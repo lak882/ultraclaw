@@ -1,0 +1,32 @@
+Class {{PACKAGE_NAME}}.Zen.{{CLASS_NAME}} Extends %ZEN.Component.page
+{
+
+Parameter APPLICATION = "{{PACKAGE_NAME}}.App";
+
+Parameter PAGENAME = "{{PAGE_TITLE}}";
+
+XData Contents [ XMLNamespace = "http://www.intersystems.com/zen" ]
+{
+  <page xmlns="http://www.intersystems.com/zen" title="{{PAGE_TITLE}}">
+    <vgroup>
+{{COMPONENTS}}
+    </vgroup>
+  </page>
+}
+
+XData Style
+{
+  <style type="text/css">
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+{{STYLES}}
+  </style>
+}
+
+{{CLIENT_METHODS}}
+
+Method %OnAfterCreatePage() As %Status
+{
+    Quit $$$OK
+}
+
+}

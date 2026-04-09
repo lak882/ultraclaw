@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+
+# Runtime logs
+sync.log
+
+# Editor backup/scratch files
+*.bak
+*.current

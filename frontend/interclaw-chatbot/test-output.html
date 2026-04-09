@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat Output Rendering Test</title>
+<link rel="stylesheet" href="chatbot.css">
+<style>
+  /* Override sidebar-specific layout for standalone testing */
+  body { margin:0; padding:24px; background:white; font-family:'Noto Sans',Arial,sans-serif; overflow:auto; width:auto; height:auto; }
+  html { overflow:auto; width:auto; height:auto; }
+  .test-container { max-width:672px; margin:0 auto; display:flex; flex-direction:column; gap:8px; }
+  .test-label {
+    font-size:10px; color:rgba(0,0,0,.35); text-transform:uppercase; letter-spacing:0.06em;
+    font-weight:500; margin:20px 0 4px; padding-bottom:4px; border-bottom:1px solid #f0f0f0;
+  }
+  .test-label:first-child { margin-top:0; }
+  .test-page-title { font-size:13px; font-weight:600; color:rgba(0,0,0,.87); margin:0 0 24px; }
+  /* Simulate chatbot message container */
+  .chatbot-message { max-width:100%; width:100%; }
+</style>
+</head>
+<body>
+<div class="test-container" id="tests">
+  <div class="test-page-title">Chat Output Rendering Test</div>
+</div>
+
+<script>
+  window._cc = {};
+  window._cc.detectNamespace = function() { return 'HSLIB'; };
+  window._cc.pathPrefix = '';
+  window._cc.escapeHtml = function(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  };
+</script>
+<script src="markdown.js"></script>
+<script>
+var cc = window._cc;
+var tests = [
+  {
+    label: 'Push confirmation',
+    text: 'Created `Demo.DTL.VXUTransform` with 8 field mappings from 2.5.1:VXU_V04 source to target.'
+  },
+  {
+    label: 'Production build',
+    text: '## Demo.Production\n\nBuilt with 4 components:\n\n- **From_HTTP** \u2014 HTTP service for VXU_V04\n- **Demo.BP.RoutingProcess** \u2014 Message router\n- **To_File** \u2014 File output to /isc/FileDrop/\n- **To_TCP** \u2014 TCP/MLLP forward\n\n### Trace\n\n| Step | Component | Result |\n|------|-----------|--------|\n| 1 | From_HTTP | Received |\n| 2 | RoutingProcess | Routed to To_File |\n| 3 | To_File | Written |'
+  },
+  {
+    label: 'DTL test results',
+    text: '### Transform Test\n\n| Field | Before | After |\n|-------|--------|-------|\n| MSH:9.1 | VXU | VXU |\n| PID:5.1 | SMITH | Smith |\n| PID:7 | 19800115 | 1980-01-15 |\n| RXA:5.1 | 03 | Hepatitis B |\n\nAll 8 mappings produced expected output.'
+  },
+  {
+    label: 'Connection info',
+    text: 'Connected to **vmdev1** in namespace `HSLIB`.\n\n| Property | Value |\n|----------|-------|\n| Version | IRIS for Health 2024.1 |\n| Production | Demo.Production |\n| Status | Running |'
+  },
+  {
+    label: 'Compilation error',
+    text: 'Compilation failed for `Demo.DTL.BadTransform`:\n\n- Line 15: Unknown property `PID:99` in schema 2.5.1:VXU_V04\n- Line 23: Syntax error in `..Lookp("Table",key)` \u2014 did you mean `..Lookup`?'
+  },
+  {
+    label: 'Code block (HL7 message)',
+    text: 'Generated test message:\n\n```hl7\nMSH|^~\\&|TestSys|TestFac|TargetSys|TargetFac|20240115120000||VXU^V04|MSG001|P|2.5.1\nPID|||12345^^^MRN||SMITH^JOHN||19800115|M\nRXA|0|1|20240115|20240115|03^Hepatitis B^CVX|1|||\n```'
+  },
+  {
+    label: 'Blockquote',
+    text: '> The production must be running before sending test messages. Use `manage_production.py --start` to start it.'
+  },
+  {
+    label: 'Multi-section response',
+    text: '## DTL Created\n\nCreated `Demo.DTL.ADTA01ToSDA3` mapping ADT_A01 fields to SDA3 Container.\n\n### Field Mappings\n\n| Source | Target | Transform |\n|--------|--------|-----------|\n| PID:5 | Patient.Name | Copy |\n| PID:7 | Patient.BirthDate | ConvertDateTime |\n| PID:8 | Patient.Gender | Lookup("GenderMap") |\n| PV1:2 | Encounter.Type | Conditional |\n| PV1:3 | Encounter.Location | Copy |\n\n### Test Results\n\nRan against ADT_A01 test message. All 5 mappings produced expected output.\n\n- Patient name: `SMITH^JOHN` \u2192 `John Smith`\n- Gender: `M` \u2192 `Male` (via lookup)\n- Date: `19800115` \u2192 `1980-01-15`'
+  },
+  {
+    label: 'List with nested detail',
+    text: 'Found 3 components in `Demo.VaccineToASIIS` package:\n\n- **Demo.VaccineToASIIS.BS.HTTPService** \u2014 Business Service\n  - Adapter: `EnsLib.HTTP.InboundAdapter`\n  - Port: 9980\n- **Demo.VaccineToASIIS.BP.Router** \u2014 Business Process\n  - Type: `EnsLib.MsgRouter.RoutingEngine`\n- **Demo.VaccineToASIIS.BO.FileOp** \u2014 Business Operation\n  - Adapter: `EnsLib.File.OutboundAdapter`'
+  },
+  {
+    label: 'Headers and horizontal rule',
+    text: '## Production Status\n\nDemo.Production is **Running** with 6 enabled hosts.\n\n---\n\n### Recent Activity\n\n| Time | Event |\n|------|-------|\n| 14:23 | VXU_V04 routed to To_File |\n| 14:21 | ADT_A01 routed to To_TCP |\n| 14:18 | Production started |'
+  },
+  {
+    label: 'Quick replies',
+    text: 'What would you like to do next?\n\n:::quick_replies\n["Check trace", "Send another message", "View DTL", "Stop production"]\n:::'
+  }
+];
+
+var container = document.getElementById('tests');
+tests.forEach(function(t) {
+  var label = document.createElement('div');
+  label.className = 'test-label';
+  label.textContent = t.label;
+  container.appendChild(label);
+
+  var msg = document.createElement('div');
+  msg.className = 'chatbot-message';
+  msg.innerHTML = '<div class="msg-content">' + cc.renderMarkdownWithQuickReplies(t.text) + '</div>';
+  container.appendChild(msg);
+});
+</script>
+</body>
+</html>

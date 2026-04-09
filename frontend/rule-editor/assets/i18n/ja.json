@@ -1,0 +1,161 @@
+{
+  "Settings": "設定",
+  "Help": "ヘルプ",
+  "Profile": "プロファイル",
+  "About": "詳細情報",
+  "header": {
+    "ABOUT_DIALOG_APP_TITLE": "詳細情報",
+    "ABOUT_DIALOG_APP_VERSION": "バージョン"
+  },
+  "Logout": "ログアウト",
+  "canvas": {
+    "DOUBLE_CLICK": "ダブルクリックして{{1}}を編集",
+    "MOVE_DOWN": "選択したエレメントを下に移動",
+    "MOVE_UP": "選択したエレメントを上に移動",
+    "DELETE_ELEMENT": "エレメントを削除"
+  },
+  "file-actions": {
+    "new": {
+      "LABEL": "新規"
+    },
+    "open": {
+      "LABEL": "開く"
+    },
+    "save": {
+      "LABEL": "保存",
+      "TOOLTIP": "この{{1}}を保存します。{{1}}をシステムに適用するには、それをコンパイルする必要があります。"
+    },
+    "compile": {
+      "LABEL": "コンパイル",
+      "TOOLTIP": "この{{1}}を保存してコンパイルします。コンパイルは、保存した{{1}}をシステムに適用します。"
+    },
+    "edit": {
+      "LABEL": "編集"
+    }
+  },
+  "filters": {
+    "LABEL": "フィルター",
+    "HIDE_SYSTEM": "システムを非表示",
+    "HIDE_PERCENT": "パーセントを非表示",
+    "ONLY_SHOW_PERSISTENT": "永続のみ表示"
+  },
+  "function-error": {
+    "UNKNOWN_FUNCTION": "不明な機能",
+    "VALUE_REQUIRED": "値は必須です",
+    "SINGLE_ARGUMENT_REQUIRED": "{{1}}に{{2}}つの引数が必要です",
+    "MULTIPLE_ARGUMENTS_REQUIRED": "{{1}}に{{2}}つの引数が必要です",
+    "RANGE_ARGUMENTS_REQUIRED": "{{1}}に{{2}}～{{3}}つの引数が必要です"
+  },
+  "help": {
+    "SWITCH_NAMESPACE_Q": "名前空間はどのように切り替えるのですか？",
+    "SWITCH_NAMESPACE_A": "名前空間を切り替えるには、画面右上のドロップダウンメニューをクリックし、[設定]に移動します。次に、[名前空間]のドロップダウンメニューをクリックし、目的の名前空間を選択します。名前空間を切り替える前に、{{1}}で変更を保存するように注意してください。保存されていない変更は失われます。"
+  },
+  "languages": {
+    "de": "ドイツ語",
+    "en": "英語",
+    "en-us": "英語（米国）",
+    "es": "スペイン語",
+    "fr": "フランス語",
+    "it": "イタリア語",
+    "ja": "日本語",
+    "ko": "韓国語",
+    "nl": "オランダ語",
+    "pt": "ポルトガル語",
+    "pt-br": "ポルトガル語（ブラジル）",
+    "ru": "ロシア語",
+    "uk": "ウクライナ語",
+    "zh-cn": "中国語（中国）"
+  },
+  "log-in": {
+    "LOG_IN": "ログイン",
+    "USERNAME": "ユーザー名",
+    "PASSWORD": "パスワード",
+    "INSUFFICIENT_PERMISSIONS": "このページにアクセスする権限がありません。",
+    "ACCESS_DENIED": "アクセスが拒否されました",
+    "INVALID_CREDENTIALS": "無効な資格情報"
+  },
+  "modal-actions": {
+    "OK": "OK",
+    "CANCEL": "キャンセル",
+    "SUBMIT": "送信",
+    "UPDATE": "更新",
+    "CLOSE": "閉じる",
+    "CLEAR": "クリア"
+  },
+  "rule-set-table": {
+    "ADD": "{{1}}を追加",
+    "ALL": "すべての{{1}}",
+    "EFFECTIVE_BEGIN": "有効日開始",
+    "EFFECTIVE_END": "有効日終了",
+    "effective-on": {
+      "LABEL": "有効日：{{1}}",
+      "YES": "はい",
+      "NO": "いいえ"
+    },
+    "ACTIONS": "アクション"
+  },
+  "snackbar-message": {
+    "READ_ONLY": "これは読み取り専用として指定されています。",
+    "READ_ONLY_SC": "これは、サーバー側のソース管理によって読み取り専用として指定されています。",
+    "SAVED_AND_COMPILED": "{{1}}が保存およびコンパイルされました。",
+    "INVALID_ASSIST_CLASS": "無効なアシストクラス。{{1}}として読み込まれました",
+    "SAVED": "{{1}}が保存されました。",
+    "SWITCHED_TO_NAMESPACE": "{{1}}の名前空間に切り替えました。",
+    "SOMETHING_WENT_WRONG": "問題が発生しました！",
+    "ZOOM_PERCENT": "ズーム：{{1}}%"
+  },
+  "system-mode": {
+    "LIVE": "ライブシステム",
+    "DEVELOPMENT": "開発システム",
+    "TEST": "テストシステム",
+    "FAILOVER": "フェイルオーバーシステム"
+  },
+  "toolbar": {
+    "UNDO": "元に戻す",
+    "REDO": "やり直す",
+    "ZOOM_IN": "ズームイン",
+    "ZOOM_OUT": "ズームアウト",
+    "EXPAND_ALL": "すべて展開",
+    "COLLAPSE_ALL": "すべて折りたたむ",
+    "DELETE_ELEMENT": "エレメントを削除"
+  },
+  "validators": {
+    "REQUIRED": "これは必須フィールドです。",
+    "CLASS_NAME": "クラス名は文字で始まり、その後に任意の数の英数字を続ける必要があります。",
+    "PACKAGE_NAME": "パッケージ名は、文字または「%」記号で始まり、その後に任意の数の英数字を続ける必要があります。",
+    "CONTEXT_CLASS_NAME": "コンテキストクラス名には、「.」記号で区切られた有効なパッケージ名を含める必要があります。最初のパッケージ名は「%」記号で始めることもできます。",
+    "COMBINED_NAME_LENGTH": "クラス名とパッケージ名の合計の長さは、220文字を超えてはなりません。",
+    "CONTEXT_CLASS_NAME_LENGTH": "コンテキストクラス名は、220文字を超えてはなりません。"
+  },
+  "warning": {
+    "TITLE": "ログアウト確認",
+    "UNSAVED_CHANGES": "現在の{{1}}の保存されていない変更は失われます",
+    "CHANGING_TYPE": "{{1}}のタイプを変更すると、{{1}}が動作しなくなる可能性があります。",
+    "UNSAVED_CHANGES_Q_CONTINUE": "現在の{{1}}の保存されていない変更は失われます。続行しますか？"
+  },
+  "source-control": {
+    "TITLE": "サーバー側のソース管理",
+    "TITLE_EXTERNAL_PAGE": "ソース管理の外部ページ",
+    "TITLE_LOG_PAGE": "セッションのソース管理ログ",
+    "UNSUPPORTED_ACTION": "サポートされていないソース管理アクション",
+    "MENU_SHOW_MESSAGES_LABEL": "ソース管理メッセージ",
+    "MENU_SHOW_MESSAGES_DESCRIPTION": "ソース管理システムからのメッセージを表示",
+    "MENU_TOOLTIP": "サーバー側のソース管理メニュー",
+    "LOG_TABLE_TS_COLUMN": "タイムスタンプ",
+    "LOG_TABLE_MESSAGE_COLUMN": "メッセージ"
+  },
+  "CONTEXT_CLASS": "コンテキストクラス",
+  "CURRENT": "現在",
+  "DESCRIPTION": "説明",
+  "EFFECTIVE_RANGE_LABEL": "有効範囲",
+  "LANGUAGE": "言語",
+  "NAME": "名前",
+  "NAMESPACE": "名前空間",
+  "OPEN_IN": "{{1}}で開く",
+  "PACKAGE": "パッケージ",
+  "PACKAGE_NAME": "パッケージ名",
+  "PRODUCTION": "生産",
+  "TYPE": "タイプ",
+  "YES": "はい",
+  "NO": "いいえ"
+}

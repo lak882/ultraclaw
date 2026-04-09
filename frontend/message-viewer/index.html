@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>InterClaw — Message Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="../rule-editor/favicon.ico">
+
+<!-- ═══ 1. ISC Design Tokens ═══ -->
+<style>
+:root {
+  --fr-styles-color-primary-hsl: 238, 49%, 39%;
+  --fr-styles-color-primary: hsl(238, 49%, 39%);
+  --fr-styles-color-primary-contrast: hsl(0, 0%, 100%);
+  --fr-styles-color-secondary-hsl: 178, 100%, 32%;
+  --fr-styles-color-secondary: hsl(178, 100%, 32%);
+  --fr-styles-color-secondary-contrast: hsl(0, 0%, 100%);
+  --fr-styles-color-white: hsl(0, 0%, 100%);
+  --fr-styles-color-near-white: hsl(0, 0%, 98%);
+  --fr-styles-color-very-light-grey: hsl(0, 0%, 95%);
+  --fr-styles-color-light-grey: hsl(0, 0%, 88%);
+  --fr-styles-font-size-2xs: 0.75rem;
+  --fr-styles-font-size-xs: 0.8125rem;
+  --fr-styles-font-size-sm: 0.875rem;
+  --fr-styles-font-size-base: 1rem;
+  --fr-header-height-toolbar: 40px;
+  --fr-header-border-top-toolbar: 2px;
+  --chatbot-width: 25vw;
+}
+@font-face {
+  font-family: 'Noto Sans'; font-style: normal; font-weight: 400;
+  src: local('Noto Sans'), local('NotoSans'),
+       url(../rule-editor/noto-sans-v9-latin-regular.dbdd323d86bb9df6.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans'; font-style: normal; font-weight: 700;
+  src: local('Noto Sans Bold'), local('NotoSans-Bold'),
+       url(../rule-editor/noto-sans-v9-latin-700.2813ebf28ffdbb0b.woff2) format('woff2');
+}
+</style>
+
+<!-- ═══ 2. Chatbot layout ═══ -->
+<style>
+html { --chatbot-width: 25vw; }
+#app-root {
+  position: absolute;
+  inset: 0 !important;
+  right: var(--chatbot-width) !important;
+  transform: translateZ(0);
+  transition: right 0.25s cubic-bezier(0, 0, 0.2, 1);
+  overflow: hidden;
+}
+body.chatbot-closed #app-root { right: 0 !important; }
+body.chatbot-dragging #app-root { transition: none !important; }
+body.chatbot-auth-gate #chatbot-sidebar,
+body.chatbot-auth-gate #chatbot-toggle { display: none !important; }
+body.chatbot-auth-gate #app-root { right: 0 !important; transition: none !important; }
+body.chatbot-fullscreen #app-root { display: none; }
+</style>
+
+<!-- ═══ 3. Message Viewer styles ═══ -->
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  font-family: 'Noto Sans', 'Noto Sans Arabic', Arial, sans-serif;
+  font-size: var(--fr-styles-font-size-sm);
+  color: rgba(0,0,0,0.87);
+  background: var(--fr-styles-color-near-white);
+}
+#app-root {
+  display: flex; flex-direction: column;
+}
+#viewer-frame {
+  flex: 1;
+  border: none;
+  width: 100%;
+  min-width: 0;
+  background: var(--fr-styles-color-white);
+}
+#viewer-error {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+}
+#viewer-error svg { width: 48px; height: 48px; stroke: rgba(0,0,0,0.2); fill: none; }
+#viewer-error h2 { font-size: var(--fr-styles-font-size-base); color: rgba(0,0,0,0.87); font-weight: 600; }
+#viewer-error p { font-size: var(--fr-styles-font-size-xs); color: rgba(0,0,0,0.54); max-width: 480px; line-height: 1.5; }
+#viewer-error code {
+  display: block; margin-top: 8px; padding: 8px 12px;
+  background: var(--fr-styles-color-very-light-grey);
+  border-radius: 4px; font-family: Consolas, Monaco, monospace;
+  font-size: var(--fr-styles-font-size-2xs); color: rgba(0,0,0,0.68);
+  word-break: break-all;
+}
+</style>
+</head>
+<body data-no-auth-gate>
+<script src="../interclaw-header.js"></script>
+  <div id="app-root">
+    <iframe id="viewer-frame"></iframe>
+    <div id="viewer-error">
+      <svg viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <h2>Could not load Message Viewer</h2>
+      <p>The IRIS Message Viewer page could not be embedded. This may be due to X-Frame-Options restrictions. You can open it directly:</p>
+      <code id="viewer-direct-link"></code>
+    </div>
+  </div>
+
+  <!-- Chatbot -->
+  <script src="../interclaw-chatbot.js?v=13"></script>
+
+<script>
+(function() {
+  'use strict';
+
+  // Resolve namespace from URL params or localStorage
+  var params = new URLSearchParams(window.location.search);
+  var namespace = params.get('$NAMESPACE') || params.get('NAMESPACE')
+    || localStorage.getItem('interclaw-namespace') || 'IC-TESTING';
+  namespace = namespace.toUpperCase();
+
+  var pathParts = window.location.pathname.split('/ui/interop/');
+  var pathPrefix = pathParts[0] || '';
+  var wrapperBase = window.location.pathname; // this page's path
+
+  // Accept ?zen=<url> to wrap any Zen page, default to Message Viewer
+  var zenParam = params.get('zen');
+  var zenUrl;
+  if (zenParam) {
+    zenUrl = zenParam.startsWith('/') ? zenParam
+      : pathPrefix + '/csp/healthshare/' + namespace.toLowerCase() + '/' + zenParam;
+  } else {
+    zenUrl = pathPrefix + '/csp/healthshare/' + namespace.toLowerCase()
+      + '/EnsPortal.MessageViewer.zen?$NAMESPACE=' + namespace;
+  }
+
+  var frame = document.getElementById('viewer-frame');
+  var errorEl = document.getElementById('viewer-error');
+  var directLink = document.getElementById('viewer-direct-link');
+
+  // -- Minimum content width for chatbot resize constraint --
+  // Zen pages have hard layout minimums. Set a conservative default,
+  // then use ResizeObserver to detect the real minimum dynamically.
+  document.documentElement.style.setProperty('--min-content-width', '700px');
+  var lastGoodContentWidth = null;
+  if (window.ResizeObserver) {
+    new ResizeObserver(function() {
+      try {
+        var iframeDoc = frame.contentDocument;
+        if (!iframeDoc || !iframeDoc.documentElement) return;
+        var scrollW = iframeDoc.documentElement.scrollWidth;
+        var frameW = frame.clientWidth;
+        if (scrollW > frameW + 5) {
+          // Content overflowing — lock to last good width
+          if (lastGoodContentWidth) {
+            document.documentElement.style.setProperty('--min-content-width', lastGoodContentWidth + 'px');
+          }
+        } else {
+          lastGoodContentWidth = frameW;
+        }
+      } catch(e) { /* cross-origin or no content yet */ }
+    }).observe(frame);
+  }
+
+  // Build a wrapper URL that keeps InterClaw header + chatbot around any Zen page
+  function wrapUrl(rawUrl) {
+    // Absolute path on same origin → wrap it
+    if (!rawUrl || rawUrl.startsWith('javascript:')) return rawUrl;
+    // Already a wrapper URL — don't double-wrap
+    if (rawUrl.indexOf('/message-viewer/') !== -1) return rawUrl;
+    return wrapperBase + '?zen=' + encodeURIComponent(rawUrl)
+      + '&$NAMESPACE=' + encodeURIComponent(namespace);
+  }
+
+  // Set the direct link for fallback
+  directLink.textContent = window.location.origin + zenUrl;
+
+  // Load the iframe
+  frame.src = zenUrl;
+
+  // After each iframe load: reset min-width detection and inject link interception
+  frame.addEventListener('load', function() {
+    lastGoodContentWidth = null; // new page may have different minimum
+    try {
+      var iframeWin = frame.contentWindow;
+      var iframeDoc = frame.contentDocument || iframeWin.document;
+
+      // Detect empty/blocked page
+      if (!iframeDoc || !iframeDoc.body || iframeDoc.body.innerHTML.length < 50) {
+        showError();
+        return;
+      }
+
+      // --- Override window.open() to keep Zen pages inside the wrapper ---
+      var origOpen = iframeWin.open;
+      iframeWin.open = function(url, target, features) {
+        if (url && !url.startsWith('javascript:') && !url.startsWith('about:')) {
+          var resolved = new URL(url, iframeWin.location.href).pathname
+            + new URL(url, iframeWin.location.href).search;
+          // Zen/portal pages: navigate within the iframe (stay in wrapper)
+          if (resolved.indexOf('.zen') !== -1 || resolved.indexOf('.cls') !== -1
+              || resolved.indexOf('EnsPortal') !== -1 || resolved.indexOf('csp/') !== -1) {
+            frame.src = resolved;
+            return null;
+          }
+          // Other URLs: open in new tab with wrapper
+          return origOpen.call(iframeWin, wrapUrl(resolved), target, features);
+        }
+        return origOpen.apply(iframeWin, arguments);
+      };
+
+      // --- Rewrite links that escape the iframe ---
+      function rewriteLinks() {
+        var links = iframeDoc.querySelectorAll('a[target="_blank"], a[target="_top"], a[target="_parent"]');
+        for (var i = 0; i < links.length; i++) {
+          var a = links[i];
+          if (a.dataset.icRewritten) continue;
+          a.dataset.icRewritten = '1';
+
+          // target="_top" and "_parent" would break out of iframe — keep in iframe instead
+          if (a.target === '_top' || a.target === '_parent') {
+            a.removeAttribute('target');
+          }
+          // target="_blank" opens a new tab — wrap the URL so it has the IC header
+          if (a.target === '_blank' && a.href) {
+            (function(anchor) {
+              anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.open(wrapUrl(anchor.getAttribute('href')), '_blank');
+              });
+            })(a);
+          }
+        }
+      }
+      rewriteLinks();
+
+      // Watch for dynamically added links (Zen pages render async)
+      if (iframeDoc.body) {
+        new MutationObserver(rewriteLinks)
+          .observe(iframeDoc.body, { childList: true, subtree: true });
+      }
+
+      // Update page title from iframe
+      if (iframeDoc.title) {
+        document.title = 'InterClaw — ' + iframeDoc.title;
+      }
+
+    } catch (e) {
+      // Cross-origin — can't inject, but iframe may still render fine
+      console.warn('[message-viewer] Cannot inject into iframe (cross-origin?):', e.message);
+      setTimeout(function() {
+        if (frame.clientHeight < 10) showError();
+      }, 2000);
+    }
+  });
+
+  frame.addEventListener('error', showError);
+
+  function showError() {
+    frame.style.display = 'none';
+    errorEl.style.display = 'flex';
+  }
+
+  // Listen for namespace changes from the header
+  window.addEventListener('interclaw-namespace-change', function(e) {
+    if (e.detail && e.detail.namespace) {
+      var newNs = e.detail.namespace.toUpperCase();
+      namespace = newNs;
+      var newUrl = pathPrefix + '/csp/healthshare/' + newNs.toLowerCase()
+        + '/EnsPortal.MessageViewer.zen?$NAMESPACE=' + newNs;
+      frame.src = newUrl;
+      directLink.textContent = window.location.origin + newUrl;
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

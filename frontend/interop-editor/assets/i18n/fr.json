@@ -1,0 +1,161 @@
+{
+  "Settings": "Paramètres",
+  "Help": "Aide",
+  "Profile": "Profil",
+  "About": "À propos",
+  "header": {
+    "ABOUT_DIALOG_APP_TITLE": "À propos",
+    "ABOUT_DIALOG_APP_VERSION": "Version"
+  },
+  "Logout": "Déconnexion",
+  "canvas": {
+    "DOUBLE_CLICK": "double-cliquez pour modifier {{1}}",
+    "MOVE_DOWN": "Déplacer l’élément sélectionné vers le bas",
+    "MOVE_UP": "Déplacer l’élément sélectionné vers le haut",
+    "DELETE_ELEMENT": "Supprimer l’élément"
+  },
+  "file-actions": {
+    "new": {
+      "LABEL": "Nouveau"
+    },
+    "open": {
+      "LABEL": "Ouvrir"
+    },
+    "save": {
+      "LABEL": "Enregistrer",
+      "TOOLTIP": "Enregistrer ce(tte) {{1}}. Pour appliquer ce(tte) {{1}} votre système, vous devez également le/la compiler."
+    },
+    "compile": {
+      "LABEL": "Compiler",
+      "TOOLTIP": "Enregistrer et compiler ce(tte) {{1}}. La compilation applique votre {{1}} enregistré(e) à votre système."
+    },
+    "edit": {
+      "LABEL": "Modifier"
+    }
+  },
+  "filters": {
+    "LABEL": "Filtres",
+    "HIDE_SYSTEM": "Masquer le système",
+    "HIDE_PERCENT": "Masquer le pourcentage",
+    "ONLY_SHOW_PERSISTENT": "Montrer uniquement les éléments persistants"
+  },
+  "function-error": {
+    "UNKNOWN_FUNCTION": "Fonction inconnue",
+    "VALUE_REQUIRED": "La valeur est requise",
+    "SINGLE_ARGUMENT_REQUIRED": "{{1}} nécessite {{2}} argument",
+    "MULTIPLE_ARGUMENTS_REQUIRED": "{{1}} nécessite {{2}} arguments",
+    "RANGE_ARGUMENTS_REQUIRED": "{{1}} nécessite entre {{2}} et {{3}} arguments"
+  },
+  "help": {
+    "SWITCH_NAMESPACE_Q": "Comment changer de namespace ?",
+    "SWITCH_NAMESPACE_A": "Pour changer de namespace, cliquez sur le menu déroulant en haut à droite de l’écran, et naviguez jusqu’à « Settings » (Paramètres). Cliquez ensuite sur le menu déroulant « Namespaces » et sélectionnez le namespace souhaité. Veillez à enregistrer toutes les modifications dans votre {{1}} avant de changer de namespace, car les modifications non enregistrées seront perdues."
+  },
+  "languages": {
+    "de": "Allemand",
+    "en": "Anglais",
+    "en-us": "Anglais (États-Unis)",
+    "es": "Espagnol",
+    "fr": "Français",
+    "it": "Italien",
+    "ja": "Japonais",
+    "ko": "Coréen",
+    "nl": "Néerlandais",
+    "pt": "Portugais",
+    "pt-br": "Portugais (Brésil)",
+    "ru": "Russe",
+    "uk": "Ukrainien",
+    "zh-cn": "Chinois (RPC)"
+  },
+  "log-in": {
+    "LOG_IN": "Connexion",
+    "USERNAME": "Nom d’utilisateur",
+    "PASSWORD": "Mot de passe",
+    "INSUFFICIENT_PERMISSIONS": "Vous n’avez pas l’autorisation d’accéder à cette page.",
+    "ACCESS_DENIED": "Accès refusé",
+    "INVALID_CREDENTIALS": "Identifiants non valides"
+  },
+  "modal-actions": {
+    "OK": "OK",
+    "CANCEL": "Annuler",
+    "SUBMIT": "Envoyer",
+    "UPDATE": "Mettre à jour",
+    "CLOSE": "Fermer",
+    "CLEAR": "Effacer"
+  },
+  "rule-set-table": {
+    "ADD": "Ajouter {{1}}",
+    "ALL": "Tou(te)s les {{1}}",
+    "EFFECTIVE_BEGIN": "Début effectif",
+    "EFFECTIVE_END": "Fin effective",
+    "effective-on": {
+      "LABEL": "En vigueur le {{1}}",
+      "YES": "Oui",
+      "NO": "Non"
+    },
+    "ACTIONS": "Actions"
+  },
+  "snackbar-message": {
+    "READ_ONLY": "Cet élément est marqué en lecture seule.",
+    "READ_ONLY_SC": "Cet élément est marqué en lecture seule par le contrôle de source côté serveur.",
+    "SAVED_AND_COMPILED": "{{1}} enregistré(e) et compilé(e).",
+    "INVALID_ASSIST_CLASS": "Classe d’assistance non valide, chargée comme {{1}}",
+    "SAVED": "{{1}} enregistré(e).",
+    "SWITCHED_TO_NAMESPACE": "Namespace modifié pour {{1}}.",
+    "SOMETHING_WENT_WRONG": "Une erreur s’est produite !",
+    "ZOOM_PERCENT": "Zoom : {{1}}%"
+  },
+  "system-mode": {
+    "LIVE": "Système en direct",
+    "DEVELOPMENT": "Système de développement",
+    "TEST": "Système de test",
+    "FAILOVER": "Système de basculement"
+  },
+  "toolbar": {
+    "UNDO": "Annuler",
+    "REDO": "Rétablir",
+    "ZOOM_IN": "Zoom avant",
+    "ZOOM_OUT": "Zoom arrière",
+    "EXPAND_ALL": "Développer tout",
+    "COLLAPSE_ALL": "Réduire tout",
+    "DELETE_ELEMENT": "Supprimer l’élément"
+  },
+  "validators": {
+    "REQUIRED": "Il s’agit d’un champ obligatoire.",
+    "CLASS_NAME": "Les noms de classe doivent commencer par une lettre suivie d’un nombre de caractères alphanumériques.",
+    "PACKAGE_NAME": "Les noms de package doivent commencer par une lettre ou un symbole « % » suivi d’un nombre de caractères alphanumériques.",
+    "CONTEXT_CLASS_NAME": "Les noms de classe de contexte doivent comprendre des noms de packages valides séparés par des symboles « . ». Le premier package peut également commencer par un symbole « % ».",
+    "COMBINED_NAME_LENGTH": "La longueur combinée du nom de classe et du nom de package ne doit pas dépasser 220 caractères.",
+    "CONTEXT_CLASS_NAME_LENGTH": "La longueur du nom de la classe de contexte ne doit pas dépasser 220 caractères."
+  },
+  "warning": {
+    "TITLE": "Confirmation de déconnexion",
+    "UNSAVED_CHANGES": "Les modifications non enregistrées dans le/la {{1}} actuel(le) seront perdues.",
+    "CHANGING_TYPE": "La modification du type de {{1}} peut entraîner l’arrêt de {{1}}.",
+    "UNSAVED_CHANGES_Q_CONTINUE": "Les modifications non enregistrées dans le/la {{1}} actuel(le) seront perdues, souhaitez-vous continuer ?"
+  },
+  "source-control": {
+    "TITLE": "Contrôle de source côté serveur",
+    "TITLE_EXTERNAL_PAGE": "Page externe de contrôle de source",
+    "TITLE_LOG_PAGE": "Journaux de contrôle de source de session",
+    "UNSUPPORTED_ACTION": "Action de contrôle de source non prise en charge",
+    "MENU_SHOW_MESSAGES_LABEL": "Messages de contrôle de source",
+    "MENU_SHOW_MESSAGES_DESCRIPTION": "Afficher les messages du système de contrôle de source",
+    "MENU_TOOLTIP": "Menu de contrôle de source côté serveur",
+    "LOG_TABLE_TS_COLUMN": "Horodatage",
+    "LOG_TABLE_MESSAGE_COLUMN": "Message"
+  },
+  "CONTEXT_CLASS": "Classe de contexte",
+  "CURRENT": "Actuel",
+  "DESCRIPTION": "Description",
+  "EFFECTIVE_RANGE_LABEL": "Plage effective",
+  "LANGUAGE": "Langue",
+  "NAME": "Nom",
+  "NAMESPACE": "Namespace",
+  "OPEN_IN": "Ouvrir dans {{1}}",
+  "PACKAGE": "Package",
+  "PACKAGE_NAME": "Nom du package",
+  "PRODUCTION": "Production",
+  "TYPE": "Type",
+  "YES": "Oui",
+  "NO": "Non"
+}

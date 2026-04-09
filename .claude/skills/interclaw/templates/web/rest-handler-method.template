@@ -1,0 +1,13 @@
+/// {{DESCRIPTION}}
+ClassMethod {{METHOD_NAME}}({{PARAMS}}) As %Status
+{
+    Set %response.ContentType = "application/json"
+
+    Try {
+        {{BODY}}
+    } Catch ex {
+        Set %response.Status = "500 Internal Server Error"
+        Write {"error": ($system.Status.GetErrorText(ex.AsStatus()))}.%ToJSON()
+    }
+    Quit $$$OK
+}

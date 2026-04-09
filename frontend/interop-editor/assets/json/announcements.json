@@ -1,0 +1,15 @@
+{ 
+    "dateUpdated": "",
+    "notelist": [
+	   {
+        "date": "June 2024",
+        "announcement": "Improved filtering",
+        "featurelist": {
+            "1": "When a filter is active and you click a host that is part of the filter, any hosts that are connected to the selected host but are not included in the filter will appear on the canvas.",
+            "2": "If you select a host that is temporarily visible on the canvas, the host's properties will appear in the property inspector. In that case no new hosts will appear or new connections will be displayed, unless the connected hosts are included in the filter.",
+            "3": "When you select a different host on the canvas, any hosts that are not part of the filter and not connected to the currently selected host will disappear from the canvas. ",
+            "4": "If any filter conditions are active the filter icon will change to indicate a filter option is active"
+            },
+        }
+    ]
+}

@@ -1,0 +1,332 @@
+{
+  "$schema": "Commands registry — single source of truth for all slash commands",
+  "commands": [
+    {
+      "name": "connect",
+      "description": "Connect to a server and namespace",
+      "category": "connection",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "list",
+      "description": "List documents in the namespace (cls, mac, inc)",
+      "category": "connection",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "pull",
+      "description": "Pull a class from the server and display source",
+      "category": "connection",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "push",
+      "description": "Push a local class to the server and compile it",
+      "category": "connection",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "production",
+      "description": "Generate, create, open, or manage a production",
+      "category": "building",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "host",
+      "description": "Add, update, remove, or list hosts in a production",
+      "category": "building",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "interview",
+      "description": "Guided questionnaire to build a requirements document",
+      "category": "building",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "build-poc",
+      "description": "Build a full POC from a requirements document",
+      "category": "building",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "poc",
+      "description": "Build a full POC (alias for /build-poc)",
+      "category": "building",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "json-adapter",
+      "description": "Generate JSON adapter classes from a payload structure",
+      "category": "building",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "web-app",
+      "description": "Create or manage a web application (REST, WSGI, CSP)",
+      "category": "building",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "dtl",
+      "description": "Create and test an HL7 Data Transformation",
+      "category": "hl7",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "rule",
+      "description": "Create an HL7 Routing Rule",
+      "category": "hl7",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "bpl",
+      "description": "Create a BPL visual business process",
+      "category": "hl7",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "lookup",
+      "description": "Create or update a lookup table",
+      "category": "hl7",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "send",
+      "description": "Send HL7 messages to an HTTP service",
+      "category": "testing",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "trace",
+      "description": "Check recent message traces and event logs",
+      "category": "testing",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "errors",
+      "description": "Pull error events from the event log",
+      "category": "testing",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "test-suite",
+      "description": "Run all test messages for a package and check traces",
+      "category": "testing",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "validate",
+      "description": "Static analysis on a production package",
+      "category": "testing",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "diagram",
+      "description": "Generate a Mermaid flowchart of a production",
+      "category": "utilities",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "docx-to-md",
+      "description": "Convert a .docx document to Markdown",
+      "category": "utilities",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "cost",
+      "description": "Show token usage and cost estimates",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "ipm",
+      "description": "Build or update an IPM package (module.xml, installer)",
+      "category": "packaging",
+      "handler": "remote",
+      "mutates": true,
+      "audience": "maintainer"
+    },
+    {
+      "name": "ipm-install",
+      "description": "Install, verify, uninstall, or reset an IPM package from a local directory",
+      "category": "packaging",
+      "handler": "remote",
+      "mutates": true,
+      "audience": "maintainer"
+    },
+    {
+      "name": "pip",
+      "description": "Install, list, or remove Python packages in IRIS embedded Python",
+      "category": "packaging",
+      "handler": "remote",
+      "mutates": true,
+      "audience": "maintainer"
+    },
+    {
+      "name": "reset",
+      "description": "Delete a package from server, clear lookup tables",
+      "category": "maintenance",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "reset-force",
+      "description": "Force-reset — skip dry run, delete immediately",
+      "category": "maintenance",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "new-namespace",
+      "description": "Create a HealthShare Foundation namespace",
+      "category": "maintenance",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "delete-namespace",
+      "description": "Delete a namespace and its database config",
+      "category": "maintenance",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "reset-namespace",
+      "description": "Delete and recreate a namespace",
+      "category": "maintenance",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "goto",
+      "description": "Navigate to a component (--dtl, --rule, --bpl, --trace)",
+      "category": "navigation",
+      "handler": "local"
+    },
+    {
+      "name": "goto-reload",
+      "description": "Reload page then navigate to a component",
+      "category": "navigation",
+      "handler": "local",
+      "hidden": true
+    },
+    {
+      "name": "trace-view",
+      "description": "Open a message trace (optionally by session ID)",
+      "category": "navigation",
+      "handler": "local"
+    },
+    {
+      "name": "refresh",
+      "description": "Reload the page while preserving chat history",
+      "category": "navigation",
+      "handler": "local"
+    },
+    {
+      "name": "model",
+      "description": "Change model — opus (capable), sonnet (balanced), haiku (fast)",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "authenticate",
+      "description": "Set Bedrock API key — /authenticate <ABSK...>",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "auth-status",
+      "description": "Check current authentication status",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "feedback",
+      "description": "Submit feedback — /feedback [1-5] [category] <comment>",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "help",
+      "description": "Show available commands",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "clear",
+      "description": "Clear chat history and start fresh",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "permissions",
+      "description": "View or set permission mode (strict, normal, permissive)",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "goto-test",
+      "description": "Test navigation strategies (1-6 or all)",
+      "category": "navigation",
+      "handler": "local",
+      "audience": "maintainer",
+      "hidden": true
+    },
+    {
+      "name": "git-token",
+      "description": "Configure GitLab token — /git-token <token> --url <url> --project <id>",
+      "category": "git",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "git-issue",
+      "description": "Create a GitLab issue — /git-issue <title>",
+      "category": "git",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
+      "name": "git-push",
+      "description": "Push files to a GitLab branch — /git-push <paths> [--branch name]",
+      "category": "git",
+      "handler": "remote",
+      "mutates": true
+    }
+  ],
+  "categories": {
+    "connection": "Connection & Browsing",
+    "building": "Production Building",
+    "hl7": "HL7 Transformations & Routing",
+    "testing": "Testing & Debugging",
+    "utilities": "Utilities",
+    "packaging": "Packaging",
+    "maintenance": "Maintenance",
+    "navigation": "Navigation",
+    "session": "Session",
+    "git": "GitLab Integration"
+  }
+}

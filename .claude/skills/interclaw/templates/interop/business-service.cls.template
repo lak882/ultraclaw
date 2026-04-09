@@ -1,0 +1,31 @@
+Class {{PACKAGE_NAME}}.{{CLASS_NAME}} Extends Ens.BusinessService
+{
+
+/// {{DESCRIPTION}}
+Parameter ADAPTER = "{{ADAPTER_CLASS}}";
+
+Property Adapter As {{ADAPTER_CLASS}};
+
+Property TargetConfigNames As %String(MAXLEN = 1000);
+
+Parameter SETTINGS = "TargetConfigNames:Basic:selector?multiSelect=1&context={Ens.ContextSearch/ProductionItems?targets=1&productionName=@productionId}";
+
+Method OnProcessInput(pInput As {{INPUT_TYPE}}, pOutput As {{OUTPUT_TYPE}}) As %Status
+{
+    Set tSC = $$$OK
+
+    // TODO: Process input from adapter and create request message
+    // Set tRequest = ##class({{REQUEST_CLASS}}).%New()
+
+    // Send to target(s)
+    // Set tSC = ..SendRequestAsync(..TargetConfigNames, tRequest)
+
+    Return tSC
+}
+
+Method OnInit() As %Status
+{
+    Return $$$OK
+}
+
+}

@@ -1,0 +1,23 @@
+"""{{APP_NAME}} — Flask WSGI application running inside IRIS Embedded Python."""
+
+from flask import Flask, jsonify, request
+import iris
+
+app = Flask(__name__)
+
+
+@app.route("/")
+def index():
+    """Health check / landing page."""
+    return jsonify({
+        "app": "{{APP_NAME}}",
+        "status": "running",
+        "iris_version": iris.system.Version.GetVersion()
+    })
+
+
+{{ROUTES}}
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

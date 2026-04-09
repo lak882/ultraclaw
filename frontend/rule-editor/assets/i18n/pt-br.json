@@ -1,0 +1,161 @@
+{
+  "Settings": "Configurações",
+  "Help": "Ajuda",
+  "Profile": "Perfil",
+  "About": "Sobre",
+  "header": {
+    "ABOUT_DIALOG_APP_TITLE": "Sobre",
+    "ABOUT_DIALOG_APP_VERSION": "Versão"
+  },
+  "Logout": "Fazer logoff",
+  "canvas": {
+    "DOUBLE_CLICK": "clique duas vezes para editar {{1}}",
+    "MOVE_DOWN": "Mover elemento selecionado para baixo",
+    "MOVE_UP": "Mover elemento selecionado para cima",
+    "DELETE_ELEMENT": "Excluir elemento"
+  },
+  "file-actions": {
+    "new": {
+      "LABEL": "Novo"
+    },
+    "open": {
+      "LABEL": "Abrir"
+    },
+    "save": {
+      "LABEL": "Salvar",
+      "TOOLTIP": "Salvar este {{1}}. Para aplicar o {{1}} a seu sistema, você também precisa compilá-lo."
+    },
+    "compile": {
+      "LABEL": "Compilar",
+      "TOOLTIP": "Salvar e compilar este {{1}}. A compilação aplica seu {{1}} salvo a seu sistema."
+    },
+    "edit": {
+      "LABEL": "Editar"
+    }
+  },
+  "filters": {
+    "LABEL": "Filtros",
+    "HIDE_SYSTEM": "Ocultar sistema",
+    "HIDE_PERCENT": "Ocultar percentual",
+    "ONLY_SHOW_PERSISTENT": "Exibir apenas persistente"
+  },
+  "function-error": {
+    "UNKNOWN_FUNCTION": "Função desconhecida",
+    "VALUE_REQUIRED": "O valor é exigido",
+    "SINGLE_ARGUMENT_REQUIRED": "{{1}} requer {{2}} argumento",
+    "MULTIPLE_ARGUMENTS_REQUIRED": "{{1}} requer {{2}} argumentos",
+    "RANGE_ARGUMENTS_REQUIRED": "{{1}} requer entre {{2}} e {{3}} argumentos"
+  },
+  "help": {
+    "SWITCH_NAMESPACE_Q": "Como alterno namespaces?",
+    "SWITCH_NAMESPACE_A": "Para alternar namespaces, clique no menu suspenso no canto superior direito da tela e acesse “Configurações”. Em seguida, clique no menu suspenso “Namespaces” e selecione o namespace desejado. Tenha cuidado para salvar as alterações no {{1}} antes de alternar namespaces, pois as alterações não salvas serão perdidas."
+  },
+  "languages": {
+    "de": "Alemão",
+    "en": "Inglês",
+    "en-us": "Inglês (Estados Unidos)",
+    "es": "Espanhol",
+    "fr": "Francês",
+    "it": "Italiano",
+    "ja": "Japonês",
+    "ko": "Coreano",
+    "nl": "Holandês",
+    "pt": "Português",
+    "pt-br": "Português (Brasil)",
+    "ru": "Russo",
+    "uk": "Ucraniano",
+    "zh-cn": "Chinês (RPC)"
+  },
+  "log-in": {
+    "LOG_IN": "Fazer login",
+    "USERNAME": "Nome de usuário",
+    "PASSWORD": "Senha",
+    "INSUFFICIENT_PERMISSIONS": "Você não tem permissão para acessar esta página.",
+    "ACCESS_DENIED": "Acesso negado",
+    "INVALID_CREDENTIALS": "Dados de acesso inválidos"
+  },
+  "modal-actions": {
+    "OK": "OK",
+    "CANCEL": "Cancelar",
+    "SUBMIT": "Enviar",
+    "UPDATE": "Atualizar",
+    "CLOSE": "Fechar",
+    "CLEAR": "Limpar"
+  },
+  "rule-set-table": {
+    "ADD": "Adicionar {{1}}",
+    "ALL": "Todos os {{1}}",
+    "EFFECTIVE_BEGIN": "Início da vigência",
+    "EFFECTIVE_END": "Fim da vigência",
+    "effective-on": {
+      "LABEL": "Vigente em {{1}}",
+      "YES": "Sim",
+      "NO": "Não"
+    },
+    "ACTIONS": "Ações"
+  },
+  "snackbar-message": {
+    "READ_ONLY": "Isto está marcado como Somente leitura.",
+    "READ_ONLY_SC": "Isto está marcado como Somente leitura pelo Controle de fonte do lado do servidor.",
+    "SAVED_AND_COMPILED": "{{1}} salvo(s) e compilado(s).",
+    "INVALID_ASSIST_CLASS": "Classe de assistência inválida, carregada como {{1}}",
+    "SAVED": "{{1}} salvo(s).",
+    "SWITCHED_TO_NAMESPACE": "Alterado para namespace {{1}}.",
+    "SOMETHING_WENT_WRONG": "Algo deu errado.",
+    "ZOOM_PERCENT": "Zoom: {{1}}%"
+  },
+  "system-mode": {
+    "LIVE": "Sistema ativo",
+    "DEVELOPMENT": "Sistema de desenvolvimento",
+    "TEST": "Sistema de teste",
+    "FAILOVER": "Sistema de recuperação de falha"
+  },
+  "toolbar": {
+    "UNDO": "Desfazer",
+    "REDO": "Refazer",
+    "ZOOM_IN": "Aumentar",
+    "ZOOM_OUT": "Reduzir",
+    "EXPAND_ALL": "Expandir todos",
+    "COLLAPSE_ALL": "Recolher todos",
+    "DELETE_ELEMENT": "Excluir elemento"
+  },
+  "validators": {
+    "REQUIRED": "Este campo deve ser preenchido.",
+    "CLASS_NAME": "Os nomes de classe devem começar com uma letra seguida de qualquer número de caracteres alfanuméricos.",
+    "PACKAGE_NAME": "Os nomes de pacotes devem começar com uma letra ou símbolo “%” seguido de qualquer número de caracteres alfanuméricos.",
+    "CONTEXT_CLASS_NAME": "Os nomes de classe de contexto devem incluir nomes de pacotes válidos separados por símbolos “.”. O primeiro pacote também pode começar com um símbolo “%”.",
+    "COMBINED_NAME_LENGTH": "O comprimento combinado do nome da classe e do nome do pacote não deve superar 220 caracteres.",
+    "CONTEXT_CLASS_NAME_LENGTH": "O comprimento do nome da classe de contexto não deve superar 220 caracteres."
+  },
+  "warning": {
+    "TITLE": "Confirmação de logout",
+    "UNSAVED_CHANGES": "As alterações não salvas no {{1}} atual serão perdidas",
+    "CHANGING_TYPE": "Alterar um tipo de {{1}} pode fazer com que o {{1}} não funcione mais.",
+    "UNSAVED_CHANGES_Q_CONTINUE": "As alterações não salvas no {{1}} atual serão perdidas. Deseja continuar?"
+  },
+  "source-control": {
+    "TITLE": "Controle de origem do lado do servidor",
+    "TITLE_EXTERNAL_PAGE": "Página externa de controle de origem",
+    "TITLE_LOG_PAGE": "Registros de controle de origem da sessão",
+    "UNSUPPORTED_ACTION": "Ação de controle de fonte não suportada",
+    "MENU_SHOW_MESSAGES_LABEL": "Mensagens de controle de origem",
+    "MENU_SHOW_MESSAGES_DESCRIPTION": "Exibir mensagens do sistema de controle de origem",
+    "MENU_TOOLTIP": "Menu de controle de fonte do lado do servidor",
+    "LOG_TABLE_TS_COLUMN": "Timestamp",
+    "LOG_TABLE_MESSAGE_COLUMN": "Mensagem"
+  },
+  "CONTEXT_CLASS": "Classe de contexto",
+  "CURRENT": "Atual",
+  "DESCRIPTION": "Descrição",
+  "EFFECTIVE_RANGE_LABEL": "Faixa de vigência",
+  "LANGUAGE": "Idioma",
+  "NAME": "Nome",
+  "NAMESPACE": "Namespace",
+  "OPEN_IN": "Abrir em {{1}}",
+  "PACKAGE": "Pacote",
+  "PACKAGE_NAME": "Nome do pacote",
+  "PRODUCTION": "Produção",
+  "TYPE": "Tipo",
+  "YES": "Sim",
+  "NO": "Não"
+}

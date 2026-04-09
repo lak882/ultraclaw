@@ -1,0 +1,161 @@
+{
+  "Settings": "Einstellungen",
+  "Help": "Hilfe",
+  "Profile": "Profil",
+  "About": "Über",
+  "header": {
+    "ABOUT_DIALOG_APP_TITLE": "Über",
+    "ABOUT_DIALOG_APP_VERSION": "Version"
+  },
+  "Logout": "Abmelden",
+  "canvas": {
+    "DOUBLE_CLICK": "zum Bearbeiten von {{1}} doppelklicken",
+    "MOVE_DOWN": "Ausgewähltes Element nach unten verschieben",
+    "MOVE_UP": "Ausgewähltes Element nach oben verschieben",
+    "DELETE_ELEMENT": "Element löschen"
+  },
+  "file-actions": {
+    "new": {
+      "LABEL": "Neu"
+    },
+    "open": {
+      "LABEL": "Öffnen"
+    },
+    "save": {
+      "LABEL": "Speichern",
+      "TOOLTIP": "{{1}} speichern. Um {{1}} auf Ihr System anzuwenden, müssen Sie es auch kompilieren."
+    },
+    "compile": {
+      "LABEL": "Kompilieren",
+      "TOOLTIP": "{{1}} speichern und kompilieren. Kompilieren wird angewendet, wenn Sie {{1}} auf Ihrem System gespeichert haben."
+    },
+    "edit": {
+      "LABEL": "Bearbeiten"
+    }
+  },
+  "filters": {
+    "LABEL": "Filter",
+    "HIDE_SYSTEM": "System ausblenden",
+    "HIDE_PERCENT": "Prozent ausblenden",
+    "ONLY_SHOW_PERSISTENT": "Nur dauerhafte anzeigen"
+  },
+  "function-error": {
+    "UNKNOWN_FUNCTION": "Unbekannte Funktion",
+    "VALUE_REQUIRED": "Wert ist erforderlich",
+    "SINGLE_ARGUMENT_REQUIRED": "{{1}} erfordert {{2}} Argument",
+    "MULTIPLE_ARGUMENTS_REQUIRED": "{{1}} erfordert {{2}} Argumente",
+    "RANGE_ARGUMENTS_REQUIRED": "{{1}} erfordert zwischen {{2}} und {{3}} Argumente"
+  },
+  "help": {
+    "SWITCH_NAMESPACE_Q": "Wie kann ich Namespaces wechseln?",
+    "SWITCH_NAMESPACE_A": "Um den Namespace zu wechseln, klicken Sie auf das Dropdown-Menü oben rechts auf dem Bildschirm und navigieren Sie zu „Einstellungen“. Klicken Sie dann auf das Dropdown-Menü „Namespaces“ und wählen Sie den gewünschten Namespace aus. Achten Sie darauf, alle Änderungen in Ihrem {{1}} zu speichern, bevor Sie den Namespace wechseln, da nicht gespeicherte Änderungen verloren gehen."
+  },
+  "languages": {
+    "de": "Deutsch",
+    "en": "Englisch",
+    "en-us": "Englisch (USA)",
+    "es": "Spanisch",
+    "fr": "Französisch",
+    "it": "Italienisch",
+    "ja": "Japanisch",
+    "ko": "Koreanisch",
+    "nl": "Niederländisch",
+    "pt": "Portugiesisch",
+    "pt-br": "Portugiesisch (Brasilien)",
+    "ru": "Russisch",
+    "uk": "Ukrainisch",
+    "zh-cn": "Chinesisch (PRC)"
+  },
+  "log-in": {
+    "LOG_IN": "Einloggen",
+    "USERNAME": "Benutzername",
+    "PASSWORD": "Passwort",
+    "INSUFFICIENT_PERMISSIONS": "Sie sind nicht berechtigt, auf diese Seite zuzugreifen.",
+    "ACCESS_DENIED": "Zugang verweigert",
+    "INVALID_CREDENTIALS": "Ungültige Anmeldedaten"
+  },
+  "modal-actions": {
+    "OK": "OK",
+    "CANCEL": "Abbrechen",
+    "SUBMIT": "Senden",
+    "UPDATE": "Aktualisieren",
+    "CLOSE": "Schließen",
+    "CLEAR": "Löschen"
+  },
+  "rule-set-table": {
+    "ADD": "{{1}} hinzufügen",
+    "ALL": "Alle {{1}}",
+    "EFFECTIVE_BEGIN": "Effektiver Beginn",
+    "EFFECTIVE_END": "Effektives Ende",
+    "effective-on": {
+      "LABEL": "Wirksam am {{1}}",
+      "YES": "Ja",
+      "NO": "Nein"
+    },
+    "ACTIONS": "Aktionen"
+  },
+  "snackbar-message": {
+    "READ_ONLY": "Dies ist als schreibgeschützt gekennzeichnet.",
+    "READ_ONLY_SC": "Dies ist von der serverseitigen Quellcodeverwaltung als schreibgeschützt gekennzeichnet.",
+    "SAVED_AND_COMPILED": "{{1}} gespeichert und kompiliert.",
+    "INVALID_ASSIST_CLASS": "Ungültige Hilfsklasse, geladen als {{1}}",
+    "SAVED": "{{1}} gespeichert.",
+    "SWITCHED_TO_NAMESPACE": "Umgestellt auf Namespace {{1}}.",
+    "SOMETHING_WENT_WRONG": "Etwas ist schief gelaufen!",
+    "ZOOM_PERCENT": "Zoom: {{1}}%"
+  },
+  "system-mode": {
+    "LIVE": "Live-System",
+    "DEVELOPMENT": "Entwicklungssystem",
+    "TEST": "Testsystem",
+    "FAILOVER": "Ausfallsicherungssystem"
+  },
+  "toolbar": {
+    "UNDO": "Rückgängig machen",
+    "REDO": "Wiederholen",
+    "ZOOM_IN": "Vergrößern",
+    "ZOOM_OUT": "Verkleinern",
+    "EXPAND_ALL": "Alle erweitern",
+    "COLLAPSE_ALL": "Alle reduzieren",
+    "DELETE_ELEMENT": "Element löschen"
+  },
+  "validators": {
+    "REQUIRED": "Das ist ein erforderliches Feld.",
+    "CLASS_NAME": "Klassennamen müssen mit einem Buchstaben beginnen, gefolgt von einer beliebigen Anzahl alphanumerischer Zeichen.",
+    "PACKAGE_NAME": "Paketnamen müssen mit einem Buchstaben oder einem „%“-Symbol beginnen, gefolgt von einer beliebigen Anzahl alphanumerischer Zeichen.",
+    "CONTEXT_CLASS_NAME": "Kontextklassennamen müssen aus gültigen Paketnamen bestehen, die durch „.“ Symbole getrennt sind. Das erste Paket kann auch mit einem „%“-Symbol beginnen.",
+    "COMBINED_NAME_LENGTH": "Die kombinierte Länge von Klassenname und Paketname darf 220 Zeichen nicht überschreiten.",
+    "CONTEXT_CLASS_NAME_LENGTH": "Die Länge des Kontextklassennamens darf 220 Zeichen nicht überschreiten."
+  },
+  "warning": {
+    "TITLE": "Abmeldungsbestätigung",
+    "UNSAVED_CHANGES": "Nicht gespeicherte Änderungen im/in der aktuellen {{1}} gehen verloren",
+    "CHANGING_TYPE": "Das Ändern des Typs von {{1}} kann dazu führen, dass {{1}} nicht mehr funktioniert.",
+    "UNSAVED_CHANGES_Q_CONTINUE": "Nicht gespeicherte Änderungen im/in der aktuellen {{1}} gehen verloren. Möchten Sie fortfahren?"
+  },
+  "source-control": {
+    "TITLE": "Serverseitige Quellcodeverwaltung",
+    "TITLE_EXTERNAL_PAGE": "Externe Seite der Quellcodeverwaltung",
+    "TITLE_LOG_PAGE": "Protokolle der Sitzungs-Quellcodeverwaltung",
+    "UNSUPPORTED_ACTION": "Nicht unterstützte Quellcodeverwaltungsaktion",
+    "MENU_SHOW_MESSAGES_LABEL": "Meldungen zur Quellcodeverwaltung",
+    "MENU_SHOW_MESSAGES_DESCRIPTION": "Meldungen vom Quellcodeverwaltungssystem anzeigen",
+    "MENU_TOOLTIP": "Serverseitiges Quellcodeverwaltungsmenü",
+    "LOG_TABLE_TS_COLUMN": "Zeitstempel",
+    "LOG_TABLE_MESSAGE_COLUMN": "Nachricht"
+  },
+  "CONTEXT_CLASS": "Kontextklasse",
+  "CURRENT": "Aktuell",
+  "DESCRIPTION": "Beschreibung",
+  "EFFECTIVE_RANGE_LABEL": "Effektiver Bereich",
+  "LANGUAGE": "Sprache",
+  "NAME": "Name",
+  "NAMESPACE": "Namespace",
+  "OPEN_IN": "Öffnen in {{1}}",
+  "PACKAGE": "Paket",
+  "PACKAGE_NAME": "Paketname",
+  "PRODUCTION": "Produktion",
+  "TYPE": "Typ",
+  "YES": "Ja",
+  "NO": "Nein"
+}

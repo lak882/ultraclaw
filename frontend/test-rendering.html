@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Chat Rendering Test</title>
+<style>
+  :root {
+    --fr-styles-font-size-xs: .8125rem;
+    --fr-styles-font-size-3xs: .6875rem;
+    --fr-styles-color-primary: #3b3b94;
+    --chatbot-font-size: var(--fr-styles-font-size-xs);
+    --chatbot-font-size-code: var(--fr-styles-font-size-3xs);
+  }
+  body { font-family: 'Noto Sans', Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 24px; }
+  .test-container { max-width: 672px; margin: 0 auto; }
+  .test-label {
+    font-size: 10px; font-weight: 500; color: rgba(0,0,0,.35);
+    text-transform: uppercase; letter-spacing: .08em;
+    margin: 20px 0 6px; padding: 0;
+  }
+  .test-label:first-child { margin-top: 0; }
+  .msg-bubble {
+    background: white; border-radius: 8px; padding: 12px 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+</style>
+<link rel="stylesheet" href="interclaw-chatbot/chatbot.css">
+<style>
+  /* Override chatbot layout styles for standalone test */
+  html, body { overflow: auto !important; width: auto !important; height: auto !important; position: static !important; }
+</style>
+</head>
+<body>
+
+<div class="test-container" id="tests"></div>
+
+<script>
+// Stub cc namespace for renderMarkdown
+window._cc = {
+  pathPrefix: '',
+  detectNamespace: function() { return 'HSLIB'; },
+  escapeHtml: function(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; },
+  linkifyComponents: function(html) { return html; }, // skip for test
+  inferEditorType: function() { return null; }
+};
+</script>
+<script src="interclaw-chatbot/markdown.js"></script>
+<script>
+var cc = window._cc;
+
+var testCases = [
+  { label: 'Simple text', outputs: ['Updated the DTL with new field mappings. PID now maps correctly to SDA3.'] },
+  { label: 'Bullet list', outputs: ['Updated the DTL:\n\n- Mapped PID-3 to MRN\n- Added facility lookup\n- Converted date format\n\nCompiled successfully.'] },
+  { label: 'Bold paragraph breaks (was broken)', outputs: ['Updated PID mapping.\n\n**Next:** Added facility lookup.\n\n**Finally:** Pushed to server.'] },
+  { label: 'Multi output blocks', outputs: ['Pulling the existing DTL.', 'Updated the transformation with new mappings.', 'Pushed and compiled successfully.'] },
+  { label: 'Table', outputs: ['Test results:\n\n| Field | Source | Status |\n| --- | --- | --- |\n| MRN | PID-3.1 | Passed |\n| Name | PID-5 | Passed |\n| DOB | PID-7 | Passed |'] },
+  { label: 'Headers + lists', outputs: ['## Production Status\n\nRunning with 3 services.\n\n### Services\n\n- **From_HTTP** - port 9980\n- **From_File** - watching /In/\n\n### Errors\n\nNone in the last 24 hours.'] },
+  { label: 'Code block', outputs: ['Routing rule condition:\n\n```\nHL7.{MSH:MessageType.MessageCode} = "ADT"\n  && HL7.{MSH:MessageType.TriggerEvent} = "A01"\n```\n\nRoutes ADT^A01 messages to `To_FileOperation`.'] },
+  { label: 'Noise stripped: portal link', outputs: ['DTL compiled.\n\n[View in Portal](http://vmdev1:52774/csp/healthshare/hslib/EnsPortal.DTLEditor.zen)\n\nRunning auto-test.'] },
+  { label: 'Noise stripped: goto + PORTAL_URL', outputs: ['Updated DTL.\n\nPORTAL_URL: [View in Portal](http://vmdev1:52774/...)\n/goto --dtl Demo.DTL.ADTA01\n\nTest passed.'] },
+  { label: 'Noise stripped: token usage', outputs: ['Updated.\n\nToken usage: 150k in, 20k out\n\nDone.'] },
+  { label: 'Numbered list', outputs: ['Created:\n\n1. `Demo.Production` - production class\n2. `Demo.DTL.VXUToASIIS` - VXU transformation\n3. `Demo.Rule.RoutingRule` - routing logic\n\nAll compiled.'] },
+  { label: 'Blockquote (error)', outputs: ['Error from event log:\n\n> ERROR #6249: Unable to serialize the request object for visual trace display.\n\nHappens when JSON class lacks `%XML.Adaptor`.'] },
+  { label: 'Bold + inline code', outputs: ['**Important:** The `EnableStandardRequests` setting must use `Target="Host"`, not `Target="Adapter"`.'] },
+  { label: 'DTL diff output', outputs: ['Test diff:\n\n```\nSource MSH:SendingFacility  = "HOSP_A"\nTarget MSH:SendingFacility  = "MAIN_HOSPITAL"  (lookup)\n\nSource PID:DateTimeOfBirth  = "19850315"\nTarget PID:DateTimeOfBirth  = "1985-03-15"  (converted)\n```'] },
+  { label: 'Quick replies', outputs: ['Production is stopped. Start it?\n\n:::quick_replies\n["Start production", "Check errors first", "Show diagram"]\n:::'] },
+  { label: 'Short response', outputs: ['Done.'] },
+];
+
+function joinOutputs(outputs) {
+  var text = '';
+  for (var i = 0; i < outputs.length; i++) {
+    var trimmed = (outputs[i] || '').trim();
+    if (!trimmed) continue;
+    text += (text ? '\n\n' : '') + trimmed;
+  }
+  return text;
+}
+
+var container = document.getElementById('tests');
+
+testCases.forEach(function(tc) {
+  var joined = joinOutputs(tc.outputs);
+  var rendered = cc.renderMarkdownWithQuickReplies(joined);
+
+  var label = document.createElement('div');
+  label.className = 'test-label';
+  label.textContent = tc.label;
+
+  var bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.innerHTML = '<div class="msg-content">' + rendered + '</div>';
+
+  container.appendChild(label);
+  container.appendChild(bubble);
+});
+</script>
+
+</body>
+</html>

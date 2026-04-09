@@ -1,0 +1,33 @@
+Class {{PACKAGE_NAME}}.{{CLASS_NAME}} Extends Ens.BusinessProcess
+{
+
+/// {{DESCRIPTION}}
+
+Method OnRequest(pRequest As {{REQUEST_CLASS}}, Output pResponse As {{RESPONSE_CLASS}}) As %Status
+{
+    Set tSC = $$$OK
+
+    // TODO: Process the incoming request
+    // - Transform data if needed
+    // - Route to operations or other processes
+    // - Build response if synchronous
+
+    // Example: send to an operation
+    // Set tSC = ..SendRequestSync("TargetOperation", pRequest, .tResponse)
+
+    Return tSC
+}
+
+Method OnResponse(request As %Library.Persistent, ByRef response As %Library.Persistent, callrequest As %Library.Persistent, callresponse As %Library.Persistent, pCompletionKey As %String) As %Status
+{
+    // Called when an async SendRequest completes
+    Return $$$OK
+}
+
+Method OnComplete(request As %Library.Persistent, ByRef response As %Library.Persistent) As %Status
+{
+    // Called after all async calls complete
+    Return $$$OK
+}
+
+}

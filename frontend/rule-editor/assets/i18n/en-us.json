@@ -1,0 +1,234 @@
+{
+  "Settings": "Settings",
+  "Help": "Help",
+  "Profile": "Profile",
+  "About": "About",
+  "header": {
+    "ABOUT_DIALOG_APP_TITLE": "About",
+    "ABOUT_DIALOG_APP_VERSION": "Version"
+  },
+  "Logout": "Log Out",
+  "canvas": {
+    "DOUBLE_CLICK": "double-click to edit {{1}}",
+    "MOVE_DOWN": "Move Selected Element Downward",
+    "MOVE_UP": "Move Selected Element Upward",
+    "DELETE_ELEMENT": "Delete Element"
+  },
+  "file-actions": {
+    "new": {
+      "LABEL": "New"
+    },
+    "open": {
+      "LABEL": "Open"
+    },
+    "save": {
+      "LABEL": "Save",
+      "TOOLTIP": "Save this {{1}}. To apply the {{1}} to your system, you also need to compile it."
+    },
+    "compile": {
+      "LABEL": "Compile",
+      "TOOLTIP": "Save and compile this {{1}}. Compiling applies your saved {{1}} to your system."
+    },
+    "test": {
+      "LABEL": "Test",
+      "TOOLTIP": "Test this {{1}} by executing it and viewing logs."
+    },
+    "edit": {
+      "LABEL": "Edit"
+    },
+    "saveAs": {
+      "LABEL": "Save As",
+      "TOOLTIP": "Save this Rule {{1}} with a new name. To apply the {{1}} to your system, you also need to compile it."
+    }
+  },
+  "filters": {
+    "LABEL": "Filters",
+    "HIDE_SYSTEM": "Hide system",
+    "HIDE_PERCENT": "Hide percent",
+    "ONLY_SHOW_PERSISTENT": "Only show persistent"
+  },
+  "function-error": {
+    "UNKNOWN_FUNCTION": "Unknown function",
+    "VALUE_REQUIRED": "Value is required",
+    "SINGLE_ARGUMENT_REQUIRED": "{{1}} requires {{2}} argument",
+    "MULTIPLE_ARGUMENTS_REQUIRED": "{{1}} requires {{2}} arguments",
+    "RANGE_ARGUMENTS_REQUIRED": "{{1}} requires between {{2}} and {{3}} arguments"
+  },
+  "help": {
+    "SWITCH_NAMESPACE_Q": "How do I switch namespaces?",
+    "SWITCH_NAMESPACE_A": "To switch namespaces, click the dropdown menu at the top right of the screen, and navigate to 'Settings'. Then, click the 'Namespaces' dropdown menu and select the desired namespace. Be careful to save any changes in your {{1}} before switching namespaces, as unsaved changes will be lost."
+  },
+  "languages": {
+    "de": "German",
+    "en": "English",
+    "en-us": "English (United States)",
+    "es": "Spanish",
+    "fr": "French",
+    "it": "Italian",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "nl": "Dutch",
+    "pt": "Portuguese",
+    "pt-br": "Portuguese (Brazil)",
+    "ru": "Russian",
+    "uk": "Ukrainian",
+    "zh-cn": "Chinese (PRC)"
+  },
+  "log-in": {
+    "LOG_IN": "Log In",
+    "USERNAME": "Username",
+    "PASSWORD": "Password",
+    "INSUFFICIENT_PERMISSIONS": "You do not have permission to access this page.",
+    "ACCESS_DENIED": "Access Denied",
+    "INVALID_CREDENTIALS": "Invalid Credentials",
+    "SERVER_UNAVAILABLE": "Server Unavailable"
+  },
+  "modal-actions": {
+    "OK": "OK",
+    "CANCEL": "Cancel",
+    "SUBMIT": "Submit",
+    "UPDATE": "Update",
+    "CLOSE": "Close",
+    "CLEAR": "Clear",
+    "YES": "Yes",
+    "NO": "No"
+  },
+  "rule-set-table": {
+    "ADD": "Add {{1}}",
+    "ALL": "All {{1}}",
+    "EFFECTIVE_BEGIN": "Effective Begin",
+    "EFFECTIVE_END": "Effective End",
+    "effective-on": {
+      "LABEL": "Effective on {{1}}",
+      "YES": "Yes",
+      "NO": "No"
+    },
+    "ACTIONS": "Actions"
+  },
+  "snackbar-message": {
+    "READ_ONLY": "This is marked Read Only.",
+    "READ_ONLY_SC": "This is marked Read Only by Server Side Source Control.",
+    "SAVED_AND_COMPILED": "{{1}} saved and compiled.",
+    "INVALID_ASSIST_CLASS": "Invalid assist class, loaded as {{1}}",
+    "SAVED": "{{1}} saved.",
+    "SWITCHED_TO_NAMESPACE": "Switched to namespace {{1}}.",
+    "SOMETHING_WENT_WRONG": "Something went wrong!",
+    "ZOOM_PERCENT": "Zoom: {{1}}%",
+    "RULE_TEST_SUCCESSFUL": "Rule Test Complete",
+    "RULE_TEST_FAIL_DOC": "Failed to open document.",
+    "RULE_TEST_FAIL_NODOC": "No document found.",
+    "RULE_TEST_FAIL_NOCLASS": "The message class did not match the requested document class.",
+    "RULE_TEST_FAIL_NOCONTEXT": "Error creating context object.",
+    "RULE_TEST_FAIL_NOHEADER": "Failed to open message header.",
+    "RULE_TEST_FAIL_GENERAL": "Error evaluating rule.",
+    "RULE_ASSIGN_PROPERTY_FIELD": "Please enter value for property."
+  },
+  "system-mode": {
+    "LIVE": "Live System",
+    "DEVELOPMENT": "Development System",
+    "TEST": "Test System",
+    "FAILOVER": "Failover System"
+  },
+  "toolbar": {
+    "UNDO": "Undo",
+    "REDO": "Redo",
+    "ZOOM_IN": "Zoom In",
+    "ZOOM_OUT": "Zoom Out",
+    "EXPAND_ALL": "Expand All",
+    "COLLAPSE_ALL": "Collapse All",
+    "DELETE_ELEMENT": "Delete Element",
+    "SEARCH": "Search"
+  },
+  "validators": {
+    "REQUIRED": "This is a required field.",
+    "CLASS_NAME": "Class names must start with a letter followed by any number of alphanumeric characters.",
+    "PACKAGE_NAME": "Package names must start with a letter or \"%\" symbol followed by any number of alphanumeric characters.",
+    "CONTEXT_CLASS_NAME": "Context class names must comprise of valid package names separated by \".\" symbols. The first package may also start with a \"%\" symbol.",
+    "COMBINED_NAME_LENGTH": "Combined length of class name and package name must not exceed 220 characters.",
+    "CONTEXT_CLASS_NAME_LENGTH": "Length of context class name must not exceed 220 characters."
+  },
+  "warning": {
+    "TITLE": "Logout confirmation",
+    "UNSAVED_CHANGES": "Unsaved changes in the current {{1}} will be lost",
+    "CHANGING_TYPE": "Changing a {{1}}'s type may cause the {{1}} to no longer work.",
+    "UNSAVED_CHANGES_Q_CONTINUE": "Unsaved changes in the current {{1}} will be lost, do you wish to continue?",
+    "TITLE_DELETE": "Delete Element Confirmation",
+    "DELETE_Q_CONTINUE": "The element you selected will be deleted, do you wish to continue?"
+  },
+  "source-control": {
+    "TITLE": "Server Side Source Control",
+    "TITLE_EXTERNAL_PAGE": "Source Control External Page",
+    "TITLE_LOG_PAGE": "Session Source Control Logs",
+    "UNSUPPORTED_ACTION": "Unsupported Source Control Action",
+    "MENU_SHOW_MESSAGES_LABEL": "Source Control Messages",
+    "MENU_SHOW_MESSAGES_DESCRIPTION": "Show messages from source control system",
+    "MENU_TOOLTIP": "Server Side Source Control Menu",
+    "LOG_TABLE_TS_COLUMN": "Timestamp",
+    "LOG_TABLE_MESSAGE_COLUMN": "Message"
+  },
+  "rule-test": {
+    "PRODUCTION_SOURCE": "Production Source",
+    "CONTEXT": "Context",
+    "CLASS": "Class",
+    "DOCUMENT_BODY_ID": "Document Body ID",
+    "HEADER_ID": "Message Header ID",
+    "HL7_DOCUMENT_CONTENT": "Document Content",
+    "DOC_TYPE": "DocType",
+    "DOC_CATEGORY": "Category",
+    "USER_INPUT": "User Input", 
+    "TEST_RESULTS": "Test Results",
+    "TEST_DETAILS": "Test Details",
+    "RESULT_LOG_LEVEL_COLUMN": "LogLevel",
+    "RESULT_SOURCE_COLUMN": "Source",
+    "RESULT_MESSAGE_COLUMN": "Message"
+
+  },
+  "rules": {
+    "FILTER": "Filter Rule Actions"
+  },
+  "targets": {
+    "SELECTED_TARGETS": "Selected Targets",
+    "TARGET": "Target",
+    "ACTIONS": "Actions",
+    "DELETE_TARGET": "Delete Target",
+    "SELECT_TARGETS": "Filter and Select Targets"
+
+  },
+  "transforms": {
+    "SELECTED_TRANSFORMS": "Selected Transforms",
+    "TRANSFORM": "Transform",
+    "ACTIONS": "Actions",
+    "VIEW_IN_DTL_EDITOR": "View in DTL Editor",
+    "DELETE_TRANSFORM": "Delete Transform",
+    "ORDER": "Change Order",
+    "SELECT_TRANSFORMS": "Filter and Select Transforms"
+
+  },
+  "constraints": {
+    "SELECTED": "Selected",
+    "CONSTRAINT": "Contraint",
+    "ACTIONS": "Actions",
+    "SELECT_CONSTRAINTS": "Filter and Select Constraints",
+    "DELETE": "Delete"
+
+  },
+  "CONTEXT_CLASS": "Context Class",
+  "CURRENT": "Current",
+  "DESCRIPTION": "Description",
+  "EFFECTIVE_RANGE_LABEL": "Effective Range",
+  "LANGUAGE": "Language",
+  "NAME": "Name",
+  "NAMESPACE": "Namespace",
+  "OPEN_IN": "Open in {{1}}",
+  "PACKAGE": "Package",
+  "PACKAGE_NAME": "Package Name",
+  "PRODUCTION": "Production",
+  "TYPE": "Type",
+  "YES": "Yes",
+  "NO": "No", 
+  "NEXT": "Next",
+  "PREVIOUS": "Previous",
+  "VIEW RESULTS": "View Results",
+  "VIEW_MESSAGE": "View Contents"
+
+}

@@ -1,0 +1,36 @@
+# IPM packaging: exclude dev-only directories from git archive.
+# These are stripped from the published package but present in the dev repo.
+# The Installer's CleanDeployRoot() is a safety net for local zpm loads.
+
+devlogs/            export-ignore
+tests/              export-ignore
+research/           export-ignore
+architecture/       export-ignore
+roadmap/            export-ignore
+checkpoints/        export-ignore
+demos/              export-ignore
+poc-examples/       export-ignore
+docs/               export-ignore
+scripts/            export-ignore
+changelog/          export-ignore
+config/.env         export-ignore
+CLAUDE.local.md     export-ignore
+audit_log/          export-ignore
+data/               export-ignore
+logs/               export-ignore
+uploads/            export-ignore
+sync.sh             export-ignore
+sync.log            export-ignore
+sync-mirror.sh      export-ignore
+.claudeignore       export-ignore
+
+# Dev-only Claude Code config (hooks, local settings, session checkpoints)
+.claude/context/           export-ignore
+.claude/hooks/             export-ignore
+.claude/settings.local.json  export-ignore
+
+# Dev-only source: CLAUDE namespace classes (not shipped)
+src/CLAUDE/          export-ignore
+src/HSLIB/           export-ignore
+src/TESTING/         export-ignore
+src/ADTFEED/         export-ignore

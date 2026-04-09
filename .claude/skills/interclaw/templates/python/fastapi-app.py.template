@@ -1,0 +1,19 @@
+"""{{APP_NAME}} — FastAPI ASGI application running inside IRIS Embedded Python."""
+
+from fastapi import FastAPI, HTTPException
+import iris
+
+app = FastAPI(title="{{APP_NAME}}")
+
+
+@app.get("/")
+async def index():
+    """Health check / landing page."""
+    return {
+        "app": "{{APP_NAME}}",
+        "status": "running",
+        "iris_version": iris.system.Version.GetVersion()
+    }
+
+
+{{ROUTES}}

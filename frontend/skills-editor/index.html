@@ -1,0 +1,1307 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>InterClaw Skill Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="../rule-editor/favicon.ico">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+<!-- ═══ 1. ISC Design Tokens (extracted from interop-editor/rule-editor builds) ═══ -->
+<style>
+:root {
+  --fr-styles-color-primary-hsl: 238, 49%, 39%;
+  --fr-styles-color-primary: hsl(238, 49%, 39%);
+  --fr-styles-color-primary-contrast: hsl(0, 0%, 100%);
+  --fr-styles-color-secondary-hsl: 178, 100%, 32%;
+  --fr-styles-color-secondary: hsl(178, 100%, 32%);
+  --fr-styles-color-secondary-contrast: hsl(0, 0%, 100%);
+  --fr-styles-color-accent: hsl(178, 41%, 82%);
+  --fr-styles-color-white: hsl(0, 0%, 100%);
+  --fr-styles-color-near-white: hsl(0, 0%, 98%);
+  --fr-styles-color-very-light-grey: hsl(0, 0%, 95%);
+  --fr-styles-color-light-grey: hsl(0, 0%, 88%);
+  --fr-styles-color-middle-grey: hsl(0, 0%, 80%);
+  --fr-styles-color-middle-dark-grey: hsl(0, 0%, 69%);
+  --fr-styles-color-dark-grey: hsl(0, 0%, 57%);
+  --fr-styles-color-very-dark-grey: hsl(0, 0%, 39%);
+  --fr-styles-color-near-black: hsl(0, 0%, 17%);
+  --fr-styles-color-warning: hsl(0, 97%, 43%);
+  --fr-styles-color-state-focused: hsl(178, 100%, 28%);
+  --fr-styles-color-state-focused-high-contrast: hsl(178, 100%, 25%);
+  --fr-styles-color-state-disabled: hsl(0, 0%, 60%);
+  --fr-styles-font-size-3xs: 0.6875rem;
+  --fr-styles-font-size-2xs: 0.75rem;
+  --fr-styles-font-size-xs: 0.8125rem;
+  --fr-styles-font-size-sm: 0.875rem;
+  --fr-styles-font-size-base: 1rem;
+  --fr-header-height-toolbar: 42px;
+  --fr-header-border-top-toolbar: 2px;
+  --chatbot-width: 25vw;
+}
+
+/* ISC Font (local files from rule-editor — same as interop-editor) */
+@font-face {
+  font-family: 'Noto Sans'; font-style: normal; font-weight: 400;
+  src: local('Noto Sans'), local('NotoSans'),
+       url(../rule-editor/noto-sans-v9-latin-regular.dbdd323d86bb9df6.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans'; font-style: normal; font-weight: 700;
+  src: local('Noto Sans Bold'), local('NotoSans-Bold'),
+       url(../rule-editor/noto-sans-v9-latin-700.2813ebf28ffdbb0b.woff2) format('woff2');
+}
+</style>
+
+<!-- ═══ 2. Chatbot layout (identical to interop-editor line 10) ═══ -->
+<style>
+html { --chatbot-width: 25vw; }
+#app-root {
+  position: absolute;
+  inset: 0 !important;
+  right: var(--chatbot-width) !important;
+  transform: translateZ(0);
+}
+body.chatbot-auth-gate #chatbot-sidebar,
+body.chatbot-auth-gate #chatbot-toggle { display: none !important; }
+body.chatbot-auth-gate #app-root { right: 0 !important; transition: none !important; }
+</style>
+
+<!-- ═══ 3. Skills Editor styles (ISC Material Design tokens) ═══ -->
+<style>
+/* ── Reset (matches interop-editor) ────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  font-family: 'Noto Sans', 'Noto Sans Arabic', Arial, sans-serif;
+  font-size: var(--fr-styles-font-size-sm);
+  color: rgba(0,0,0,0.87);
+  background: var(--fr-styles-color-near-white);
+}
+
+/* ── App Layout ─────────────────────────────────── */
+#app-root { display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Toolbar ────────────────────────────────────── */
+#toolbar {
+  height: var(--fr-header-height-toolbar);
+  border-top: var(--fr-header-border-top-toolbar) solid var(--fr-styles-color-primary);
+  background: var(--fr-styles-color-white);
+  display: flex; align-items: center;
+  padding: 0 16px; gap: 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+  z-index: 10;
+}
+.brand {
+  font-weight: 600; font-size: var(--fr-styles-font-size-sm);
+  color: var(--fr-styles-color-primary);
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
+}
+.brand svg { width: 16px; height: 16px; fill: currentColor; }
+.breadcrumb {
+  font-size: var(--fr-styles-font-size-xs); color: rgba(0,0,0,0.54);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+}
+.breadcrumb .sep { color: rgba(0,0,0,0.26); margin: 0 3px; }
+.breadcrumb .current { color: rgba(0,0,0,0.87); font-weight: 600; }
+.toolbar-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.view-toggle {
+  display: none; gap: 1px;
+  background: var(--fr-styles-color-very-light-grey); border-radius: 4px; padding: 2px;
+}
+.view-toggle.visible { display: flex; }
+.view-toggle button {
+  border: none; background: none; padding: 3px 10px; border-radius: 3px;
+  cursor: pointer; font-family: inherit; font-size: var(--fr-styles-font-size-2xs); font-weight: 500;
+  color: rgba(0,0,0,0.54); transition: all 0.15s ease;
+}
+.view-toggle button.active {
+  background: var(--fr-styles-color-white); color: rgba(0,0,0,0.87);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+}
+.view-toggle button:hover:not(.active) { color: rgba(0,0,0,0.87); }
+
+/* ── Main ───────────────────────────────────────── */
+#main { flex: 1; display: flex; overflow: hidden; }
+
+/* ── Sidebar ────────────────────────────────────── */
+#sidebar {
+  width: 280px; min-width: 200px; max-width: 420px;
+  background: var(--fr-styles-color-white);
+  border-right: 1px solid rgba(0,0,0,0.12);
+  display: flex; flex-direction: column;
+  overflow: hidden; flex-shrink: 0;
+}
+#sidebar-search { padding: 8px 12px; flex-shrink: 0; }
+#sidebar-search input {
+  width: 100%; padding: 5px 10px;
+  border: 1px solid rgba(0,0,0,0.38); border-radius: 4px;
+  font-family: inherit; font-size: var(--fr-styles-font-size-2xs);
+  color: rgba(0,0,0,0.87); background: var(--fr-styles-color-white); outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#sidebar-search input::placeholder { color: rgba(0,0,0,0.38); }
+#sidebar-search input:focus {
+  border-color: rgba(0,0,0,0.5);
+  box-shadow: none;
+}
+#sidebar-content { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+#sidebar-content::-webkit-scrollbar { width: 4px; }
+#sidebar-content::-webkit-scrollbar-track { background: transparent; }
+#sidebar-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+#sidebar-content::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.26); }
+
+/* ── Section ────────────────────────────────────── */
+.section { margin-bottom: 0; }
+.section-header {
+  display: flex; align-items: center;
+  padding: 6px 12px; cursor: pointer; user-select: none;
+  transition: background 0.1s;
+}
+.section-header:hover { background: rgba(0,0,0,0.04); }
+.section-chevron {
+  width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: rgba(0,0,0,0.54);
+  transition: transform 0.15s ease;
+}
+.section-chevron.collapsed { transform: rotate(-90deg); }
+.section-chevron svg { width: 10px; height: 10px; }
+.section-icon {
+  width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-left: 2px; color: rgba(0,0,0,0.54);
+}
+.section-icon svg { width: 14px; height: 14px; }
+.section-label {
+  font-size: var(--fr-styles-font-size-2xs); font-weight: 600; color: rgba(0,0,0,0.54);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-left: 6px; flex: 1;
+}
+.section-count {
+  font-size: var(--fr-styles-font-size-3xs); color: rgba(0,0,0,0.38);
+}
+.section-items { overflow: hidden; }
+.section-items.collapsed { display: none; }
+
+/* ── Group (sub-section in References/Templates) ── */
+.group-header {
+  display: flex; align-items: center;
+  padding: 4px 12px 4px 24px; cursor: pointer; user-select: none;
+  transition: background 0.1s;
+}
+.group-header:hover { background: rgba(0,0,0,0.04); }
+.group-chevron {
+  width: 14px; height: 14px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: rgba(0,0,0,0.38);
+  transition: transform 0.15s ease;
+}
+.group-chevron.collapsed { transform: rotate(-90deg); }
+.group-chevron svg { width: 8px; height: 8px; }
+.group-label {
+  font-size: var(--fr-styles-font-size-2xs); font-weight: 500; color: rgba(0,0,0,0.54);
+  margin-left: 4px; flex: 1;
+}
+.group-count { font-size: var(--fr-styles-font-size-3xs); color: rgba(0,0,0,0.38); }
+.group-items.collapsed { display: none; }
+
+/* ── File item ──────────────────────────────────── */
+.file-item {
+  display: flex; align-items: center;
+  padding: 3px 12px 3px 38px; cursor: pointer; user-select: none;
+  gap: 6px; white-space: nowrap;
+  transition: background 0.1s;
+}
+/* padding-left set dynamically by JS based on depth */
+.file-item:hover { background: rgba(0,0,0,0.04); }
+.file-item.active {
+  background: rgba(0,0,0,0.06);
+}
+.file-item.active .file-name { font-weight: 600; }
+.file-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 15px; border-radius: 3px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  font-family: 'Consolas', 'Monaco', monospace;
+  flex-shrink: 0; letter-spacing: 0.3px;
+}
+.file-icon.py { background: rgba(53,114,165,0.12); color: #3572A5; }
+.file-icon.md { background: rgba(8,63,161,0.12); color: #083fa1; }
+.file-icon.json { background: rgba(180,140,10,0.12); color: #9a7b0a; }
+.file-icon.js { background: rgba(180,140,10,0.12); color: #9a7b0a; }
+.file-icon.sh { background: rgba(78,170,37,0.12); color: #3d8a1e; }
+.file-icon.cls { background: rgba(108,52,131,0.12); color: #6c3483; }
+.file-icon.cos { background: rgba(108,52,131,0.12); color: #6c3483; }
+.file-icon.template { background: rgba(108,52,131,0.12); color: #6c3483; }
+.file-icon.html { background: rgba(227,79,38,0.12); color: #c43e1c; }
+.file-icon.css { background: rgba(21,114,182,0.12); color: #1572B6; }
+.file-icon.xml { background: rgba(227,79,38,0.12); color: #c43e1c; }
+.file-icon.yaml { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
+.file-icon.yml { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
+.file-icon.toml { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
+.file-icon.cfg { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
+.file-icon.txt { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.38); }
+.file-icon.default { background: rgba(0,0,0,0.04); color: rgba(0,0,0,0.38); }
+.file-name {
+  font-size: var(--fr-styles-font-size-2xs); color: rgba(0,0,0,0.87);
+  overflow: hidden; text-overflow: ellipsis;
+}
+.override-badge {
+  font-size: 9px; font-weight: 600;
+  color: hsl(27, 96%, 50%);
+  background: hsla(27, 96%, 50%, 0.08);
+  padding: 0 4px; border-radius: 3px;
+  margin-left: auto; flex-shrink: 0; line-height: 16px;
+}
+.search-empty {
+  padding: 24px; text-align: center;
+  color: rgba(0,0,0,0.38); font-size: var(--fr-styles-font-size-2xs);
+}
+
+/* ── Resize handle ──────────────────────────────── */
+#resize-handle {
+  width: 4px; cursor: col-resize;
+  background: transparent; flex-shrink: 0;
+  transition: background 0.15s;
+}
+#resize-handle:hover, #resize-handle.active { background: var(--fr-styles-color-secondary); }
+
+/* ── Content panel ──────────────────────────────── */
+#content {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden; background: var(--fr-styles-color-near-white);
+  min-width: 0;
+}
+
+/* ── Code header ────────────────────────────────── */
+#code-header {
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+  display: none; align-items: center; gap: 10px; flex-shrink: 0;
+  background: var(--fr-styles-color-white);
+}
+#code-header .filename { font-weight: 600; font-size: var(--fr-styles-font-size-sm); color: rgba(0,0,0,0.87); }
+#code-header .lang-badge {
+  font-size: var(--fr-styles-font-size-3xs); font-weight: 600; padding: 1px 6px; border-radius: 3px;
+  background: var(--fr-styles-color-very-light-grey); color: rgba(0,0,0,0.54);
+  text-transform: uppercase;
+}
+#code-header .meta { font-size: var(--fr-styles-font-size-2xs); color: rgba(0,0,0,0.38); }
+
+/* ── Source Editor (editable textarea — serves as both source view and editor) ── */
+#source-editor {
+  flex: 1; display: none;
+  border: none; outline: none; resize: none;
+  padding: 16px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: var(--fr-styles-font-size-xs); line-height: 1.5; tab-size: 4;
+  color: rgba(0,0,0,0.87);
+  background: var(--fr-styles-color-white);
+  white-space: pre; overflow: auto;
+  width: 100%; min-width: 0;
+}
+#source-editor::placeholder { color: rgba(0,0,0,0.38); }
+
+/* ── Highlighted code view (Prism) ─────────────── */
+#code-view {
+  flex: 1; display: none;
+  margin: 0; overflow: auto;
+  background: var(--fr-styles-color-white);
+  font-size: var(--fr-styles-font-size-xs) !important;
+}
+#code-view code {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  font-size: var(--fr-styles-font-size-xs) !important;
+  line-height: 1.5 !important;
+}
+
+/* ── New file button ───────────────────────────── */
+.new-btn {
+  border: 1px solid rgba(0,0,0,0.12); background: none;
+  border-radius: 3px; padding: 2px 8px;
+  font-family: inherit; font-size: var(--fr-styles-font-size-2xs);
+  color: rgba(0,0,0,0.54); cursor: pointer;
+  transition: all 0.15s; display: flex; align-items: center; gap: 4px;
+}
+.new-btn:hover {
+  background: rgba(0,0,0,0.04);
+  color: rgba(0,0,0,0.87);
+  border-color: rgba(0,0,0,0.26);
+}
+
+/* ── Markdown view ──────────────────────────────── */
+#markdown-view {
+  flex: 1; overflow: auto;
+  padding: 24px 32px; display: none;
+  line-height: 1.6; font-size: var(--fr-styles-font-size-sm);
+}
+#markdown-view::-webkit-scrollbar { width: 6px; }
+#markdown-view::-webkit-scrollbar-track { background: transparent; }
+#markdown-view::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+#markdown-view h1 {
+  font-size: 1.5em; margin: 0.8em 0 0.4em; font-weight: 700;
+  color: var(--fr-styles-color-primary);
+  border-bottom: 1px solid var(--fr-styles-color-very-light-grey); padding-bottom: 0.3em;
+}
+#markdown-view h2 { font-size: 1.3em; margin: 0.8em 0 0.4em; font-weight: 600; color: rgba(0,0,0,0.87); }
+#markdown-view h3 { font-size: 1.1em; margin: 0.6em 0 0.3em; font-weight: 600; }
+#markdown-view p { margin: 0.5em 0; }
+#markdown-view code {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.9em; background: var(--fr-styles-color-very-light-grey);
+  padding: 1px 4px; border-radius: 3px;
+}
+#markdown-view pre {
+  background: var(--fr-styles-color-near-white);
+  border: 1px solid var(--fr-styles-color-very-light-grey);
+  border-radius: 4px; padding: 12px 16px;
+  overflow-x: auto; margin: 0.5em 0;
+}
+#markdown-view pre code { background: none; padding: 0; font-size: var(--fr-styles-font-size-xs); }
+#markdown-view ul, #markdown-view ol { padding-left: 1.5em; margin: 0.5em 0; }
+#markdown-view li { margin: 0.2em 0; }
+#markdown-view table { border-collapse: collapse; margin: 0.5em 0; width: 100%; }
+#markdown-view th, #markdown-view td {
+  border: 1px solid var(--fr-styles-color-light-grey); padding: 6px 10px;
+  text-align: left; font-size: var(--fr-styles-font-size-2xs);
+}
+#markdown-view th { background: var(--fr-styles-color-very-light-grey); font-weight: 600; }
+#markdown-view blockquote {
+  border-left: 3px solid var(--fr-styles-color-light-grey); padding-left: 12px;
+  margin: 0.5em 0; color: rgba(0,0,0,0.54);
+}
+#markdown-view a { color: var(--fr-styles-color-secondary); text-decoration: none; }
+#markdown-view a:hover { text-decoration: underline; }
+#markdown-view hr { border: none; border-top: 1px solid var(--fr-styles-color-light-grey); margin: 1em 0; }
+#markdown-view strong { font-weight: 700; }
+
+/* ── Welcome state ──────────────────────────────── */
+#welcome {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; padding: 40px; text-align: center;
+}
+#welcome .logo { width: 48px; height: 48px; fill: var(--fr-styles-color-primary); opacity: 0.2; }
+#welcome h2 { font-size: var(--fr-styles-font-size-base); color: rgba(0,0,0,0.87); font-weight: 600; }
+#welcome p { font-size: var(--fr-styles-font-size-xs); color: rgba(0,0,0,0.54); max-width: 400px; line-height: 1.5; }
+#welcome kbd {
+  display: inline-block; padding: 2px 6px;
+  background: var(--fr-styles-color-very-light-grey);
+  border: 1px solid var(--fr-styles-color-light-grey);
+  border-radius: 3px;
+  font-family: 'Consolas', monospace; font-size: var(--fr-styles-font-size-2xs);
+  color: rgba(0,0,0,0.54);
+}
+
+/* ── Status Indicator ──────────────────────────── */
+.status-indicator {
+  font-size: var(--fr-styles-font-size-2xs);
+  color: rgba(0,0,0,0.54);
+  display: flex; align-items: center; gap: 5px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.status-indicator .dot {
+  width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+}
+.status-indicator .dot.saved { background: hsl(152, 69%, 53%); }
+.status-indicator .dot.saving { background: hsl(45, 93%, 47%); animation: pulse-save 1s ease-in-out infinite; }
+.status-indicator .dot.modified { background: hsl(27, 96%, 61%); }
+@keyframes pulse-save { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+/* ── Modified Badge ────────────────────────────── */
+.modified-badge {
+  font-size: 9px; font-weight: 600;
+  color: var(--fr-styles-color-state-focused);
+  background: hsla(var(--fr-styles-color-secondary-hsl), 0.08);
+  padding: 0 4px; border-radius: 3px;
+  margin-left: auto; flex-shrink: 0; line-height: 16px;
+}
+
+/* ── Restore Button ────────────────────────────── */
+.restore-btn {
+  display: none;
+  border: 1px solid rgba(0,0,0,0.12); background: none;
+  border-radius: 3px; padding: 2px 8px;
+  font-family: inherit; font-size: var(--fr-styles-font-size-2xs);
+  color: rgba(0,0,0,0.54); cursor: pointer;
+  transition: all 0.15s;
+}
+.restore-btn:hover {
+  background: rgba(0,0,0,0.04);
+  color: rgba(0,0,0,0.87);
+  border-color: rgba(0,0,0,0.26);
+}
+.restore-btn.visible { display: inline-block; }
+
+/* ── Loading ────────────────────────────────────── */
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; color: rgba(0,0,0,0.38); font-size: var(--fr-styles-font-size-2xs);
+}
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-top-color: var(--fr-styles-color-secondary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 8px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body data-no-auth-gate>
+<script src="../interclaw-header.js"></script>
+  <div id="app-root">
+    <!-- Toolbar -->
+    <div id="toolbar">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg>
+        Skill Editor
+      </div>
+      <div class="breadcrumb" id="breadcrumb">Select a file to view</div>
+      <div class="toolbar-actions">
+        <button id="new-btn" class="new-btn" title="New custom command">+ New</button>
+        <span id="status-indicator" class="status-indicator"></span>
+        <button id="restore-btn" class="restore-btn">Restore</button>
+        <div class="view-toggle" id="view-toggle">
+          <button class="active" data-view="rendered">Rendered</button>
+          <button data-view="source">Source</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div id="main">
+      <div id="sidebar">
+        <div id="sidebar-search">
+          <input type="text" id="search-input" placeholder="Search files..." spellcheck="false">
+        </div>
+        <div id="sidebar-content">
+          <div class="loading"><div class="spinner"></div> Loading...</div>
+        </div>
+      </div>
+      <div id="resize-handle"></div>
+      <div id="content">
+        <div id="welcome">
+          <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg>
+          <h2>Skill Editor</h2>
+          <p>Browse skill files, commands, scripts, and references. Select a file from the sidebar.</p>
+          <p><kbd>Ctrl+P</kbd> to search &middot; Auto-refresh every 3s</p>
+        </div>
+        <div id="code-header">
+          <span class="filename" id="file-name"></span>
+          <span class="meta" id="file-meta"></span>
+        </div>
+        <pre id="code-view" class="line-numbers"><code></code></pre>
+        <textarea id="source-editor" spellcheck="false"></textarea>
+        <div id="markdown-view"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chatbot (identical injection as interop-editor / rule-editor) -->
+  <script src="../interclaw-chatbot.js?v=13"></script>
+
+  <!-- Prism.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-xml-doc.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-toml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ini.min.js"></script>
+  <!-- Marked.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ── API Base ──────────────────────────────────────────────────────── */
+  var pathParts = window.location.pathname.split('/ui/interop/');
+  var pathPrefix = pathParts[0] || '';
+  var API_BASE = pathPrefix + '/api/interclaw/skills-editor';
+
+  /* ── State ──────────────────────────────────────────────────────────── */
+  var state = {
+    currentFile: null,
+    currentFileData: null,
+    currentView: 'source',
+    dirty: false,
+    modifiedPaths: {},
+    sections: null,
+    expanded: { core: false, commands: false, scripts: false, references: false, templates: false },
+    expandedGroups: {},
+    refreshTimer: null,
+    saveTimer: null,
+  };
+
+  /* ── Helpers ────────────────────────────────────────────────────────── */
+  var $ = function(s) { return document.querySelector(s); };
+  var $$ = function(s) { return document.querySelectorAll(s); };
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function formatSize(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1048576).toFixed(1) + ' MB';
+  }
+
+  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+  function apiGet(endpoint, params) {
+    var url = API_BASE + endpoint;
+    if (params) {
+      url += '?' + Object.keys(params).map(function(k) {
+        return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+      }).join('&');
+    }
+    return fetch(url, { credentials: 'include' }).then(function(r) { return r.json(); });
+  }
+
+  function apiPut(endpoint, body) {
+    return fetch(API_BASE + endpoint, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      credentials: 'include',
+    }).then(function(r) { return r.json(); });
+  }
+
+  function apiPost(endpoint, body) {
+    return fetch(API_BASE + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      credentials: 'include',
+    }).then(function(r) { return r.json(); });
+  }
+
+  /* ── File icon from extension ──────────────────────────────────────── */
+  var ICON_MAP = {
+    '.py':'py', '.md':'md', '.json':'json', '.js':'js', '.sh':'sh',
+    '.cls':'cls', '.cos':'cos', '.template':'tpl', '.html':'html', '.css':'css',
+    '.xml':'xml', '.yaml':'yml', '.yml':'yml', '.toml':'toml', '.cfg':'cfg',
+    '.txt':'txt', '.conf':'cfg', '.hl7':'txt'
+  };
+  var ICON_LABELS = {
+    py:'PY', md:'MD', json:'{ }', js:'JS', sh:'$_', cls:'CLS', cos:'COS',
+    tpl:'TPL', html:'</', css:'#', xml:'</>', yml:'YML', toml:'CFG', cfg:'CFG',
+    txt:'TXT', 'default':'···'
+  };
+  function fileIconClass(ext) {
+    var cls = ICON_MAP[ext] || 'default';
+    return { cls: cls, label: ICON_LABELS[cls] || ICON_LABELS['default'] };
+  }
+
+  /* ── Prism language map ──────────────────────────────────────────── */
+  var PRISM_LANG = {
+    python:'python', json:'json', javascript:'javascript', bash:'bash',
+    yaml:'yaml', css:'css', html:'markup', xml:'markup', markdown:'markdown',
+    toml:'toml', ini:'ini'
+  };
+
+  /* ── Section definitions ────────────────────────────────────────────── */
+  var SECTIONS = [
+    { id: 'core', label: 'Core',
+      icon: '<svg viewBox="0 0 16 16"><path d="M8 1L2 4.5v7L8 15l6-3.5v-7L8 1z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>' },
+    { id: 'commands', label: 'Commands',
+      icon: '<svg viewBox="0 0 16 16"><path d="M4 5l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="12" x2="13" y2="12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' },
+    { id: 'scripts', label: 'Scripts',
+      icon: '<svg viewBox="0 0 16 16"><path d="M5 3v10M11 3v10M3 6h10M3 10h10" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>' },
+    { id: 'references', label: 'References',
+      icon: '<svg viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M10 2v3h3" fill="none" stroke="currentColor" stroke-width="1.1"/><line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1"/><line x1="5" y1="10.5" x2="9" y2="10.5" stroke="currentColor" stroke-width="1"/></svg>' },
+    { id: 'templates', label: 'Templates',
+      icon: '<svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.1"/><line x1="2" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="1"/><line x1="6" y1="6" x2="6" y2="14" stroke="currentColor" stroke-width="1"/></svg>' },
+  ];
+
+  /* ── Organize raw tree into sections ────────────────────────────────── */
+  var SKIP_RE = /__pycache__|__init__|\.pyc|\.gitkeep|node_modules|images/i;
+
+  // Filter a tree recursively, removing junk files and empty dirs
+  function filterTree(nodes) {
+    if (!nodes) return [];
+    var out = [];
+    nodes.forEach(function(n) {
+      if (SKIP_RE.test(n.path || '')) return;
+      if (n.type === 'dir') {
+        var children = filterTree(n.children);
+        if (children.length) out.push({ type: 'dir', name: n.name, path: n.path, children: children });
+      } else {
+        out.push(n);
+      }
+    });
+    // Sort: dirs first, then files, both alphabetical
+    out.sort(function(a, b) {
+      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    return out;
+  }
+
+  // Find a subtree node by path or name match
+  function findSubtree(nodes, matchRe) {
+    if (!nodes) return null;
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].type === 'dir' && (matchRe.test(nodes[i].path || '') || matchRe.test(nodes[i].name || ''))) return nodes[i];
+      if (nodes[i].type === 'dir') {
+        var found = findSubtree(nodes[i].children, matchRe);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  // Count all files in a tree recursively
+  function countFiles(nodes) {
+    if (!nodes) return 0;
+    var c = 0;
+    nodes.forEach(function(n) {
+      if (n.type === 'dir') c += countFiles(n.children);
+      else c++;
+    });
+    return c;
+  }
+
+  function organizeTree(tree, topLevelFiles) {
+    var sections = {
+      core:       { items: [], rootPath: '.claude' },
+      commands:   { tree: [] },
+      scripts:    { tree: [] },
+      references: { tree: [] },
+      templates:  { tree: [] },
+    };
+
+    // Core: SKILL.md files
+    (function findCore(items) {
+      if (!items) return;
+      items.forEach(function(it) {
+        if (it.type === 'dir') { findCore(it.children); return; }
+        if (/SKILL\.md$/.test(it.path || '')) sections.core.items.unshift(it);
+      });
+    })(tree);
+
+    if (topLevelFiles) {
+      topLevelFiles.forEach(function(f) {
+        if (f.type === 'file' && /^CLAUDE/i.test(f.name)) {
+          sections.core.items.push({ name: f.name, path: f.path, ext: f.ext || '.md' });
+        }
+      });
+    }
+
+    // Commands: preserve full subtree under .claude/commands/
+    var cmdNode = findSubtree(tree, /(?:^|\/)commands$/);
+    if (cmdNode) { sections.commands.tree = filterTree(cmdNode.children); sections.commands.rootPath = cmdNode.path; }
+
+    // Scripts: preserve full subtree under interclaw/scripts/
+    var scriptNode = findSubtree(tree, /(?:^|\/)scripts$/);
+    if (scriptNode) { sections.scripts.tree = filterTree(scriptNode.children); sections.scripts.rootPath = scriptNode.path; }
+
+    // References: preserve full subtree under interclaw/references/
+    var refNode = findSubtree(tree, /(?:^|\/)references$/);
+    if (refNode) { sections.references.tree = filterTree(refNode.children); sections.references.rootPath = refNode.path; }
+
+    // Templates: preserve full subtree under interclaw/templates/
+    var tplNode = findSubtree(tree, /(?:^|\/)templates$/);
+    if (tplNode) { sections.templates.tree = filterTree(tplNode.children); sections.templates.rootPath = tplNode.path; }
+
+    return sections;
+  }
+
+  /* ── Load modified paths from git ───────────────────────────────────── */
+  function loadModified() {
+    apiGet('/modified').then(function(paths) {
+      state.modifiedPaths = {};
+      (paths || []).forEach(function(p) { state.modifiedPaths[p] = true; });
+      renderSidebar($('#search-input').value.trim() || undefined);
+      updateRestoreButton();
+    }).catch(function() {});
+  }
+
+  /* ── Load tree ──────────────────────────────────────────────────────── */
+  function loadTree() {
+    Promise.all([
+      apiGet('/tree', { root: '.claude' }),
+      apiGet('/roots'),
+    ]).then(function(res) {
+      var tree = res[0].tree || [];
+      var roots = (res[1] && res[1].roots) || [];
+      state.sections = organizeTree(tree, roots);
+      renderSidebar();
+    }).catch(function(err) {
+      $('#sidebar-content').innerHTML =
+        '<div class="loading" style="color:var(--fr-styles-color-warning)">Failed to load: ' + esc(err.message) + '</div>';
+    });
+  }
+
+  /* ── Render sidebar ─────────────────────────────────────────────────── */
+
+  // Filter a tree by search query, keeping dirs that have matching descendants
+  function filterTreeByQuery(nodes, q) {
+    if (!q || !nodes) return nodes;
+    var out = [];
+    nodes.forEach(function(n) {
+      if (n.type === 'dir') {
+        var children = filterTreeByQuery(n.children, q);
+        if (children.length) out.push({ type: 'dir', name: n.name, path: n.path, children: children });
+      } else {
+        if (n.name.toLowerCase().indexOf(q) !== -1) out.push(n);
+      }
+    });
+    return out;
+  }
+
+  function renderSidebar(filter) {
+    var container = $('#sidebar-content');
+    container.innerHTML = '';
+    if (!state.sections) return;
+
+    var q = (filter || '').toLowerCase();
+
+    SECTIONS.forEach(function(def) {
+      var sec = state.sections[def.id];
+      if (!sec) return;
+
+      var isOpen = q ? true : state.expanded[def.id] !== false;
+      var count = 0;
+      var filtered, filteredTree;
+
+      // Core section uses flat items
+      if (sec.items) {
+        filtered = q ? sec.items.filter(function(i) { return i.name.toLowerCase().indexOf(q) !== -1; }) : sec.items;
+        count = filtered.length;
+      }
+      // Other sections use tree
+      if (sec.tree) {
+        filteredTree = q ? filterTreeByQuery(sec.tree, q) : sec.tree;
+        count = countFiles(filteredTree);
+      }
+
+      if (q && !count) return;
+
+      var sectionEl = document.createElement('div');
+      sectionEl.className = 'section';
+
+      var header = document.createElement('div');
+      header.className = 'section-header';
+      header.innerHTML =
+        '<span class="section-chevron ' + (isOpen ? '' : 'collapsed') + '">' +
+          '<svg viewBox="0 0 10 10"><path d="M2 3l3 3.5L8 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</span>' +
+        '<span class="section-icon">' + def.icon + '</span>' +
+        '<span class="section-label">' + def.label + '</span>' +
+        '<span class="section-count">' + count + '</span>';
+      header.addEventListener('click', function() {
+        state.expanded[def.id] = !state.expanded[def.id];
+        setTreeSelection('folder', def.label, sec.rootPath || def.id);
+        renderSidebar(q || undefined);
+      });
+      sectionEl.appendChild(header);
+
+      var itemsEl = document.createElement('div');
+      itemsEl.className = 'section-items' + (isOpen ? '' : ' collapsed');
+
+      if (filtered) {
+        filtered.forEach(function(item) { itemsEl.appendChild(buildFileItem(item, 0)); });
+      }
+      if (filteredTree) {
+        renderTreeNodes(filteredTree, itemsEl, def.id, 0, !!q);
+      }
+
+      sectionEl.appendChild(itemsEl);
+      container.appendChild(sectionEl);
+    });
+
+    if (!container.children.length && q) {
+      container.innerHTML = '<div class="search-empty">No matching files</div>';
+    }
+  }
+
+  function renderTreeNodes(nodes, parentEl, sectionId, depth, forceOpen) {
+    nodes.forEach(function(n) {
+      if (n.type === 'dir') {
+        parentEl.appendChild(buildFolder(sectionId, n, depth, forceOpen));
+      } else {
+        parentEl.appendChild(buildFileItem(n, depth));
+      }
+    });
+  }
+
+  function buildFolder(sectionId, dirNode, depth, forceOpen) {
+    var key = sectionId + ':' + dirNode.path;
+    var isOpen = forceOpen ? true : !!state.expandedGroups[key];
+    var fileCount = countFiles(dirNode.children);
+
+    var wrapper = document.createElement('div');
+    var header = document.createElement('div');
+    header.className = 'group-header';
+    header.style.paddingLeft = (24 + depth * 16) + 'px';
+    header.innerHTML =
+      '<span class="group-chevron ' + (isOpen ? '' : 'collapsed') + '">' +
+        '<svg viewBox="0 0 10 10"><path d="M2 3l3 3.5L8 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</span>' +
+      '<span class="group-label">' + esc(dirNode.name) + '</span>' +
+      '<span class="group-count">' + fileCount + '</span>';
+    header.addEventListener('click', function() {
+      state.expandedGroups[key] = !state.expandedGroups[key];
+      setTreeSelection('folder', dirNode.name, dirNode.path);
+      renderSidebar($('#search-input').value.trim() || undefined);
+    });
+    wrapper.appendChild(header);
+
+    var itemsEl = document.createElement('div');
+    itemsEl.className = 'group-items' + (isOpen ? '' : ' collapsed');
+    renderTreeNodes(dirNode.children, itemsEl, sectionId, depth + 1, forceOpen);
+    wrapper.appendChild(itemsEl);
+    return wrapper;
+  }
+
+  function buildFileItem(item, depth) {
+    var el = document.createElement('div');
+    el.className = 'file-item' + (depth > 0 ? ' in-group' : '');
+    el.style.paddingLeft = (28 + (depth || 0) * 16) + 'px';
+    el.dataset.path = item.path;
+    if (state.currentFile === item.path) el.classList.add('active');
+
+    var icon = fileIconClass(item.ext);
+    var badge = item.override ? '<span class="override-badge">CUSTOM</span>' : '';
+    if (!badge && state.modifiedPaths && state.modifiedPaths[item.path]) {
+      badge = '<span class="modified-badge">MODIFIED</span>';
+    }
+    el.innerHTML =
+      '<span class="file-icon ' + icon.cls + '">' + icon.label + '</span>' +
+      '<span class="file-name" title="' + esc(item.path) + '">' + esc(item.name) + '</span>' +
+      badge;
+    el.addEventListener('click', function() {
+      setTreeSelection('file', item.name, item.path);
+      openFile(item.path);
+    });
+    return el;
+  }
+
+  /* ── Tree selection tracking ────────────────────────────────────────── */
+  // Build a listing of folder contents recursively (for context)
+  function buildFolderListing(nodes, prefix, depth) {
+    if (!nodes || depth > 3) return '';
+    var lines = [];
+    nodes.forEach(function(n) {
+      var indent = '';
+      for (var i = 0; i < depth; i++) indent += '  ';
+      if (n.type === 'dir') {
+        lines.push(indent + n.name + '/');
+        lines.push(buildFolderListing(n.children, prefix, depth + 1));
+      } else {
+        lines.push(indent + n.name);
+      }
+    });
+    return lines.join('\n');
+  }
+
+  function setTreeSelection(type, name, path, content) {
+    var sel = { type: type, name: name, path: path };
+    if (type === 'file' && content !== undefined) sel.content = content;
+    if (type === 'folder') {
+      var listing = '';
+      if (state.sections) {
+        Object.keys(state.sections).forEach(function(sid) {
+          if (listing) return;
+          var sec = state.sections[sid];
+          // Section root match
+          if (sec.rootPath === path) {
+            if (sec.tree && sec.tree.length) {
+              listing = buildFolderListing(sec.tree, '', 0);
+            } else if (sec.items && sec.items.length) {
+              listing = sec.items.map(function(i) { return i.name; }).join('\n');
+            }
+            return;
+          }
+          // Search within tree for subfolder match
+          if (sec.tree) {
+            (function findDir(nodes) {
+              if (listing || !nodes) return;
+              nodes.forEach(function(n) {
+                if (listing) return;
+                if (n.type === 'dir' && n.path === path) {
+                  listing = buildFolderListing(n.children, '', 0);
+                } else if (n.type === 'dir') {
+                  findDir(n.children);
+                }
+              });
+            })(sec.tree);
+          }
+        });
+      }
+      if (listing) sel.listing = listing;
+    }
+    localStorage.setItem('interclaw-tree-selection', JSON.stringify(sel));
+    window.dispatchEvent(new CustomEvent('interclaw-tree-selection', { detail: sel }));
+  }
+
+  /* ── Open file ──────────────────────────────────────────────────────── */
+  function openFile(path) {
+    if (state.dirty) doSave();
+
+    state.currentFile = path;
+    state.dirty = false;
+    showStatus('');
+
+    var parts = path.split('/');
+    $('#breadcrumb').innerHTML = parts.map(function(p, i) {
+      return i === parts.length - 1
+        ? '<span class="current">' + esc(p) + '</span>'
+        : esc(p);
+    }).join('<span class="sep">/</span>');
+
+    $('#welcome').style.display = 'none';
+    $('#code-header').style.display = 'flex';
+    $('#code-view').style.display = 'none';
+    $('#source-editor').style.display = 'none';
+    $('#markdown-view').style.display = 'none';
+
+    apiGet('/file', { path: path }).then(function(data) {
+      if (data.error) {
+        $('#source-editor').value = 'Error: ' + data.error;
+        $('#source-editor').style.display = 'block';
+        return;
+      }
+
+      state.currentFileData = data;
+
+      // Update tree selection with file content
+      setTreeSelection('file', data.name, path, data.content);
+
+      $('#file-name').textContent = data.name;
+      $('#file-meta').textContent = formatSize(data.size);
+      $('#source-editor').value = data.content;
+
+      if (data.language === 'markdown') {
+        // Markdown: Rendered | Source toggle, default to rendered
+        renderMarkdown(data.content);
+        $('#view-toggle').classList.add('visible');
+        $('#view-toggle').innerHTML =
+          '<button data-view="rendered">Rendered</button>' +
+          '<button data-view="source">Source</button>';
+        setView('rendered');
+      } else {
+        // Code files: View (highlighted) | Edit (textarea) toggle
+        renderHighlighted(data.content, data.language);
+        $('#view-toggle').classList.add('visible');
+        $('#view-toggle').innerHTML =
+          '<button data-view="highlighted">View</button>' +
+          '<button data-view="source">Edit</button>';
+        setView('highlighted');
+      }
+
+      updateRestoreButton();
+
+      $$('.file-item').forEach(function(el) {
+        el.classList.toggle('active', el.dataset.path === path);
+      });
+    }).catch(function(err) {
+      $('#source-editor').value = 'Failed to load: ' + err.message;
+    });
+  }
+
+  function renderMarkdown(content) {
+    var view = $('#markdown-view');
+    if (typeof marked !== 'undefined') {
+      view.innerHTML = marked.parse(content, { breaks: true, gfm: true });
+      view.querySelectorAll('pre code').forEach(function(b) {
+        var m = (b.className || '').match(/language-(\w+)/);
+        if (m && Prism.languages[m[1]]) Prism.highlightElement(b);
+      });
+    } else {
+      view.innerHTML = '<pre>' + esc(content) + '</pre>';
+    }
+  }
+
+  function renderHighlighted(content, language) {
+    var codeEl = $('#code-view').querySelector('code');
+    var prismLang = PRISM_LANG[language] || 'text';
+    codeEl.className = 'language-' + prismLang;
+    codeEl.textContent = content;
+    if (Prism.languages[prismLang]) {
+      Prism.highlightElement(codeEl);
+    }
+  }
+
+  function setView(view) {
+    state.currentView = view;
+    $$('#view-toggle button').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.view === view);
+    });
+    $('#code-view').style.display = view === 'highlighted' ? 'block' : 'none';
+    $('#source-editor').style.display = view === 'source' ? 'block' : 'none';
+    $('#markdown-view').style.display = view === 'rendered' ? 'block' : 'none';
+
+    if (view === 'source') {
+      requestAnimationFrame(function() { $('#source-editor').focus(); });
+    }
+  }
+
+  /* ── Auto-save ─────────────────────────────────────────────────────── */
+  function scheduleSave() {
+    clearTimeout(state.saveTimer);
+    state.dirty = true;
+    showStatus('modified');
+    state.saveTimer = setTimeout(doSave, 1200);
+  }
+
+  function doSave() {
+    if (!state.currentFile || !state.dirty) return;
+    clearTimeout(state.saveTimer);
+
+    var content = $('#source-editor').value;
+    showStatus('saving');
+
+    apiPut('/file', { path: state.currentFile, content: content }).then(function(res) {
+      if (res.error) { showStatus('error'); return; }
+
+      state.dirty = false;
+      state.currentFileData.content = content;
+
+      if (state.currentFileData.language === 'markdown') renderMarkdown(content);
+      else if (state.currentView === 'highlighted') renderHighlighted(content, state.currentFileData.language);
+      $('#file-meta').textContent = formatSize(res.size);
+
+      showStatus('saved');
+      setTimeout(function() { if (!state.dirty) showStatus(''); }, 2000);
+
+      loadModified();
+    }).catch(function() {
+      showStatus('error');
+    });
+  }
+
+  function showStatus(type) {
+    var el = $('#status-indicator');
+    switch (type) {
+      case 'modified': el.innerHTML = '<span class="dot modified"></span> Modified'; break;
+      case 'saving': el.innerHTML = '<span class="dot saving"></span> Saving\u2026'; break;
+      case 'saved': el.innerHTML = '<span class="dot saved"></span> Saved'; break;
+      case 'error': el.innerHTML = '<span class="dot" style="background:hsl(0,97%,43%)"></span> Error'; break;
+      default: el.innerHTML = '';
+    }
+  }
+
+  /* ── Restore ───────────────────────────────────────────────────────── */
+  function restoreFile() {
+    if (!state.currentFile) return;
+    if (!confirm('Restore this file to the last committed version?')) return;
+
+    apiPost('/restore', { path: state.currentFile }).then(function(res) {
+      if (res.error) { alert('Restore failed: ' + res.error); return; }
+
+      state.dirty = false;
+      state.currentFileData.content = res.content;
+
+      $('#source-editor').value = res.content;
+      if (state.currentFileData.language === 'markdown') renderMarkdown(res.content);
+      else if (state.currentView === 'highlighted') renderHighlighted(res.content, state.currentFileData.language);
+      $('#file-meta').textContent = formatSize(res.size);
+
+      showStatus('');
+      loadModified();
+    }).catch(function(err) {
+      alert('Restore failed: ' + err.message);
+    });
+  }
+
+  function updateRestoreButton() {
+    var btn = $('#restore-btn');
+    if (state.currentFile && state.modifiedPaths[state.currentFile]) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  }
+
+  /* ── Create new file ──────────────────────────────────────────────── */
+  function createNewFile() {
+    var name = prompt('New custom command name (e.g. my-command):');
+    if (!name) return;
+    name = name.trim();
+    if (!name) return;
+    // Strip .md if user typed it; we add it
+    name = name.replace(/\.md$/i, '');
+    // Sanitize: only allow alphanumeric, hyphens, underscores
+    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+      alert('Name can only contain letters, numbers, hyphens, and underscores.');
+      return;
+    }
+    var path = '.claude/commands/custom/' + name + '.md';
+    var template = '---\nallowed-tools: Bash, Read\ndescription: Custom command\n---\n\n# ' + name + '\n\nUsage: /' + name + ' $ARGUMENTS\n\n## Steps\n\n1. ...\n';
+
+    apiPost('/file', { path: path, content: template }).then(function(res) {
+      if (res.error) { alert('Create failed: ' + res.error); return; }
+      state.expanded.commands = true;
+      loadTree();
+      loadModified();
+      setTimeout(function() { openFile(path); }, 600);
+    }).catch(function(err) {
+      alert('Create failed: ' + err.message);
+    });
+  }
+
+  /* ── Auto-refresh ───────────────────────────────────────────────────── */
+  function startAutoRefresh() {
+    if (state.refreshTimer) clearInterval(state.refreshTimer);
+    state.refreshTimer = setInterval(function() {
+      if (!state.currentFile || state.dirty) return;
+      apiGet('/file', { path: state.currentFile }).then(function(data) {
+        if (!data.error && data.content !== state.currentFileData.content) {
+          state.currentFileData.content = data.content;
+          $('#source-editor').value = data.content;
+          if (data.language === 'markdown') renderMarkdown(data.content);
+          else if (state.currentView === 'highlighted') renderHighlighted(data.content, data.language);
+          $('#file-meta').textContent = formatSize(data.size);
+        }
+      }).catch(function() {});
+    }, 3000);
+  }
+
+  /* ── Resize handle ──────────────────────────────────────────────────── */
+  (function() {
+    var handle = $('#resize-handle');
+    var sidebar = $('#sidebar');
+    var dragging = false, startX, startW;
+    handle.addEventListener('mousedown', function(e) {
+      dragging = true; startX = e.clientX; startW = sidebar.offsetWidth;
+      handle.classList.add('active');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+      if (!dragging) return;
+      var w = startW + (e.clientX - startX);
+      if (w >= 200 && w <= 420) sidebar.style.width = w + 'px';
+    });
+    document.addEventListener('mouseup', function() {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+  })();
+
+  /* ── Events ─────────────────────────────────────────────────────────── */
+  $('#search-input').addEventListener('input', function() {
+    renderSidebar(this.value.trim() || undefined);
+  });
+  $('#search-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { this.value = ''; renderSidebar(); this.blur(); }
+  });
+  $('#view-toggle').addEventListener('click', function(e) {
+    var btn = e.target.closest('button');
+    if (btn && btn.dataset.view) setView(btn.dataset.view);
+  });
+
+  // Source editor (editable — serves as both source view and editor)
+  $('#source-editor').addEventListener('input', scheduleSave);
+  $('#source-editor').addEventListener('keydown', function(e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      var ta = e.target;
+      var s = ta.selectionStart, end = ta.selectionEnd;
+      ta.value = ta.value.substring(0, s) + '    ' + ta.value.substring(end);
+      ta.selectionStart = ta.selectionEnd = s + 4;
+      scheduleSave();
+    }
+  });
+
+  $('#restore-btn').addEventListener('click', restoreFile);
+  $('#new-btn').addEventListener('click', createNewFile);
+
+  document.addEventListener('keydown', function(e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      doSave();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+      e.preventDefault();
+      $('#search-input').focus();
+      $('#search-input').select();
+    }
+  });
+
+  /* ── Expand section/group for a given file path ──────────────────────── */
+  function expandForPath(path) {
+    if (!state.sections) return;
+    var p = path || '';
+    if (/SKILL\.md$|^CLAUDE/i.test(p.split('/').pop())) {
+      state.expanded.core = true;
+    } else if (/\.claude\/commands\//.test(p)) {
+      state.expanded.commands = true;
+    } else if (/interclaw\/scripts\//.test(p)) {
+      state.expanded.scripts = true;
+    } else if (/interclaw\/references\//.test(p)) {
+      state.expanded.references = true;
+      var m = p.match(/references\/([^/]+)\//);
+      if (m) state.expandedGroups['references:' + m[1]] = true;
+    } else if (/interclaw\/templates\//.test(p)) {
+      state.expanded.templates = true;
+      var m = p.match(/templates\/([^/]+)\//);
+      if (m) state.expandedGroups['templates:' + m[1]] = true;
+    }
+    renderSidebar();
+  }
+
+  /* ── Public API for chatbot integration ─────────────────────────────── */
+  window._skillsEditor = {
+    openFile: function(path) {
+      expandForPath(path);
+      openFile(path);
+    },
+    isReady: function() { return !!state.sections; }
+  };
+
+  /* ── Init ───────────────────────────────────────────────────────────── */
+  // Clear stale tree selection on mount
+  localStorage.removeItem('interclaw-tree-selection');
+  window.dispatchEvent(new CustomEvent('interclaw-tree-selection', { detail: null }));
+
+  // Clear on unmount (navigating away)
+  window.addEventListener('pagehide', function() {
+    localStorage.removeItem('interclaw-tree-selection');
+  });
+
+  loadTree();
+  loadModified();
+  startAutoRefresh();
+
+  // Handle ?open= query param (cross-page navigation from chatbot)
+  var openParam = new URLSearchParams(window.location.search).get('open');
+  if (openParam) {
+    // Wait for tree to load, then open the file
+    var waitForTree = setInterval(function() {
+      if (state.sections) {
+        clearInterval(waitForTree);
+        expandForPath(openParam);
+        openFile(openParam);
+        // Clean up URL
+        history.replaceState(null, '', window.location.pathname);
+      }
+    }, 200);
+  }
+
+})();
+</script>
+</body>
+</html>

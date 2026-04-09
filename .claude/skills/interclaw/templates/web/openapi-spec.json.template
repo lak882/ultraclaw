@@ -1,0 +1,114 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "{{API_TITLE}}",
+    "description": "{{API_DESCRIPTION}}",
+    "version": "1.0.0"
+  },
+  "basePath": "{{BASE_PATH}}",
+  "schemes": ["http"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "{{RESOURCE_PATH}}": {
+      "get": {
+        "operationId": "{{LIST_OPERATION}}",
+        "summary": "List all {{RESOURCE_PLURAL}}",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "operationId": "{{CREATE_OPERATION}}",
+        "summary": "Create a {{RESOURCE_SINGULAR}}",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/{{RESOURCE_SINGULAR}}"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          }
+        }
+      }
+    },
+    "{{RESOURCE_PATH}}/{id}": {
+      "get": {
+        "operationId": "{{GET_OPERATION}}",
+        "summary": "Get a {{RESOURCE_SINGULAR}} by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      },
+      "put": {
+        "operationId": "{{UPDATE_OPERATION}}",
+        "summary": "Update a {{RESOURCE_SINGULAR}}",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/{{RESOURCE_SINGULAR}}"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Updated"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "{{DELETE_OPERATION}}",
+        "summary": "Delete a {{RESOURCE_SINGULAR}}",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "{{RESOURCE_SINGULAR}}": {
+      "type": "object",
+      "properties": {}
+    }
+  }
+}

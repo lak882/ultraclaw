@@ -1,0 +1,32 @@
+Class {{PACKAGE_NAME}}.Page.{{CLASS_NAME}} Extends %CSP.Page
+{
+
+Parameter CONTENTTYPE = "text/html";
+
+Parameter CHARSET = "utf-8";
+
+ClassMethod OnPreHTTP() As %Boolean
+{
+    Set %response.ContentType = "text/html"
+    Quit 1
+}
+
+ClassMethod OnPage() As %Status
+{
+    Write "<!DOCTYPE html>"
+    Write "<html><head>"
+    Write "<meta charset=""utf-8"">"
+    Write "<meta name=""viewport"" content=""width=device-width, initial-scale=1"">"
+    Write "<title>{{PAGE_TITLE}}</title>"
+    Write "<style>"
+    Write "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; }"
+    Write "</style>"
+    Write "</head><body>"
+
+    {{BODY}}
+
+    Write "</body></html>"
+    Quit $$$OK
+}
+
+}

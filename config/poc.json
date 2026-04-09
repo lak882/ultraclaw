@@ -1,0 +1,18 @@
+{
+  "poc_mode": {
+    "description": "When true, services become HTTP (testable via /send) and operations are disabled or write to file",
+    "enabled": true
+  },
+  "services": {
+    "override_to_http": true,
+    "description": "Replace TCP/SFTP/File services with HTTP services so test messages can be POSTed via send_hl7.py",
+    "enable_standard_requests": true,
+    "pool_size": 0
+  },
+  "operations": {
+    "enabled": false,
+    "override_to_file": true,
+    "description": "When override_to_file is true, operations write output to file instead of connecting to real endpoints",
+    "file_path": "/tmp/poc-output/"
+  }
+}

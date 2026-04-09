@@ -1,0 +1,43 @@
+{
+    "intersystems.servers": {
+        "vmdev1": {
+            "webServer": {
+                "scheme": "http",
+                "host": "vmdev1.iscinternal.com",
+                "port": 80,
+                "pathPrefix": "/irishealth"
+            },
+            "username": "superuser",
+            "password": "SYS"
+        },
+        "claude-dev": {
+            "webServer": {
+                "scheme": "http",
+                "host": "vmdev1.iscinternal.com",
+                "port": 80,
+                "pathPrefix": "/claude-dev"
+            },
+            "username": "superuser",
+            "password": "SYS"
+        },
+        "claude-prod": {
+            "webServer": {
+                "scheme": "http",
+                "host": "vmdev1.iscinternal.com",
+                "port": 80,
+                "pathPrefix": "/claude-prod"
+            },
+            "username": "superuser",
+            "password": "SYS"
+        },
+        "irisclaw-analytics": {
+            "webServer": {
+                "scheme": "http",
+                "host": "localhost",
+                "port": 80
+            },
+            "username": "superuser",
+            "password": "SYS"
+        }
+    }
+}

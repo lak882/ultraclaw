@@ -1,0 +1,28 @@
+Class {{PACKAGE_NAME}}.REST.Dispatch Extends %CSP.REST
+{
+
+Parameter UseSession = 0;
+
+Parameter HandleCorsRequest = 1;
+
+Parameter CHARSET = "utf-8";
+
+Parameter CONTENTTYPE = "application/json";
+
+XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
+{
+  <Routes>
+{{ROUTES}}
+  </Routes>
+}
+
+/// Pre-dispatch hook — runs before every request
+ClassMethod OnPreDispatch(pUrl As %String, pMethod As %String, ByRef pContinue As %Boolean) As %Status
+{
+    Set %response.ContentType = "application/json"
+    Quit $$$OK
+}
+
+{{METHODS}}
+
+}

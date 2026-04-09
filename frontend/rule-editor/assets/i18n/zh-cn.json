@@ -1,0 +1,161 @@
+{
+  "Settings": "设置",
+  "Help": "帮助",
+  "Profile": "配置文件",
+  "About": "关于",
+  "header": {
+    "ABOUT_DIALOG_APP_TITLE": "关于",
+    "ABOUT_DIALOG_APP_VERSION": "版本"
+  },
+  "Logout": "注销",
+  "canvas": {
+    "DOUBLE_CLICK": "双击以编辑 {{1}}",
+    "MOVE_DOWN": "下移选定元素",
+    "MOVE_UP": "上移选定元素",
+    "DELETE_ELEMENT": "删除元素"
+  },
+  "file-actions": {
+    "new": {
+      "LABEL": "新"
+    },
+    "open": {
+      "LABEL": "打开"
+    },
+    "save": {
+      "LABEL": "保存",
+      "TOOLTIP": "保存此 {{1}}。要将 {{1}} 应用于您的系统，您还需要对其进行编译。"
+    },
+    "compile": {
+      "LABEL": "编译",
+      "TOOLTIP": "保存并编译此 {{1}}。编译会将您保存的 {{1}} 应用于您的系统。"
+    },
+    "edit": {
+      "LABEL": "编辑"
+    }
+  },
+  "filters": {
+    "LABEL": "过滤器",
+    "HIDE_SYSTEM": "隐藏系统",
+    "HIDE_PERCENT": "隐藏百分比",
+    "ONLY_SHOW_PERSISTENT": "仅显示持久的"
+  },
+  "function-error": {
+    "UNKNOWN_FUNCTION": "未知函数",
+    "VALUE_REQUIRED": "值为必填项",
+    "SINGLE_ARGUMENT_REQUIRED": "{{1}} 需要 {{2}} 参数",
+    "MULTIPLE_ARGUMENTS_REQUIRED": "{{1}} 需要 {{2}} 参数",
+    "RANGE_ARGUMENTS_REQUIRED": "{{1}} 需要介于 {{2}} 和 {{3}} 之间的参数"
+  },
+  "help": {
+    "SWITCH_NAMESPACE_Q": "如何切换命名空间？",
+    "SWITCH_NAMESPACE_A": "要切换命名空间，请单击屏幕右上角的下拉菜单，然后导航到“设置”。然后单击“命名空间”下拉菜单，并选择所需的命名空间。在切换命名空间之前，请小心保存 {{1}} 中的任何更改，因为未保存的更改将丢失。"
+  },
+  "languages": {
+    "de": "德语",
+    "en": "英语",
+    "en-us": "英语（美国）",
+    "es": "西班牙语",
+    "fr": "法语",
+    "it": "意大利语",
+    "ja": "日语",
+    "ko": "韩语",
+    "nl": "荷兰语",
+    "pt": "葡萄牙语",
+    "pt-br": "葡萄牙语（巴西）",
+    "ru": "俄语",
+    "uk": "乌克兰语",
+    "zh-cn": "中文（中国）"
+  },
+  "log-in": {
+    "LOG_IN": "登录",
+    "USERNAME": "用户名",
+    "PASSWORD": "密码",
+    "INSUFFICIENT_PERMISSIONS": "您无权访问此页面。",
+    "ACCESS_DENIED": "访问被拒绝",
+    "INVALID_CREDENTIALS": "凭证无效"
+  },
+  "modal-actions": {
+    "OK": "确定",
+    "CANCEL": "取消",
+    "SUBMIT": "提交",
+    "UPDATE": "更新",
+    "CLOSE": "关闭",
+    "CLEAR": "清除"
+  },
+  "rule-set-table": {
+    "ADD": "添加 {{1}}",
+    "ALL": "全部 {{1}}",
+    "EFFECTIVE_BEGIN": "生效",
+    "EFFECTIVE_END": "失效",
+    "effective-on": {
+      "LABEL": "生效日期 {{1}}",
+      "YES": "是",
+      "NO": "否"
+    },
+    "ACTIONS": "操作"
+  },
+  "snackbar-message": {
+    "READ_ONLY": "这标记为只读。",
+    "READ_ONLY_SC": "这标记为只通过服务器端源控件读取。",
+    "SAVED_AND_COMPILED": "{{1}} 已保存并编译。",
+    "INVALID_ASSIST_CLASS": "辅助类无效，加载为 {{1}}",
+    "SAVED": "{{1}} 已保存。",
+    "SWITCHED_TO_NAMESPACE": "已切换到命名空间 {{1}}。",
+    "SOMETHING_WENT_WRONG": "出错了!",
+    "ZOOM_PERCENT": "缩放：{{1}}%"
+  },
+  "system-mode": {
+    "LIVE": "实时系统",
+    "DEVELOPMENT": "开发系统",
+    "TEST": "测试系统",
+    "FAILOVER": "故障转移系统"
+  },
+  "toolbar": {
+    "UNDO": "撤消",
+    "REDO": "重做",
+    "ZOOM_IN": "放大",
+    "ZOOM_OUT": "缩小",
+    "EXPAND_ALL": "全部展开",
+    "COLLAPSE_ALL": "全部折叠",
+    "DELETE_ELEMENT": "删除元素"
+  },
+  "validators": {
+    "REQUIRED": "这是必填字段。",
+    "CLASS_NAME": "类名称必须以字母开头，后跟任意数量的字母数字字符。",
+    "PACKAGE_NAME": "程序包名称必须以字母或“%”符号开头，后跟任意数量的字母数字字符。",
+    "CONTEXT_CLASS_NAME": "上下文类名称必须由有效的程序包名称组成，并以“.”符号隔开。第一个程序包也可以以“%”符号开头。",
+    "COMBINED_NAME_LENGTH": "类名称和程序包名称的组合长度不得超过 220 个字符。",
+    "CONTEXT_CLASS_NAME_LENGTH": "上下文类名称的长度不得超过 220 个字符。"
+  },
+  "warning": {
+    "TITLE": "注销确认",
+    "UNSAVED_CHANGES": "当前 {{1}} 中未保存的更改将丢失",
+    "CHANGING_TYPE": "更改 {{1}} 的类型可能导致 {{1}} 不再工作。",
+    "UNSAVED_CHANGES_Q_CONTINUE": "当前 {{1}}　中未保存的更改将丢失，是否要继续？"
+  },
+  "source-control": {
+    "TITLE": "服务器端源控件",
+    "TITLE_EXTERNAL_PAGE": "源控件外部页面",
+    "TITLE_LOG_PAGE": "会话源控件日志",
+    "UNSUPPORTED_ACTION": "不支持的源控件操作",
+    "MENU_SHOW_MESSAGES_LABEL": "源控件消息",
+    "MENU_SHOW_MESSAGES_DESCRIPTION": "显示来自源控件系统的消息",
+    "MENU_TOOLTIP": "服务器端源控件菜单",
+    "LOG_TABLE_TS_COLUMN": "时间戳",
+    "LOG_TABLE_MESSAGE_COLUMN": "消息"
+  },
+  "CONTEXT_CLASS": "上下文类",
+  "CURRENT": "当前",
+  "DESCRIPTION": "描述",
+  "EFFECTIVE_RANGE_LABEL": "有效范围",
+  "LANGUAGE": "语言",
+  "NAME": "名称",
+  "NAMESPACE": "命名空间",
+  "OPEN_IN": "打开方式 {{1}}",
+  "PACKAGE": "程序包",
+  "PACKAGE_NAME": "程序包名称",
+  "PRODUCTION": "生产",
+  "TYPE": "类型",
+  "YES": "是",
+  "NO": "否"
+}

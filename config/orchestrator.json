@@ -1,0 +1,225 @@
+{
+    "navigation": {
+        "enabled": true,
+        "autoNavigate": true,
+        "autoFocus": false,
+        "openInNewTab": false,
+        "preferredUI": "new",
+        "gotoOnPush": true,
+        "gotoOnCreate": true
+    },
+    "components": {
+        "production": {
+            "navigate": true,
+            "openInNewTab": false,
+            "preferredUI": "new",
+            "autoFocus": true,
+            "portalPage": "EnsPortal.ProductionConfig.zen"
+        },
+        "dataTransformation": {
+            "navigate": true,
+            "openInNewTab": true,
+            "preferredUI": "new",
+            "autoFocus": true,
+            "portalPage": "EnsPortal.DTLEditor.zen",
+            "urlSuffix": ".cls"
+        },
+        "routingRule": {
+            "navigate": true,
+            "openInNewTab": true,
+            "preferredUI": "new",
+            "autoFocus": true,
+            "portalPage": "EnsPortal.RuleEditor.zen"
+        },
+        "businessProcess": {
+            "navigate": true,
+            "openInNewTab": true,
+            "preferredUI": "new",
+            "autoFocus": false,
+            "portalPage": "EnsPortal.BPLEditor.zen"
+        },
+        "lookupTable": {
+            "navigate": true,
+            "openInNewTab": true,
+            "preferredUI": "old",
+            "autoFocus": false,
+            "portalPage": "EnsPortal.LookupSettings.zen",
+            "urlParam": "LookupTable"
+        },
+        "trace": {
+            "navigate": true,
+            "openInNewTab": true,
+            "preferredUI": "old",
+            "autoFocus": true,
+            "portalPage": "EnsPortal.VisualTrace.zen",
+            "urlParam": "SESSIONID"
+        },
+        "messageViewer": {
+            "navigate": true,
+            "openInNewTab": true,
+            "preferredUI": "old",
+            "autoFocus": false,
+            "portalPage": "EnsPortal.MessageViewer.zen"
+        },
+        "eventLog": {
+            "navigate": true,
+            "openInNewTab": true,
+            "preferredUI": "old",
+            "autoFocus": false,
+            "portalPage": "EnsPortal.EventLog.zen"
+        },
+        "businessService": {
+            "navigate": true,
+            "openInNewTab": false,
+            "preferredUI": "new",
+            "autoFocus": true
+        },
+        "businessOperation": {
+            "navigate": true,
+            "openInNewTab": false,
+            "preferredUI": "new",
+            "autoFocus": true
+        },
+        "recordMap": {
+            "navigate": true,
+            "openInNewTab": true,
+            "preferredUI": "old",
+            "autoFocus": false,
+            "portalPage": "EnsPortal.RecordMapper.zen"
+        }
+    },
+    "tabs": {
+        "maxTabs": 5,
+        "reuseExisting": true,
+        "closeOnReset": true
+    },
+    "display": {
+        "showStatusMessages": true,
+        "showToolUse": true,
+        "showSystemMessages": false,
+        "fontSize": "xs",
+        "defaultModel": "sonnet",
+        "sidebarWidth": 400,
+        "sidebarPosition": "right"
+    },
+    "session": {
+        "persistChat": true,
+        "autoConnect": true,
+        "autoReconnectOnNamespaceChange": true,
+        "defaultServer": "vmdev1"
+    },
+    "learning": {
+        "enabled": false,
+        "mode": "propose",
+        "targets": {
+            "gotchas": true,
+            "references": true,
+            "templates": true,
+            "patterns": true
+        },
+        "safety": {
+            "requireApproval": true,
+            "maxGotchasPerSession": 5,
+            "maxNewFilesPerSession": 3,
+            "forbiddenPaths": [
+                "config/servers.json",
+                ".claude/settings.local.json",
+                ".claude/skills/*/scripts/*.py",
+                ".claude/commands/*.md"
+            ]
+        },
+        "log": {
+            "enabled": true,
+            "path": "logs/learning.jsonl"
+        }
+    },
+    "cost": {
+        "position": "top",
+        "showOnReadOnly": false,
+        "showOnCreate": true,
+        "format": "{input} input · {output} output · {duration} · {cost}",
+        "pricing": {
+            "inputPerMTok": 3,
+            "outputPerMTok": 15
+        },
+        "createCommands": ["dtl", "production", "rule", "bpl", "poc", "json-adapter", "host", "lookup", "push", "reset", "reset-force", "interview"],
+        "readOnlyCommands": ["list", "pull", "trace", "errors", "connect", "send", "diagram", "validate", "cost"]
+    },
+    "permissions": {
+        "mode": "normal",
+        "modes": {
+            "strict": {
+                "description": "Require confirmation for all destructive operations",
+                "confirmBeforePush": true,
+                "confirmBeforeReset": true,
+                "confirmBeforeDelete": true,
+                "confirmBeforeProductionStateChange": true,
+                "confirmBeforeSend": true,
+                "allowFileEdits": false,
+                "allowServerEdits": false,
+                "dryRunFirst": true
+            },
+            "normal": {
+                "description": "Confirm destructive operations, allow standard edits",
+                "confirmBeforePush": false,
+                "confirmBeforeReset": true,
+                "confirmBeforeDelete": true,
+                "confirmBeforeProductionStateChange": false,
+                "confirmBeforeSend": false,
+                "allowFileEdits": true,
+                "allowServerEdits": true,
+                "dryRunFirst": true
+            },
+            "permissive": {
+                "description": "Allow edits without confirmation, confirm only resets/deletes",
+                "confirmBeforePush": false,
+                "confirmBeforeReset": true,
+                "confirmBeforeDelete": true,
+                "confirmBeforeProductionStateChange": false,
+                "confirmBeforeSend": false,
+                "allowFileEdits": true,
+                "allowServerEdits": true,
+                "dryRunFirst": false
+            },
+            "dangerously-skip-permissions": {
+                "description": "No confirmations, full auto \u2014 use with caution",
+                "confirmBeforePush": false,
+                "confirmBeforeReset": false,
+                "confirmBeforeDelete": false,
+                "confirmBeforeProductionStateChange": false,
+                "confirmBeforeSend": false,
+                "allowFileEdits": true,
+                "allowServerEdits": true,
+                "dryRunFirst": false
+            }
+        },
+        "guardrails": {
+            "neverDeleteWithRunningProduction": true,
+            "alwaysBackupBeforeDeploy": true,
+            "maxResetPackagesPerCommand": 3,
+            "requireNamespaceMatch": true
+        }
+    },
+    "telemetry": {
+        "enabled": true,
+        "logPath": "data/telemetry",
+        "retentionDays": 90
+    },
+    "gitlab": {
+        "url": "",
+        "projectId": "",
+        "token": "",
+        "branchPrefix": "skills/",
+        "defaultLabels": ["interclaw"]
+    },
+    "feedback": {
+        "enabled": true,
+        "provider": "github",
+        "github": {
+            "repo": "lak882/claude-connector-gitlab-mirror",
+            "credentialId": "GitHubFeedback",
+            "labels": ["feedback"]
+        },
+        "categories": ["bug", "feature-request", "general", "praise"]
+    }
+}

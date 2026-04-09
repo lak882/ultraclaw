@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Category name="StClairCustom" description="St. Clair Health custom schema with ZPN and ZIN segments" base="2.5.1">
+
+  <!-- Message Types: map trigger events to custom structure -->
+  <MessageType name='ADT_A01' structure='ADT_A01_Z' returntype='ACK'/>
+  <MessageType name='ADT_A04' structure='ADT_A01_Z' returntype='ACK'/>
+  <MessageType name='ADT_A08' structure='ADT_A01_Z' returntype='ACK'/>
+  <MessageType name='ADT_A13' structure='ADT_A01_Z' returntype='ACK'/>
+  <MessageType name='ADT_A31' structure='ADT_A01_Z' returntype='ACK'/>
+
+  <!-- Custom message structure: ADT_A01 with ZPN and ZIN appended -->
+  <MessageStructure name='ADT_A01_Z'
+    definition='MSH~EVN~PID~[~PD1~]~[~{~ROL~}~]~[~{~NK1~}~]~PV1~[~PV2~]~[~{~ROL~}~]~[~{~DB1~}~]~[~{~OBX~}~]~[~{~AL1~}~]~[~{~DG1~}~]~[~DRG~]~[~{~PR1~[~{~ROL~}~]~}~]~[~{~GT1~}~]~[~{~IN1~[~IN2~]~[~{~IN3~}~]~[~{~ROL~}~]~}~]~[~ACC~]~[~UB1~]~[~UB2~]~[~PDA~]~[~ZPN~]~[~ZIN~]'/>
+
+  <!-- ZPN: Custom Provider/Notes segment (15 fields) -->
+  <SegmentStructure name='ZPN' description='Custom Provider/Notes Segment'>
+    <SegmentSubStructure piece='1' description='Set ID' datatype='SI' max_length='4' required='O'/>
+    <SegmentSubStructure piece='2' description='Provider Code' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='3' description='Provider Name' datatype='ST' max_length='200' required='O'/>
+    <SegmentSubStructure piece='4' description='Provider Type' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='5' description='Department' datatype='ST' max_length='100' required='O'/>
+    <SegmentSubStructure piece='6' description='Location Code' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='7' description='Phone Number' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='8' description='Fax Number' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='9' description='Email' datatype='ST' max_length='200' required='O'/>
+    <SegmentSubStructure piece='10' description='NPI' datatype='ST' max_length='20' required='O'/>
+    <SegmentSubStructure piece='11' description='License Number' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='12' description='Specialty Code' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='13' description='Effective Date' datatype='TS' max_length='26' required='O'/>
+    <SegmentSubStructure piece='14' description='Expiration Date' datatype='TS' max_length='26' required='O'/>
+    <SegmentSubStructure piece='15' description='Notes' datatype='ST' max_length='500' required='O'/>
+  </SegmentStructure>
+
+  <!-- ZIN: Custom Insurance segment (4 fields) -->
+  <SegmentStructure name='ZIN' description='Custom Insurance Segment'>
+    <SegmentSubStructure piece='1' description='Set ID' datatype='SI' max_length='4' required='O'/>
+    <SegmentSubStructure piece='2' description='Insurance Plan Code' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='3' description='Coverage Type' datatype='ST' max_length='50' required='O'/>
+    <SegmentSubStructure piece='4' description='Authorization Notes' datatype='ST' max_length='500' required='O'/>
+  </SegmentStructure>
+
+</Category>

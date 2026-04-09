@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+  <Document name="interclaw.ZPM">
+    <Module>
+      <Name>interclaw</Name>
+      <Version>0.1.0</Version>
+      <Description>InterClaw — AI-powered interoperability skill for InterSystems IRIS. Custom Interop Editor frontend with chatbot sidebar, Python automation scripts, and Claude Code integration for building productions via natural language.</Description>
+      <Keywords>claude,interoperability,ai,chatbot,hl7,production,dtl</Keywords>
+      <Author>
+        <Person>Louis Kabelka</Person>
+        <Organization>InterSystems</Organization>
+        <CopyrightDate>2026</CopyrightDate>
+      </Author>
+      <Packaging>module</Packaging>
+
+      <!-- ═══════════════════════════════════════════════════════
+           Deployed content: repo root -> ${cspDir}interclaw/
+           FileCopy deploys the repo, WebApplication creates the web app
+           pointing directly at frontend/ (no Installer fixup needed).
+           The Installer's CleanDeployRoot removes non-shipped content.
+
+           Deployed layout on IRIS:
+             ${cspDir}interclaw/
+               frontend/          ← Angular editors + chatbot (web-served)
+               .claude/           ← Skills, scripts, commands (not web-served)
+               config/            ← Runtime config (not web-served)
+               filedrop/          ← HL7 message drops (not web-served)
+               CLAUDE.md          ← Claude Code project instructions
+               requirements.txt   ← Python dependencies
+           ═══════════════════════════════════════════════════════ -->
+      <FileCopy Name="/" InstallDirectory="${cspDir}interclaw/" />
+      <WebApplication
+        Name="/ui/interop/interclaw"
+        NameSpace="{$namespace}"
+        MatchRoles=":%All"
+        ServeFiles="1"
+        Recurse="1"
+        Path="${cspDir}interclaw/frontend/"
+        AutheEnabled="#{$$$AutheUnauthenticated}"
+        CookiePath="/ui/interop/interclaw/"
+        UseCookies="2"
+      />
+
+      <!-- ═══════════════════════════════════════════════════════
+           ObjectScript classes: compiled into the target namespace.
+
+           InterClaw.PKG (63 classes):
+             Core:      Installer, Reset, Production, AuditEntry, ChangeLog
+             Pipeline:  BS.ChatService, BP.ChatProcess, BO.WebSocketOperation,
+                        BO.EventHTTPOperation, BPL.*, REST.Dispatch, Bridge.*,
+                        Msg.* (13 event types), Production
+             Analytics: BS.*, BP.EventStorageProcess, BO.*, Log.* (7 tables),
+                        Msg.SessionLogRequest, SessionLog, Production
+             Portal:    Home, MenuItems, Setup
+             REST:      Dispatch (legacy), ChatBridge, SkillsEditor.Dispatch
+             WS:        Chat
+             BS/BO/Msg: ChatbotBackend, ScriptAudit, AuditLog, ConversationLog,
+                        GitHubFeedback, EventListener, message classes
+
+           EnsLib.Hub.UI.Application (1 class):
+             Portal menu hook — injected via package mapping.
+           ═══════════════════════════════════════════════════════ -->
+      <SourcesRoot>src</SourcesRoot>
+      <Resource Name="InterClaw.PKG"/>
+      <Resource Name="EnsLib.Hub.UI.Application.CLS"/>
+
+      <!-- ═══════════════════════════════════════════════════════
+           Post-install hook: idempotent setup
+           IPM deploys files as irisusr:irisusr with 775 permissions.
+           See InterClaw.Installer class header for full step list.
+           ═══════════════════════════════════════════════════════ -->
+      <Invokes>
+        <Invoke Class="InterClaw.Installer" Method="Setup" />
+      </Invokes>
+
+      <SystemRequirements Version=">=2025.1" Interoperability="enabled" />
+    </Module>
+  </Document>
+</Export>

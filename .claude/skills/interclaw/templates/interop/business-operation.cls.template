@@ -1,0 +1,35 @@
+Class {{PACKAGE_NAME}}.{{CLASS_NAME}} Extends Ens.BusinessOperation
+{
+
+/// {{DESCRIPTION}}
+Parameter ADAPTER = "{{ADAPTER_CLASS}}";
+
+Property Adapter As {{ADAPTER_CLASS}};
+
+Parameter INVOCATION = "Queue";
+
+Method {{HANDLER_METHOD}}(pRequest As {{REQUEST_CLASS}}, Output pResponse As {{RESPONSE_CLASS}}) As %Status
+{
+    Set tSC = $$$OK
+
+    // TODO: Handle the request using the adapter
+    // Example for HTTP:
+    //   Set tSC = ..Adapter.SendFormDataArray(.tHTTPResponse, "POST", ..Adapter.URL, ...)
+    // Example for File:
+    //   Set tSC = ..Adapter.PutString(pRequest.Content, pRequest.Filename)
+    // Example for TCP:
+    //   Set tSC = ..Adapter.SendMessageString(pRequest.Content, .tResponse)
+
+    Return tSC
+}
+
+XData MessageMap
+{
+<MapItems>
+  <MapItem MessageType="{{REQUEST_CLASS}}">
+    <Method>{{HANDLER_METHOD}}</Method>
+  </MapItem>
+</MapItems>
+}
+
+}

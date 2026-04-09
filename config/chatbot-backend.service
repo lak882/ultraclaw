@@ -1,0 +1,15 @@
+[Unit]
+Description=InterClaw Chatbot Backend
+After=network.target iris.service
+
+[Service]
+Type=simple
+User=lkabelka
+WorkingDirectory=/usr/local/InterSystems/interop-agent-orchestrator
+ExecStart=/usr/local/InterSystems/IRISHealth/bin/irispython /usr/local/InterSystems/IRISHealth/csp/interclaw/python/rest_server.py
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

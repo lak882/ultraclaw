@@ -1,0 +1,161 @@
+{
+  "Settings": "Configuración",
+  "Help": "Ayuda",
+  "Profile": "Perfil",
+  "About": "Acerca de",
+  "header": {
+    "ABOUT_DIALOG_APP_TITLE": "Acerca de",
+    "ABOUT_DIALOG_APP_VERSION": "Versión"
+  },
+  "Logout": "Cerrar sesión",
+  "canvas": {
+    "DOUBLE_CLICK": "hacer doble clic para editar {{1}}",
+    "MOVE_DOWN": "Bajar el elemento seleccionado",
+    "MOVE_UP": "Subir elemento seleccionado",
+    "DELETE_ELEMENT": "Eliminar elemento"
+  },
+  "file-actions": {
+    "new": {
+      "LABEL": "Nuevo"
+    },
+    "open": {
+      "LABEL": "Abrir"
+    },
+    "save": {
+      "LABEL": "Guardar",
+      "TOOLTIP": "Guarde este {{1}}. Para aplicar el {{1}} a su sistema, también debe compilarlo."
+    },
+    "compile": {
+      "LABEL": "Compilar",
+      "TOOLTIP": "Guarde y compile este {{1}}. La compilación aplica su {{1}} guardado a su sistema."
+    },
+    "edit": {
+      "LABEL": "Editar"
+    }
+  },
+  "filters": {
+    "LABEL": "Filtros",
+    "HIDE_SYSTEM": "Ocultar sistema",
+    "HIDE_PERCENT": "Ocultar porcentaje",
+    "ONLY_SHOW_PERSISTENT": "Mostrar solo persistente"
+  },
+  "function-error": {
+    "UNKNOWN_FUNCTION": "Función desconocida",
+    "VALUE_REQUIRED": "El valor es obligatorio",
+    "SINGLE_ARGUMENT_REQUIRED": "{{1}} requiere {{2}} argumento",
+    "MULTIPLE_ARGUMENTS_REQUIRED": "{{1}} requiere {{2}} argumentos",
+    "RANGE_ARGUMENTS_REQUIRED": "{{1}} requiere entre {{2}} y {{3}} argumentos"
+  },
+  "help": {
+    "SWITCH_NAMESPACE_Q": "¿Cómo cambio los namespaces?",
+    "SWITCH_NAMESPACE_A": "Para cambiar los namespaces, haga clic en el menú desplegable en la parte superior derecha de la pantalla y vaya a “Configuración”. A continuación, haga clic en el menú desplegable “Namespaces” y seleccione el namespace deseado. Tenga cuidado de guardar los cambios en su {{1}} antes de cambiar los namespaces, ya que los cambios no guardados se perderán."
+  },
+  "languages": {
+    "de": "Alemán",
+    "en": "Inglés",
+    "en-us": "Inglés (Estados Unidos)",
+    "es": "Español",
+    "fr": "Francés",
+    "it": "Italiano",
+    "ja": "Japonés",
+    "ko": "Coreano",
+    "nl": "Holandés",
+    "pt": "Portugués",
+    "pt-br": "Portugués (Brasil)",
+    "ru": "Ruso",
+    "uk": "Ucraniano",
+    "zh-cn": "Chino (PRC)"
+  },
+  "log-in": {
+    "LOG_IN": "Iniciar sesión",
+    "USERNAME": "Nombre de usuario",
+    "PASSWORD": "Contraseña",
+    "INSUFFICIENT_PERMISSIONS": "No tiene permiso para acceder a esta página.",
+    "ACCESS_DENIED": "Se ha denegado el acceso",
+    "INVALID_CREDENTIALS": "Credenciales no válidas"
+  },
+  "modal-actions": {
+    "OK": "Aceptar",
+    "CANCEL": "Cancelar",
+    "SUBMIT": "Enviar",
+    "UPDATE": "Actualizar",
+    "CLOSE": "Cerrar",
+    "CLEAR": "Eliminar"
+  },
+  "rule-set-table": {
+    "ADD": "Agregar {{1}}",
+    "ALL": "Todos {{1}}",
+    "EFFECTIVE_BEGIN": "Inicio efectivo",
+    "EFFECTIVE_END": "Fin efectivo",
+    "effective-on": {
+      "LABEL": "Efectivo el {{1}}",
+      "YES": "Sí",
+      "NO": "No"
+    },
+    "ACTIONS": "Acciones"
+  },
+  "snackbar-message": {
+    "READ_ONLY": "Esto está marcado como Solo lectura.",
+    "READ_ONLY_SC": "Esto está marcado como Solo lectura por el control de origen del lado del servidor.",
+    "SAVED_AND_COMPILED": "{{1}} guardados y compilados.",
+    "INVALID_ASSIST_CLASS": "Clase de asistencia no válida, cargada como {{1}}",
+    "SAVED": "{{1}} guardado.",
+    "SWITCHED_TO_NAMESPACE": "Se ha cambiado al namespace {{1}}.",
+    "SOMETHING_WENT_WRONG": "¡Se ha producido un error!",
+    "ZOOM_PERCENT": "Zoom: {{1}}%"
+  },
+  "system-mode": {
+    "LIVE": "Sistema en vivo",
+    "DEVELOPMENT": "Sistema de desarrollo",
+    "TEST": "Sistema de pruebas",
+    "FAILOVER": "Sistema de conmutación por error"
+  },
+  "toolbar": {
+    "UNDO": "Deshacer",
+    "REDO": "Rehacer",
+    "ZOOM_IN": "Acercar",
+    "ZOOM_OUT": "Alejar",
+    "EXPAND_ALL": "Ampliar todos",
+    "COLLAPSE_ALL": "Contraer todos",
+    "DELETE_ELEMENT": "Eliminar elemento"
+  },
+  "validators": {
+    "REQUIRED": "Este es un campo obligatorio.",
+    "CLASS_NAME": "Los nombres de clase deben comenzar con una letra seguida de caracteres alfanuméricos.",
+    "PACKAGE_NAME": "El nombre del paquete debe comenzar con una letra o el símbolo “%” seguido de caracteres alfanuméricos.",
+    "CONTEXT_CLASS_NAME": "Los nombres de clase de contexto deben incluir nombres de paquetes válidos separados por símbolos “.”. El primer paquete también puede comenzar con un símbolo “%”.",
+    "COMBINED_NAME_LENGTH": "La longitud combinada del nombre de clase y el nombre de paquete no debe superar los 220 caracteres.",
+    "CONTEXT_CLASS_NAME_LENGTH": "La longitud del nombre de clase de contexto no debe superar los 220 caracteres."
+  },
+  "warning": {
+    "TITLE": "Confirmación de cierre de sesión",
+    "UNSAVED_CHANGES": "Los cambios no guardados en el {{1}} actual se perderán",
+    "CHANGING_TYPE": "El cambio del tipo de {{1}} puede hacer que {{1}} deje de funcionar.",
+    "UNSAVED_CHANGES_Q_CONTINUE": "Los cambios no guardados en el actual {{1}} se perderán, ¿desea continuar?"
+  },
+  "source-control": {
+    "TITLE": "Control de origen del lado del servidor",
+    "TITLE_EXTERNAL_PAGE": "Página externa de control de origen",
+    "TITLE_LOG_PAGE": "Registros de control de origen de sesión",
+    "UNSUPPORTED_ACTION": "Acción de control de origen no compatible",
+    "MENU_SHOW_MESSAGES_LABEL": "Mensajes de control de origen",
+    "MENU_SHOW_MESSAGES_DESCRIPTION": "Mostrar mensajes del sistema de control de origen",
+    "MENU_TOOLTIP": "Menú de control de origen del lado del servidor",
+    "LOG_TABLE_TS_COLUMN": "Marca de tiempo",
+    "LOG_TABLE_MESSAGE_COLUMN": "Mensaje"
+  },
+  "CONTEXT_CLASS": "Clase de contexto",
+  "CURRENT": "Actual",
+  "DESCRIPTION": "Descripción",
+  "EFFECTIVE_RANGE_LABEL": "Rango efectivo",
+  "LANGUAGE": "Idioma",
+  "NAME": "Nombre",
+  "NAMESPACE": "Namespace",
+  "OPEN_IN": "Abrir en {{1}}",
+  "PACKAGE": "Paquete",
+  "PACKAGE_NAME": "Nombre de paquete",
+  "PRODUCTION": "Producción",
+  "TYPE": "Tipo",
+  "YES": "Sí",
+  "NO": "No"
+}

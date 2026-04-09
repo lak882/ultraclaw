@@ -1,0 +1,8 @@
+Class {{PACKAGE_NAME}}.{{CLASS_NAME}} Extends Ens.Request
+{
+
+/// {{DESCRIPTION}}
+
+{{PROPERTIES}}
+
+}
