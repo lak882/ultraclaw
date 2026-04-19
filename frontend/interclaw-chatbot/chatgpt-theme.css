@@ -523,3 +523,123 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
   background: rgba(59, 59, 148, 0.18);
   color: var(--v0-gray-1000);
 }
+
+/* ========================================================================
+   Chatbar (composer) — ChatGPT port
+   Scoped to #chatbot-sidebar .chatbot-input-wrapper. Mirrors the live
+   ChatGPT composer captured in references/design-systems/ChatGPT.html:
+     - 28px rounded outer surface (matches `style="border-radius:28px"`)
+     - transparent border by default, soft drop shadow
+     - slightly deeper shadow on focus-within
+     - 36px circular send button (h-9 w-9), black primed / gray inactive
+     - mode label and icon buttons sit flush, no boxy backgrounds
+   Rollback: delete this block.
+   ======================================================================== */
+#chatbot-sidebar .chatbot-input-container {
+  padding: 12px 16px 16px !important;
+  background: transparent !important;
+}
+
+#chatbot-sidebar .chatbot-input-wrapper {
+  border-radius: 28px !important;
+  border: 1px solid transparent !important;
+  background: #ffffff !important;
+  padding: 10px 12px !important;
+  gap: 2px !important;
+  box-shadow:
+    0 0.25rem 1.25rem rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease !important;
+}
+
+#chatbot-sidebar .chatbot-input-wrapper.expanded {
+  border-radius: 28px !important;
+}
+
+#chatbot-sidebar .chatbot-input-wrapper:focus-within,
+#chatbot-sidebar .chatbot-input-wrapper.active {
+  border-color: transparent !important;
+  box-shadow:
+    0 0.5rem 1.75rem rgba(0, 0, 0, 0.10),
+    0 2px 4px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Internal divider fades away — ChatGPT's composer is a single surface */
+#chatbot-sidebar .chatbot-input-divider {
+  border-top-color: transparent !important;
+}
+
+/* Textarea: 4px horizontal padding on label, 15px text matches ChatGPT base */
+#chatbot-sidebar .chatbot-input-wrapper .chatbot-input {
+  padding: 6px 4px !important;
+  font-size: 15px !important;
+  line-height: 22px !important;
+  color: #0d0d0d !important;
+}
+#chatbot-sidebar .chatbot-input-wrapper .chatbot-input::placeholder {
+  color: rgba(13, 13, 13, 0.45) !important;
+}
+
+/* Bottom row: flatten icon buttons — no hover pill, just icon tint swap */
+#chatbot-sidebar .chatbot-input-bottom {
+  padding: 0 !important;
+}
+#chatbot-sidebar .chatbot-upload-btn,
+#chatbot-sidebar .chatbot-cmd-btn {
+  width: 32px !important;
+  height: 32px !important;
+  color: #5d5d5d !important;
+  border-radius: 50% !important;
+}
+#chatbot-sidebar .chatbot-upload-btn:hover,
+#chatbot-sidebar .chatbot-cmd-btn:hover {
+  color: #0d0d0d !important;
+  background: rgba(13, 13, 13, 0.06) !important;
+}
+#chatbot-sidebar .chatbot-cmd-btn.active {
+  color: #0d0d0d !important;
+  background: rgba(13, 13, 13, 0.08) !important;
+  border-radius: 50% !important;
+}
+
+#chatbot-sidebar .chatbot-mode-label {
+  color: #5d5d5d !important;
+  font-size: 13px !important;
+  padding: 6px 10px !important;
+  border-radius: 999px !important;
+}
+#chatbot-sidebar .chatbot-mode-label:hover {
+  color: #0d0d0d !important;
+  background: rgba(13, 13, 13, 0.06) !important;
+}
+#chatbot-sidebar .chatbot-mode-label.active {
+  color: #0d0d0d !important;
+  background: rgba(13, 13, 13, 0.08) !important;
+  border-radius: 999px !important;
+}
+
+/* Send button: 36px round, black primed / light-gray inactive */
+#chatbot-sidebar .chatbot-send-btn {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: #ececec !important;
+  color: #8e8e8e !important;
+}
+#chatbot-sidebar .chatbot-send-btn.active {
+  background: #0d0d0d !important;
+  color: #ffffff !important;
+}
+#chatbot-sidebar .chatbot-send-btn.active:hover {
+  background: #262626 !important;
+}
+#chatbot-sidebar .chatbot-stop-btn {
+  background: #0d0d0d !important;
+  color: #ffffff !important;
+}
+#chatbot-sidebar .chatbot-stop-btn:hover { background: #262626 !important; }
+
+/* Attachment chip tray sits flush with the rounded surface */
+#chatbot-sidebar .chatbot-attachments-divider {
+  border-top-color: transparent !important;
+}

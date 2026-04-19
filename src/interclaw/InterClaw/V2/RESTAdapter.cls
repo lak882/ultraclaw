@@ -36,10 +36,17 @@ ClassMethod Health() As %Status
 
 ClassMethod ReadBody() As %String
 {
+    // Force UTF-8 decoding. The frontend always sends JSON as UTF-8, but CSP
+    // may hand us a stream whose TranslateTable defaults to the session
+    // charset (not UTF-8), which mojibakes multibyte characters like "·"
+    // into "Â·" and later double-encodes them on write.
     Set body = ""
     If $IsObject(%request.Content) {
         Set stream = %request.Content
+        Try { Set stream.TranslateTable = "RAW" } Catch {}
+        Do stream.Rewind()
         While 'stream.AtEnd { Set body = body _ stream.Read(32000) }
+        Set body = $ZConvert(body, "I", "UTF8")
     }
     Return body
 }
