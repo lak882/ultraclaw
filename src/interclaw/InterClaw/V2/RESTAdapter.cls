@@ -23,6 +23,7 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 <Route Url="/api/chats/:id"  Method="GET"  Call="ChatsGet"/>
 <Route Url="/api/chats/:id"  Method="PUT"  Call="ChatsPut"/>
 <Route Url="/api/chats/:id"  Method="DELETE" Call="ChatsDelete"/>
+<Route Url="/api/chats/:id/retitle" Method="POST" Call="ChatsRetitle"/>
 <Route Url="/api/portal-urls" Method="GET" Call="PortalUrls"/>
 </Routes>
 }
@@ -353,6 +354,28 @@ ClassMethod PortalUrls() As %Status
         Set ^Inteclaw.PortalUrlsCache("body") = raw
         Set ^Inteclaw.PortalUrlsCache("mtime") = mtime
         Write raw
+    } Catch ex {
+        Set %response.Status = "500 Internal Server Error"
+        Write "{""error"":""" _ $Replace(ex.DisplayString(), """", "\""") _ """}"
+    }
+    Return $$$OK
+}
+
+/// POST /api/chats/:id/retitle — ask Haiku to summarize the last 10 turns
+/// into a fresh title. Returns {"title":"..."} on success or {"title":""}
+/// when the title is locked, the chat is missing, or the model call fails.
+/// The frontend fires this every few turns; failures are silent by design
+/// so a flaky Bedrock call never breaks the chat UI.
+ClassMethod ChatsRetitle(id As %String) As %Status
+{
+    Set %response.ContentType = "application/json"
+    Set %response.CharSet = "utf-8"
+    Try {
+        Set user = ##class(InterClaw.V2.ChatStore).ResolveUser()
+        Set title = ##class(InterClaw.V2.ChatStore).Retitle(user, id)
+        Set resp = ##class(%DynamicObject).%New()
+        Do resp.%Set("title", title)
+        Write resp.%ToJSON()
     } Catch ex {
         Set %response.Status = "500 Internal Server Error"
         Write "{""error"":""" _ $Replace(ex.DisplayString(), """", "\""") _ """}"

@@ -183,6 +183,9 @@ ClassMethod Put(user As %String, id As %String, input As %DynamicObject) As %Dyn
         If input.%IsDefined("favorite") {
             Do existing.%Set("favorite", ''input.%Get("favorite"), "boolean")
         }
+        If input.%IsDefined("titleLocked") {
+            Do existing.%Set("titleLocked", ''input.%Get("titleLocked"), "boolean")
+        }
         If input.%IsDefined("model") Do existing.%Set("model", input.%Get("model"))
         If input.%IsDefined("namespace") Do existing.%Set("namespace", input.%Get("namespace"))
     }
@@ -227,6 +230,133 @@ ClassMethod DeriveTitle(text As %String) As %String
     Set sp = $Find(cut, " ", 40)
     If sp > 0 Set cut = $Extract(cut, 1, sp - 2)
     Return cut _ "..."
+}
+
+/// Summarize a chat into a short title by calling Haiku on the last 10
+/// turns. Returns the new title on success or "" on failure / when the
+/// chat's title is locked. Persists the title to disk when it changes.
+///
+/// Why Haiku: cheapest available model; a 3-6 word summary never needs
+/// frontier reasoning. Why last-10: preserves topic-shift signal without
+/// blowing up prompt size on long chats.
+ClassMethod Retitle(user As %String, id As %String) As %String
+{
+    Set existing = ..Read(user, id)
+    If '$IsObject(existing) Return ""
+    If ''existing.%Get("titleLocked") Return ""
+    Set msgs = existing.%Get("messages")
+    If '$IsObject(msgs) Return ""
+    Set currentTitle = existing.%Get("title")
+    Set newTitle = ..SummarizeTitle(msgs.%ToJSON(), currentTitle)
+    If newTitle = "" Return ""
+    If newTitle = currentTitle Return ""
+    Do existing.%Set("title", newTitle)
+    Do existing.%Set("updatedAt", ..NowMs(), "number")
+    Set path = ..UserDir(user) _ ..SafeId(id) _ ".json"
+    Set tmp = path _ ".tmp"
+    Set stream = ##class(%Stream.FileCharacter).%New()
+    Set stream.TranslateTable = "UTF8"
+    Set stream.Filename = tmp
+    Do stream.Write(existing.%ToJSON())
+    Do stream.%Save()
+    Do stream.%Close()
+    If ##class(%File).Exists(path) Do ##class(%File).Delete(path)
+    Do ##class(%File).Rename(tmp, path)
+    Return newTitle
+}
+
+ClassMethod SummarizeTitle(messagesJSON As %String, currentTitle As %String = "") As %String [ Language = python ]
+{
+    import json, urllib.request, urllib.error, re
+    try:
+        import iris
+    except Exception:
+        return ""
+
+    try:
+        if not iris.cls("Ens.Config.Credentials")._ExistsId("Inteclaw.Bedrock"):
+            return ""
+        cred = iris.cls("Ens.Config.Credentials")._OpenId("Inteclaw.Bedrock")
+        # IRIS object proxies don't expose __bool__; use `is not None`.
+        secret = str(cred.Password) if cred is not None else ""
+    except Exception:
+        return ""
+    if not secret:
+        return ""
+    try:
+        credj = json.loads(secret)
+    except Exception:
+        return ""
+    region = credj.get("region", "us-east-1")
+    key = credj.get("key", "")
+    if not key:
+        return ""
+
+    try:
+        messages = json.loads(str(messagesJSON)) if messagesJSON else []
+    except Exception:
+        messages = []
+    recent = []
+    for entry in messages[-10:]:
+        if not isinstance(entry, dict):
+            continue
+        mtype = str(entry.get("type") or "")
+        html = str(entry.get("html") or "")
+        if mtype not in ("user", "assistant"):
+            continue
+        text = re.sub(r"<[^>]+>", " ", html)
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text:
+            continue
+        if len(text) > 600:
+            text = text[:600] + "..."
+        recent.append(f"{mtype}: {text}")
+    if not recent:
+        return ""
+
+    convo = "\n\n".join(recent)
+    current = str(currentTitle) if currentTitle else ""
+    system = (
+        "You write short chat titles. Return 3-6 words that describe the "
+        "current topic. No quotes, no trailing punctuation, no emojis, no "
+        "explanations. Title Case. If the conversation covers multiple "
+        "topics, title the most recent one."
+    )
+    user_msg = (
+        f"Current title: {current or '(none)'}\n\n"
+        f"Last {len(recent)} messages:\n{convo}\n\n"
+        "Return only the new title."
+    )
+    payload = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 64,
+        "system": system,
+        "messages": [{"role": "user", "content": user_msg}],
+    }
+    model = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+    url = f"https://bedrock-runtime.{region}.amazonaws.com/model/{model}/invoke"
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    try:
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=20) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+    except Exception:
+        return ""
+    blocks = resp.get("content", []) if isinstance(resp, dict) else []
+    out = ""
+    for b in blocks:
+        if isinstance(b, dict) and b.get("type") == "text":
+            out += b.get("text", "")
+    out = out.strip().strip('"').strip("'").strip()
+    out = re.sub(r"\s+", " ", out).strip()
+    out = out.rstrip(".!?,:;")
+    if len(out) > 80:
+        out = out[:80].rstrip()
+    return out
 }
 
 }

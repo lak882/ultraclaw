@@ -98,6 +98,43 @@
     chats.push(entry);
   }
 
+  // Cadence-gated LLM retitle: every REHIT_EVERY user turns (starting at
+  // REHIT_MIN), ask the backend to summarize the last 10 messages into a
+  // fresh title. Firing lives in persistChat's PUT-success handler so we
+  // only evaluate after the server has the latest transcript on disk.
+  var RETITLE_MIN_USER_MSGS = 3;   // don't retitle very short chats
+  var RETITLE_EVERY = 4;            // retitle cadence in user-message turns
+  var _lastRetitledAt = Object.create(null);  // chatId -> user msg count at last retitle
+
+  function countUserMessages(messages) {
+    var n = 0;
+    for (var i = 0; i < messages.length; i++) if (messages[i].type === 'user') n++;
+    return n;
+  }
+
+  function maybeRetitle(chatId, messages) {
+    var userCount = countUserMessages(messages);
+    if (userCount < RETITLE_MIN_USER_MSGS) return;
+    var last = _lastRetitledAt[chatId] || 0;
+    if ((userCount - last) < RETITLE_EVERY) return;
+    _lastRetitledAt[chatId] = userCount;
+    fetch(chatsUrl('/' + encodeURIComponent(chatId) + '/retitle'), {
+      method: 'POST',
+      credentials: 'same-origin'
+    })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.title) return;
+      var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
+      if (!chat) return;
+      if (chat.title === data.title) return;
+      chat.title = data.title;
+      chat.updatedAt = Date.now();
+      cc.renderChatsSidebar();
+    })
+    .catch(function(err) { console.warn('[interclaw] retitle failed:', err); });
+  }
+
   var _persistTimer = null;
   cc.persistChat = function() {
     if (!cc.sessionId) return;
@@ -123,6 +160,7 @@
         cc.chatsStore.activeId = data.id;
         upsertChat({ id: data.id, title: data.title || 'Untitled', updatedAt: data.updatedAt || Date.now() });
         cc.renderChatsSidebar();
+        maybeRetitle(data.id, messages);
       })
       .catch(function(err) { console.warn('[interclaw] persistChat failed:', err); });
     }, 500);
@@ -575,7 +613,7 @@
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
-            body: JSON.stringify({ title: newTitle })
+            body: JSON.stringify({ title: newTitle, titleLocked: true })
           })
           .then(function(r) { if (!r.ok) console.warn('[interclaw] rename PUT failed:', r.status); })
           .catch(function(err) { console.warn('[interclaw] rename failed:', err); });
