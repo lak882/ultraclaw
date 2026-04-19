@@ -143,15 +143,13 @@
         if (reclassText && cc.currentStreamEl) {
           cc.stepCounter++;
           var stepId = 'think-' + cc.stepCounter;
-          var thinkStep = {
+          cc.addReasoningStep({
             id: stepId,
             type: 'thinking',
             title: 'Thinking',
             content: reclassText,
             status: 'success'
-          };
-          cc.addReasoningStep(thinkStep);
-          if (cc.recordAddStep) cc.recordAddStep(cc.currentStreamEl, Object.assign({}, thinkStep));
+          });
           // Clear the main bubble.
           var contentEl2 = cc.currentStreamEl.querySelector('.msg-content');
           if (contentEl2) contentEl2.innerHTML = '';
@@ -168,15 +166,13 @@
           cc.stepCounter++;
           cc._currentThinkingStepId = 'think-' + cc.stepCounter;
           cc._currentThinkingStepText = '';
-          var liveThink = {
+          cc.addReasoningStep({
             id: cc._currentThinkingStepId,
             type: 'thinking',
             title: 'Thinking',
             content: '',
             status: 'running'
-          };
-          cc.addReasoningStep(liveThink);
-          if (cc.recordAddStep) cc.recordAddStep(cc.currentStreamEl, Object.assign({}, liveThink));
+          });
         }
         cc._currentThinkingStepText += data.text;
         cc.updateReasoningStep(cc._currentThinkingStepId, {
@@ -216,19 +212,31 @@
           if (ce) ce.innerHTML = '';
           cc.currentStreamText = '';
         }
-        // `output` is the authoritative answer for this turn. Discard any
-        // prior accumulation (delta chunks, earlier partial `output` events
-        // from mid-answer revisions) and render only this text. Previous
-        // attempts to dedupe via prefix/substring matching failed when the
-        // model emitted two different versions of the same answer (e.g. a
-        // Count+Examples table followed by a Count+"Key application classes"
-        // table) — neither was a prefix of the other, so both rendered.
-        cc.currentStreamText = outputText;
-        if (cc.recordSetText) cc.recordSetText(cc.currentStreamEl, outputText);
+        // Deltas only accumulate currentStreamText — the main bubble
+        // isn't rendered until now. Discard delta accumulation that
+        // overlaps the final output (prefix/substring either direction
+        // under whitespace normalization) so animateText doesn't render
+        // the same answer twice.
+        if (cc.currentStreamText) {
+          var norm = function(s) { return (s || '').replace(/\s+/g, ' ').trim(); };
+          var streamed = norm(cc.currentStreamText);
+          var finalTxt = norm(outputText);
+          if (streamed && finalTxt &&
+              (streamed === finalTxt
+               || finalTxt.indexOf(streamed) !== -1
+               || streamed.indexOf(finalTxt) !== -1)) {
+            cc.currentStreamText = '';
+          }
+        }
+        var prevText = cc.currentStreamText;
+        cc.currentStreamText += (cc.currentStreamText ? '\n\n' : '') + outputText;
         var mc = cc.currentStreamEl.querySelector('.msg-content');
         if (mc) {
-          mc.innerHTML = '';
-          cc.animateText(mc, outputText, chatMessages, '');
+          if (prevText) mc.innerHTML = cc.renderMarkdownWithQuickReplies(prevText);
+          else mc.innerHTML = '';
+          (function(el, prev, added, scroll) {
+            cc.animateText(el, added, scroll, prev);
+          })(mc, prevText, outputText, chatMessages);
         }
         break;
       case 'session':
@@ -329,7 +337,6 @@
           resultCount: 0
         };
         cc.addReasoningStep(toolStep);
-        if (cc.recordAddStep) cc.recordAddStep(cc.currentStreamEl, Object.assign({}, toolStep));
         chatMessages.scrollTop = chatMessages.scrollHeight;
         break;
       case 'tool_result':
@@ -357,13 +364,12 @@
           var combined = priorContent
             ? priorContent + '\n\n--- Result ---\n' + resultText.split('\n').slice(0, 20).join('\n')
             : resultText.split('\n').slice(0, 20).join('\n');
-          var stepUpdates = {
+          cc.updateReasoningStep(lastToolStep.id, {
             status: 'success',
             content: combined,
             rawOutput: data.text || '',
             resultCount: resultCount
-          };
-          cc.updateReasoningStep(lastToolStep.id, stepUpdates);
+          });
         }
         chatMessages.scrollTop = chatMessages.scrollHeight;
         break;
@@ -460,33 +466,17 @@
         break;
       case 'reload':
         console.log('[goto-detect] backend detected /reload');
+        sessionStorage.setItem('chatbot-programmatic-reload', 'true');
         cc.saveState();
-        setTimeout(function() {
-          if (window._interclawShell && window._interclawShell.reloadActiveFrame) {
-            // Reload only the active editor iframe. The chat pane and shell
-            // chrome stay put — no more "opens interclaw within the page".
-            window._interclawShell.reloadActiveFrame();
-          } else {
-            sessionStorage.setItem('chatbot-programmatic-reload', 'true');
-            window.location.reload();
-          }
-        }, 500);
+        setTimeout(function() { window.location.reload(); }, 500);
         break;
       case 'usage':
-        // Prefer the server-reported elapsed time — the BP clocks it from
-        // request receipt to usage emission, which survives window reloads
-        // and overlapping turns where the client-side timer is stale.
+        // Prefer the server's authoritative elapsed_ms. Falls back to the
+        // client timer when absent; the old '?' fallback was triggered on
+        // resumed streams where queryStartTime hadn't been set yet.
         var elapsed;
         if (typeof data.elapsed_ms === 'number' && data.elapsed_ms >= 0) {
           elapsed = (data.elapsed_ms / 1000).toFixed(1);
-          // Also re-anchor the live thinking-bar timer so the ticking
-          // label matches server time from this point forward. On a
-          // fresh send this is a no-op (client and server agree). On a
-          // reattach (openChat of a running chat) this snaps the label
-          // from "0.1s" to the true age of the turn.
-          if (cc.queryStartTime) {
-            cc.queryStartTime = Date.now() - data.elapsed_ms;
-          }
         } else if (cc.queryStartTime) {
           elapsed = ((Date.now() - cc.queryStartTime) / 1000).toFixed(1);
         } else {
@@ -525,19 +515,6 @@
         var inK = (totalIn / 1000).toFixed(1);
         var outK = (cc.lastOutputTokens / 1000).toFixed(1);
         cc.lastUsageText = durStr + ' \u00b7 $' + costUsd + ' \u00b7 ' + inK + 'k tokens in \u00b7 ' + outK + 'k tokens out';
-        // Persist a structured usage snapshot on the turn record so the
-        // post-turn summary survives reload without serializing the live
-        // bubble HTML.
-        if (cc.recordSetUsage) {
-          cc.recordSetUsage(cc.currentStreamEl, {
-            inputTokens: cc.lastInputTokens,
-            outputTokens: cc.lastOutputTokens,
-            cacheReadTokens: cc.lastCacheReadTokens || 0,
-            cacheWriteTokens: cc.lastCacheWriteTokens || 0,
-            elapsedMs: elSec * 1000,
-            costUsd: +costUsd
-          });
-        }
         break;
       case 'done':
         cc.stopTimer();
@@ -548,10 +525,9 @@
           cc.sessionId = data.session_id;
         }
         cc.sessionReady = true;
+        cc.saveState();
         cc.totalTokensAccum += cc.lastTurnTokens;
         if (cc.lastTurnTokens > 0) cc.updateTokenCounter(cc.totalTokensAccum);
-        // Transform the live thinking-bar into the post-turn usage-bar
-        // BEFORE saveState so the persisted HTML includes the usage summary.
         cc.transformThinkingToUsage();
         cc.removeTypingIndicator();
         for (var di = 0; di < cc.currentSteps.length; di++) {
@@ -566,18 +542,8 @@
           var contentEl = cc.currentStreamEl.querySelector('.msg-content');
           var finalText = cc.currentStreamText.replace(/\n?\{"allowedPrompts"[\s\S]*$/, '');
           if (contentEl) contentEl.innerHTML = cc.renderMarkdown(finalText);
-          // Mirror the final text into the turn record. The `output` event
-          // sets this too, but a turn that ends via deltas-only (no
-          // terminal `output`) wouldn't have updated the record otherwise.
-          if (cc.recordSetText) cc.recordSetText(cc.currentStreamEl, finalText);
           chatMessages.scrollTop = chatMessages.scrollHeight;
-        } else if (cc.currentStreamEl && cc.currentSteps && cc.currentSteps.length > 0) {
-          console.warn('[stream] turn ended with tool steps but no answer text — backend may have dropped the output event');
         }
-        // saveState was called above before we had a chance to flush the
-        // final text into the record. Call it again now so the record on
-        // disk has the complete text + steps + usage.
-        cc.saveState();
         // Detect navigation directives in assistant response or tool results.
         // Context-aware: Angular interop-editor uses /goto (auto-navigate),
         // legacy-ui uses OPEN: lines (clickable link).
@@ -620,15 +586,9 @@
                 cc.switchToPlanMode();
                 // Don't set found=true — let other directives still be scanned
               } else if (doneLine === '/reload' || doneLine === '/refresh') {
+                sessionStorage.setItem('chatbot-programmatic-reload', 'true');
                 cc.saveState();
-                setTimeout(function() {
-                  if (window._interclawShell && window._interclawShell.reloadActiveFrame) {
-                    window._interclawShell.reloadActiveFrame();
-                  } else {
-                    sessionStorage.setItem('chatbot-programmatic-reload', 'true');
-                    window.location.reload();
-                  }
-                }, 500);
+                setTimeout(function() { window.location.reload(); }, 500);
                 found = true;
                 break;
               }

@@ -77,9 +77,7 @@
       var assistantMsg = document.createElement('div');
       assistantMsg.className = 'chatbot-message';
       assistantMsg.innerHTML = '<div class="msg-content">' + cc.renderMarkdown(text) + '</div>';
-      var aw = cc.wrapMessage(assistantMsg, false);
-      aw._ccRecord = { type: 'assistant', text: text, steps: [], usage: null };
-      content.appendChild(aw);
+      content.appendChild(cc.wrapMessage(assistantMsg, false));
       content.scrollTop = content.scrollHeight;
       cc.saveState();
       return;
@@ -99,11 +97,8 @@
       msg.textContent = text;
     }
     if (type === 'user' || type === 'assistant') {
-      var wrapEl = cc.wrapMessage(msg, type === 'user');
-      wrapEl._ccRecord = { type: type, text: text };
-      content.appendChild(wrapEl);
+      content.appendChild(cc.wrapMessage(msg, type === 'user'));
     } else {
-      msg._ccRecord = { type: type, text: text };
       content.appendChild(msg);
     }
     content.scrollTop = content.scrollHeight;
@@ -111,12 +106,6 @@
   };
 
   cc.showTypingIndicator = function() {
-    // Idempotent: if a live streaming bubble is already in the DOM, reuse
-    // it instead of stacking a fresh one.
-    if (cc.currentStreamEl && cc.currentStreamEl.parentNode) {
-      cc.ensureStepsContainer();
-      return;
-    }
     var chatMessages = document.getElementById('chatbot-content');
     cc.currentStreamEl = document.createElement('div');
     cc.currentStreamEl.className = 'chatbot-message';
@@ -129,11 +118,6 @@
     cc.currentThinkingEl = null;
     cc.currentThinkingText = '';
     cc._hiddenToolCount = 0;
-    // Attach a fresh turn-record to the bubble. Subsequent event handlers
-    // (tool_use, tool_result, output, usage) write to it. On save we read
-    // the record instead of serializing innerHTML, which keeps transient
-    // UI (thinking-bar timer, animated labels) out of persistence.
-    if (cc.attachTurnRecord) cc.attachTurnRecord(cc.currentStreamEl);
     cc.ensureStepsContainer();
     chatMessages.scrollTop = chatMessages.scrollHeight;
   };
@@ -169,18 +153,6 @@
     var children = document.getElementById('chatbot-content').children;
     for (var i = 0; i < children.length; i++) {
       var el = children[i];
-      // Skip ephemeral DOM (welcome bubble with its quick-reply buttons,
-      // transient placeholders). These get rebuilt on every page load
-      // and don't survive a JSON round-trip anyway.
-      if (el._ccEphemeral) continue;
-      // Prefer the typed turn-record attached at DOM-creation time. No
-      // HTML scraping, so live UI (thinking bar, timers) never leaks.
-      if (el._ccRecord) {
-        state.messages.push(el._ccRecord);
-        continue;
-      }
-      // Best-effort fallback for any non-record nodes that slip in
-      // (welcome bubbles, etc.) — capture type + text only.
       var msgEl = el.classList.contains('chatbot-msg-wrap') ? el.querySelector('.chatbot-message') : el;
       if (!msgEl) continue;
       var type = 'assistant';
@@ -188,7 +160,7 @@
       else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
       else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
       else if (msgEl.classList.contains('chatbot-message-tool')) type = 'tool';
-      state.messages.push({ type: type, text: (msgEl.textContent || '').trim() });
+      state.messages.push({ type: type, html: msgEl.innerHTML });
     }
     sessionStorage.setItem('chatbot-state', JSON.stringify(state));
   };
@@ -204,34 +176,24 @@
       var content = document.getElementById('chatbot-content');
 
       state.messages.forEach(function(m) {
-        if (!m) return;
-        // New-shape record: route through the canonical renderer so live
-        // and restored DOM are identical.
-        var isRecord = (m.html == null);
-        if (isRecord && cc.renderTurnRecord) {
-          var node = cc.renderTurnRecord(m);
-          if (node) content.appendChild(node);
-          return;
-        }
-        // Legacy {type, html} fallback for sessions saved before the
-        // structured-record switch. Strip transient status bars; keep
-        // populated reasoning-steps.
         var msg = document.createElement('div');
         msg.className = 'chatbot-message';
         if (m.type === 'user') msg.className += ' chatbot-message-user';
         else if (m.type === 'system') msg.className += ' chatbot-message-system';
         else if (m.type === 'error') msg.className += ' chatbot-message-error';
         else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
-        msg.innerHTML = m.html || '';
-        var bars = msg.querySelectorAll('.bubble-thinking-bar');
-        for (var bk = 0; bk < bars.length; bk++) {
-          if (bars[bk].parentNode) bars[bk].parentNode.removeChild(bars[bk]);
-        }
-        var emptySteps = msg.querySelectorAll('.reasoning-steps');
-        for (var esk = 0; esk < emptySteps.length; esk++) {
-          var list = emptySteps[esk].querySelector('.reasoning-list');
-          if (!list || !list.querySelector('.reasoning-step')) {
-            if (emptySteps[esk].parentNode) emptySteps[esk].parentNode.removeChild(emptySteps[esk]);
+        msg.innerHTML = m.html;
+        // Drop replay noise on restore. See rehydrateMessages in
+        // chats-sidebar.js for rationale — the rule is "final answer +
+        // usage bar only" for any rehydrated assistant turn.
+        if (m.type === 'assistant') {
+          var steps = msg.querySelectorAll('.reasoning-steps');
+          for (var si = 0; si < steps.length; si++) {
+            if (steps[si].parentNode) steps[si].parentNode.removeChild(steps[si]);
+          }
+          var bars = msg.querySelectorAll('.bubble-thinking-bar');
+          for (var bi = 0; bi < bars.length; bi++) {
+            if (bars[bi].parentNode) bars[bi].parentNode.removeChild(bars[bi]);
           }
         }
         if (m.type === 'user' || m.type === 'assistant') {

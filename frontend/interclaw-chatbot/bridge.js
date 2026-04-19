@@ -122,14 +122,13 @@
     var maxPollRetries = 3;
     cc.showStopButton();
     cc.showTypingIndicator();
-    // Start the live thinking-bar timer. If openChat stashed the server's
-    // turnStartedAt, snap queryStartTime back to it so the label shows
-    // the turn's true age right away. Otherwise start from now and let
-    // the next `usage` event refine via data.elapsed_ms.
-    cc.startTimer();
-    if (cc._resumeTurnStartedAt) {
-      cc.queryStartTime = cc._resumeTurnStartedAt;
-      cc._resumeTurnStartedAt = null;
+    // Resume mode renders only the final answer, no intermediate steps.
+    // The typing indicator's empty `.reasoning-steps` wrapper would show
+    // as a stray "Hide steps" toggle with no content — drop it.
+    if (cc.currentStepsEl && cc.currentStepsEl.parentNode) {
+      cc.currentStepsEl.parentNode.removeChild(cc.currentStepsEl);
+      cc.currentStepsEl = null;
+      cc.currentStepsListEl = null;
     }
     cc.updateStatus('Resuming...');
     try {
@@ -154,6 +153,17 @@
             after = evt.seq;
             var data = evt.data;
             if (data.type === 'connected') continue;
+            // Resume mode: skip intermediate streaming events. The user
+            // reopened mid-turn or post-interrupt — they don't want to
+            // watch the replay of every tool step and delta they already
+            // missed. Only keep events that contribute to the final
+            // presentation: the answer text, the usage summary, and the
+            // terminal done/error. `session` is always free.
+            var RESUME_ALLOWED = {
+              output: 1, usage: 1, done: 1, error: 1, session: 1,
+              status: 1, goto: 1, reload: 1
+            };
+            if (!RESUME_ALLOWED[data.type]) continue;
             cc.handleEvent(data);
           }
           if (pollData.done) {
@@ -265,7 +275,6 @@
     // bridgeSend's busy-guard) or a raw string (legacy path via
     // sendCommandToBackend). Dispatch by type.
     if (nextMsg && typeof nextMsg === 'object') {
-      console.log('[bridge] processQueue draining payload — this produces a new bubble');
       cc.showTypingIndicator();
       cc.startTimer();
       cc.startResponseTimeout();

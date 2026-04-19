@@ -47,14 +47,6 @@
   // backend on the first turn). Before we have a session, we have no id
   // yet, so the very first prompt can't be persisted — the backend's
   // session_id arrives mid-stream and the next saveState catches it.
-  // Persisted-record serializer. Reads the typed `_ccRecord` attached to
-  // each pane child by the live event handlers and returns an array of
-  // records. No innerHTML scraping — so transient UI (thinking bar,
-  // timers, animated labels) never leaks into persistence.
-  //
-  // For legacy compatibility with older callers that still need an HTML
-  // blob, the record carries everything needed to re-render identically
-  // via cc.renderTurnRecord().
   function serializeCurrentPane() {
     var out = [];
     var content = document.getElementById('chatbot-content');
@@ -62,25 +54,15 @@
     var children = content.children;
     for (var i = 0; i < children.length; i++) {
       var el = children[i];
-      // Ephemeral bubbles (welcome, transient placeholders) don't persist.
-      if (el._ccEphemeral) continue;
-      // Prefer the record attached at create-time. Falls back to a
-      // legacy-shape {type, html} snapshot only when a DOM node was
-      // produced outside the record-aware paths.
-      var rec = el._ccRecord || (el.querySelector && el.querySelector('[data-cc-record]') && el.querySelector('[data-cc-record]')._ccRecord);
-      if (rec) {
-        out.push(rec);
-        continue;
-      }
       var msgEl = el.classList && el.classList.contains('chatbot-msg-wrap')
         ? el.querySelector('.chatbot-message') : el;
       if (!msgEl || !msgEl.classList) continue;
-      var legacyType = 'assistant';
-      if (msgEl.classList.contains('chatbot-message-user')) legacyType = 'user';
-      else if (msgEl.classList.contains('chatbot-message-system')) legacyType = 'system';
-      else if (msgEl.classList.contains('chatbot-message-error')) legacyType = 'error';
-      else if (msgEl.classList.contains('chatbot-message-tool')) legacyType = 'tool';
-      out.push({ type: legacyType, text: (msgEl.textContent || '').trim() });
+      var type = 'assistant';
+      if (msgEl.classList.contains('chatbot-message-user')) type = 'user';
+      else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
+      else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
+      else if (msgEl.classList.contains('chatbot-message-tool')) type = 'tool';
+      out.push({ type: type, html: msgEl.innerHTML });
     }
     return out;
   }
@@ -679,14 +661,8 @@
         cc.sessionId = chat.id;
         cc.sessionReady = true;
         // If the chat's bridge is still streaming on the server, attach to
-        // it so the live events render into this reopened pane. Pre-seed
-        // the thinking-bar timer from the server's turnStartedAt so the
-        // "Thinking · 42s" label reflects the true age of the still-running
-        // turn instead of "0s" until the first usage event lands.
+        // it so the live events render into this reopened pane.
         if (chat.status === 'running' && chat.bridgeId && cc.attachBridge) {
-          if (+chat.turnStartedAt > 0) {
-            cc._resumeTurnStartedAt = +chat.turnStartedAt;
-          }
           cc.attachBridge(chat.bridgeId, +chat.lastSeq || 0);
         }
       })
@@ -714,19 +690,6 @@
     var content = document.getElementById('chatbot-content');
     if (!content) return;
     messages.forEach(function(m) {
-      if (!m) return;
-      // New-shape record (has .steps/.text — no .html): render through
-      // the canonical renderer so live and rehydrated DOM are identical.
-      var isRecord = (m.html == null) && (m.type === 'user' || m.type === 'assistant' || m.type === 'system' || m.type === 'error' || m.type === 'tool');
-      if (isRecord && cc.renderTurnRecord) {
-        var node = cc.renderTurnRecord(m);
-        if (node) content.appendChild(node);
-        return;
-      }
-      // Legacy {type,html} fallback for chats saved before the
-      // structured-record switch. Strip the transient thinking-bar that
-      // old saves captured along with the bubble; leave usage bar + any
-      // populated reasoning-steps intact.
       var msg = document.createElement('div');
       msg.className = 'chatbot-message';
       if (m.type === 'user') msg.className += ' chatbot-message-user';
@@ -734,15 +697,20 @@
       else if (m.type === 'error') msg.className += ' chatbot-message-error';
       else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
       msg.innerHTML = m.html || '';
-      var bars = msg.querySelectorAll('.bubble-thinking-bar');
-      for (var bi = 0; bi < bars.length; bi++) {
-        if (bars[bi].parentNode) bars[bi].parentNode.removeChild(bars[bi]);
-      }
-      var emptySteps = msg.querySelectorAll('.reasoning-steps');
-      for (var esi = 0; esi < emptySteps.length; esi++) {
-        var list = emptySteps[esi].querySelector('.reasoning-list');
-        if (!list || !list.querySelector('.reasoning-step')) {
-          if (emptySteps[esi].parentNode) emptySteps[esi].parentNode.removeChild(emptySteps[esi]);
+      // Strip replay noise on reopen. When the user didn't watch the
+      // turn live (window was closed), the serialized bubble HTML carries
+      // the entire tool-step history with raw JSON payloads. The user
+      // wants only the final answer + usage bar. This also trims steps
+      // from turns they DID watch — acceptable: the headers are still
+      // lightweight and the bodies were the noisy part.
+      if (m.type === 'assistant') {
+        var steps = msg.querySelectorAll('.reasoning-steps');
+        for (var si = 0; si < steps.length; si++) {
+          if (steps[si].parentNode) steps[si].parentNode.removeChild(steps[si]);
+        }
+        var bars = msg.querySelectorAll('.bubble-thinking-bar');
+        for (var bi = 0; bi < bars.length; bi++) {
+          if (bars[bi].parentNode) bars[bi].parentNode.removeChild(bars[bi]);
         }
       }
       if (m.type === 'user' || m.type === 'assistant') {
