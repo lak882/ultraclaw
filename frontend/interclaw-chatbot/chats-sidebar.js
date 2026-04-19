@@ -534,6 +534,12 @@
 
   // ── Actions ─────────────────────────────────────────────────────────────
   cc.startNewChat = function() {
+    // Detach from the previous chat's stream without stopping it — the
+    // server keeps producing events, and the sidebar shows the running
+    // indicator so the user can reopen it later.
+    if (cc.bridgePolling && cc.bridgeAbort) {
+      try { cc.bridgeAbort.abort(); } catch (_) {}
+    }
     cc.chatsStore.activeId = null;
     cc.sessionId = null;
     cc.sessionReady = false;
