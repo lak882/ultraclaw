@@ -19,11 +19,23 @@
     return d.innerHTML;
   }
 
+  // Renders a step row identical to the live reasoning-steps output so
+  // live-streaming view and retrospect view are pixel-equivalent. Uses the
+  // same `reasoning-tool-lines` / `reasoning-tool-line` structure for tool
+  // bodies and `renderMarkdown` for thinking bodies, mirroring
+  // reasoning-steps.js `toggleStepContent`. The step el gets a unique id
+  // and we reuse `cc.toggleStepContent` so the expand/collapse behaves the
+  // same way (auto-expanded tracking, chevron state).
+  var _replayStepCounter = 0;
   function renderStepRow(step) {
+    _replayStepCounter++;
+    var stepId = step.id || ('replay-' + _replayStepCounter);
     var el = document.createElement('div');
     el.className = 'reasoning-step';
+    el.id = 'reasoning-step-' + stepId;
     el.dataset.stepType = step.type || 'tool';
     el.dataset.content = step.body || '';
+    el.dataset.rawOutput = step.rawOutput || '';
     var iconHtml = step.type === 'thinking'
       ? '<div class="reasoning-step-icon"><div class="reasoning-dot"></div></div>'
       : '<div class="reasoning-step-icon reasoning-tool-icon">' + cc.getToolIcon(step.toolName || 'wrench') + '</div>';
@@ -35,23 +47,19 @@
         '<span class="reasoning-chevron-step' + (!step.body ? ' invisible' : '') + '">' + cc.CHEVRON_SVG + '</span>' +
       '</button>';
     el.appendChild(row);
+    // Hook the same toggle function the live path uses. It handles the
+    // tool-lines split, markdown for thinking, chevron state, etc.
     if (step.body) {
-      // Inline expand-on-click: shows the body below the row.
-      var bodyEl = null;
       row.querySelector('.reasoning-step-label').onclick = function(e) {
         e.stopPropagation();
-        if (bodyEl && bodyEl.parentNode) {
-          bodyEl.parentNode.removeChild(bodyEl);
-          bodyEl = null;
-          return;
+        var isOpen = el.querySelector('.reasoning-step-content');
+        if (isOpen) {
+          isOpen.remove();
+          var chev = el.querySelector('.reasoning-chevron-step');
+          if (chev) chev.classList.remove('open');
+        } else if (cc.toggleStepContent) {
+          cc.toggleStepContent(stepId);
         }
-        bodyEl = document.createElement('div');
-        bodyEl.className = 'reasoning-step-content';
-        var pre = document.createElement('pre');
-        pre.style.whiteSpace = 'pre-wrap';
-        pre.textContent = step.body;
-        bodyEl.appendChild(pre);
-        el.appendChild(bodyEl);
       };
     }
     return el;
@@ -161,14 +169,20 @@
     return wrap;
   }
 
-  // Public: build the entire pane from a doc. Clears existing content first.
-  // Does NOT render the welcome bubble — when a user opens a specific
-  // chat they want to see that chat, not a greeting. Welcome belongs on
-  // empty panes only and is handled by initSession.
+  // Public: build the entire pane from a doc. Clears existing content first,
+  // then prepends the welcome bubble (always at the top), then appends doc
+  // turns. The welcome is idempotent and ephemeral, so multiple calls are
+  // safe.
   cc.renderChatDoc = function(doc) {
     var content = document.getElementById('chatbot-content');
     if (!content) return;
     content.innerHTML = '';
+    if (cc.showWelcomeMessage) {
+      // Fire-and-forget — it prepends whenever the async command registry
+      // resolves. Even if doc turns render first, the welcome still
+      // lands at the top via insertBefore.
+      try { cc.showWelcomeMessage(); } catch (_) {}
+    }
     if (!doc || !Array.isArray(doc.turns)) return;
     doc.turns.forEach(function(t) {
       var node = renderTurn(t);

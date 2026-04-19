@@ -159,9 +159,7 @@
       try { await cc.commandsReady; } catch (_) {}
     }
     var chatMessages = document.getElementById('chatbot-content');
-    // Idempotent: if a welcome bubble is already in the pane (from an
-    // earlier initSession / openChat / renderChatDoc call), skip.
-    // Otherwise init paths + reopen stack the greeting multiple times.
+    // Idempotent: only one welcome ever. Don't stack on repeat calls.
     if (chatMessages && chatMessages.querySelector('.chatbot-welcome-msg')) {
       return;
     }
@@ -179,10 +177,15 @@
     wrap._ccEphemeral = true;
     msgEl._ccEphemeral = true;
     wrap.appendChild(msgEl);
-    chatMessages.appendChild(wrap);
+    // Always pin the welcome to the top of the pane, even if doc turns
+    // rendered first (async welcome + sync renderChatDoc race).
+    if (chatMessages.firstChild) {
+      chatMessages.insertBefore(wrap, chatMessages.firstChild);
+    } else {
+      chatMessages.appendChild(wrap);
+    }
     var msgContent = msgEl.querySelector('.msg-content');
     msgContent.innerHTML = cc.renderMarkdownWithQuickReplies(cc.buildWelcomeMessage());
-    chatMessages.scrollTop = chatMessages.scrollHeight;
   };
 
 })(window._cc);

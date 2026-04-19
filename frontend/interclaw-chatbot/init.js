@@ -68,8 +68,20 @@
           document.body.classList.add('chatbot-closed');
         }
 
-        if (!isReload && cc.restoreState()) {
-          // Restored conversation from tab navigation
+        // If the URL carries a chat id, buildSidebar already kicked off
+        // openChat for it — which calls renderChatDoc, which prepends
+        // welcome itself. Skip sessionStorage restore to avoid double
+        // rendering. initSession still runs for auth but skips welcome
+        // (renderChatDoc owns that on URL-deep-link paths).
+        var hasUrlChat = /^#\/chat\/[^?]+/.test(window.location.hash || '');
+        if (hasUrlChat) {
+          sessionStorage.removeItem('chatbot-state');
+          cc.initSession({ skipWelcome: true });
+        } else if (!isReload && cc.restoreState()) {
+          // Restored conversation from tab navigation — welcome is already
+          // in the restored HTML if it was there at save time; showWelcome
+          // is idempotent so calling it is safe either way.
+          if (cc.showWelcomeMessage) cc.showWelcomeMessage();
         } else {
           sessionStorage.removeItem('chatbot-state');
           cc.initSession();

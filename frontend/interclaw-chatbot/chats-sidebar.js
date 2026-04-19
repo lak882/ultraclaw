@@ -185,9 +185,10 @@
   };
 
   function buildPersistPayload(chatId) {
-    // Messages are now owned by the BP (ChatProcess.OnRequest writes both
-    // user and assistant records on done). The frontend only contributes
-    // metadata: a title on the first turn, and records for retitle.
+    // Phase 2: the BP owns all message persistence via ^Inteclaw.ChatDoc.
+    // The frontend still derives a title from the user's first message
+    // the BP can't reliably guess — we send only that metadata. No
+    // messages array in the body.
     var messages = serializeCurrentPane();
     if (!messages.length) return null;
     var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
@@ -195,13 +196,16 @@
     if (!chat || !chat.title || chat.title === 'Untitled') {
       body.title = deriveTitle(messages);
     }
-    // No-op payload? Skip the PUT entirely.
     if (!Object.keys(body).length) return null;
     return { body: body, messages: messages };
   }
 
   var _persistTimer = null;
   cc.persistChat = function() {
+    // Suppressed during openChat's rehydrate path — the doc on the server
+    // is already authoritative, so echoing it back creates phantom empty
+    // entries (an empty chat file per reload/switch).
+    if (cc._suppressPersist) return;
     // Only persist once the user has actually typed something. Otherwise
     // every page load (welcome message, system bubbles) would mint a chat.
     // `ensureChatId(true)` returns null until a real user turn exists.
@@ -235,8 +239,16 @@
   // complete after the page starts tearing down. Without this, closing the
   // tab within ~500ms of sending a prompt loses the user's message.
   cc.flushPersistChat = function() {
-    var chatId = cc.ensureChatId(true);
-    if (!chatId) return;
+    // Same suppression as persistChat — don't flush during render/reload.
+    if (cc._suppressPersist) return;
+    // Only flush for chats the user has actually started/touched in this
+    // tab. `cc.sessionId` being set means either the user sent something
+    // or openChat adopted an existing chat. In both cases the chat
+    // already exists server-side; the flush is a safety belt, not a
+    // mint point. If there's no sessionId yet, skip — a reload with
+    // nothing unsaved shouldn't create phantom chat files.
+    if (!cc.sessionId) return;
+    var chatId = cc.sessionId;
     if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
     var payload = buildPersistPayload(chatId);
     if (!payload) return;
@@ -697,9 +709,22 @@
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(doc) {
         if (doc && Array.isArray(doc.turns) && cc.renderChatDoc) {
-          cc.renderChatDoc(doc);
+          // Set sessionId BEFORE render. renderChatDoc mutates the pane,
+          // which fires saveState → persistChat → ensureChatId(true).
+          // Without the id set first, ensureChatId mints a *new* local-
+          // id and saves an empty-title chat under it on every openChat.
           cc.sessionId = doc.chatId || id;
           cc.sessionReady = true;
+          // Suppress persist PUTs while we rehydrate. The doc we're
+          // rendering IS what's already on the server — echoing it back
+          // via title-only PUTs spams the chat file with new entries.
+          cc._suppressPersist = true;
+          try { cc.renderChatDoc(doc); }
+          finally {
+            // Clear on next tick so any stray saveState from the render
+            // pipeline drains without triggering persistChat.
+            setTimeout(function() { cc._suppressPersist = false; }, 50);
+          }
           if (doc.status === 'running' && doc.bridgeId && cc.attachBridge) {
             cc.attachBridge(doc.bridgeId, 0);
           }
@@ -710,10 +735,10 @@
           .then(function(r) { return r.ok ? r.json() : null; })
           .then(function(chat) {
             if (!chat || !chat.messages) return;
-            clearMessagesPane();
-            rehydrateMessages(chat.messages);
             cc.sessionId = chat.id;
             cc.sessionReady = true;
+            clearMessagesPane();
+            rehydrateMessages(chat.messages);
             if (chat.status === 'running' && chat.bridgeId && cc.attachBridge) {
               cc.attachBridge(chat.bridgeId, +chat.lastSeq || 0);
             }
