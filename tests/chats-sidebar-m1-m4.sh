@@ -47,14 +47,24 @@ else
 fi
 
 # Required DOM hooks
-# Collapse/reopen are back; plus search input and star-toggle action.
-for hook in "ic-chats-sidebar" "ic-chats-new" "ic-chats-list" "ic-chats-collapse" "ic-chats-reopen" "ic-chats-search-input"; do
+# Chats rail is always visible again — no collapse, no reopen pill.
+for hook in "ic-chats-sidebar" "ic-chats-new" "ic-chats-list" "ic-chats-search-input"; do
   if grep -q "$hook" "$sidebar_js_path"; then
     pass "sidebar defines #$hook"
   else
     fail "sidebar defines #$hook"
   fi
 done
+if ! grep -q "reopenBtn.id" "$sidebar_js_path"; then
+  pass "reopen pill not injected (chats rail always visible)"
+else
+  fail "reopen pill not injected (chats rail always visible)"
+fi
+if ! grep -q "ic-chats-collapse-btn" "$sidebar_js_path"; then
+  pass "collapse button not rendered (chats rail always visible)"
+else
+  fail "collapse button not rendered (chats rail always visible)"
+fi
 if grep -q "data-action=\"favorite\"" "$sidebar_js_path"; then
   pass "sidebar renders favorite action (via popup menu)"
 else

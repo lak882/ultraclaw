@@ -149,7 +149,6 @@
     sidebar.innerHTML =
       '<div class="ic-chats-header">' +
         '<span class="ic-chats-brand">Chats</span>' +
-        '<button class="ic-chats-collapse-btn" id="ic-chats-collapse" title="Hide chats" aria-label="Hide chats">' + ICON_COLLAPSE + '</button>' +
       '</div>' +
       '<a class="ic-chats-new" id="ic-chats-new" role="button" tabindex="0">' +
         '<span class="ic-chats-new-icon">' + ICON_NEW_CHAT + '</span>' +
@@ -162,25 +161,15 @@
       '<div class="ic-chats-list" id="ic-chats-list"></div>';
     document.body.appendChild(sidebar);
 
-    // Floating reopen pill sits outside the sidebar so it stays visible
-    // when the rail is hidden.
-    var reopenBtn = document.createElement('button');
-    reopenBtn.id = 'ic-chats-reopen';
-    reopenBtn.title = 'Show chats';
-    reopenBtn.setAttribute('aria-label', 'Show chats');
-    reopenBtn.innerHTML = ICON_EXPAND;
-    document.body.appendChild(reopenBtn);
-
     // ── Event wiring ──────────────────────────────────────────────────────
     document.getElementById('ic-chats-new').addEventListener('click', cc.startNewChat);
-    document.getElementById('ic-chats-collapse').addEventListener('click', function() {
-      document.body.classList.add('ic-chats-collapsed');
-      try { localStorage.setItem('ic-chats-collapsed', '1'); } catch (e) {}
-    });
-    reopenBtn.addEventListener('click', function() {
+
+    // Sidebar is no longer collapsible — clear any stale flag from a prior
+    // session so the rail always renders.
+    try {
+      localStorage.removeItem('ic-chats-collapsed');
       document.body.classList.remove('ic-chats-collapsed');
-      try { localStorage.removeItem('ic-chats-collapsed'); } catch (e) {}
-    });
+    } catch (e) {}
 
     // Live search: filter in-place on input; Esc clears.
     var searchInput = document.getElementById('ic-chats-search-input');
@@ -196,13 +185,6 @@
         searchInput.blur();
       }
     });
-
-    // Restore collapsed state from the previous session.
-    try {
-      if (localStorage.getItem('ic-chats-collapsed') === '1') {
-        document.body.classList.add('ic-chats-collapsed');
-      }
-    } catch (e) {}
 
     cc.renderChatsSidebar();
     cc.refreshChatsList();
@@ -399,10 +381,16 @@
       preferredLeft = Math.max(8, Math.round(trig.left - menuW - gap));
     }
     var preferredTop = Math.round(trig.top);
+    // Never overlap the 2px blue header stripe. Clamp top to just below
+    // the header bar + its 2px accent.
+    var headerCSS = getComputedStyle(document.documentElement).getPropertyValue('--ic-header-total').trim();
+    var headerH = parseInt(headerCSS, 10) || 44;
+    var minTop = headerH + 4;
+    if (preferredTop < minTop) preferredTop = minTop;
     // Keep the menu within the viewport vertically.
     var menuEstH = 3 * 32 + 12; // approx: 3 items × 32px + padding
     if (preferredTop + menuEstH + 8 > window.innerHeight) {
-      preferredTop = Math.max(8, window.innerHeight - menuEstH - 8);
+      preferredTop = Math.max(minTop, window.innerHeight - menuEstH - 8);
     }
     menu.style.top = preferredTop + 'px';
     menu.style.left = preferredLeft + 'px';

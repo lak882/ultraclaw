@@ -564,6 +564,11 @@
       var shell = window._interclawShell;
       if (shell && tabId !== 'chat' && (tabId === 'portal' || tabId === 'traces' || tabId === 'skills')) {
         e.preventDefault();
+        // Exit chat mode so the iframe becomes visible (the chatbot panel
+        // otherwise fills 100% width and covers the workspace).
+        if (inChatMode) {
+          document.body.classList.remove('ic-chat-mode');
+        }
         shell.activateTab(tabId);
         return;
       }

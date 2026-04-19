@@ -54,14 +54,30 @@
    ======================================================================== */
 #ic-chats-sidebar {
   background: var(--v0-bg-100) !important;
-  border-top: 2px solid var(--v0-accent) !important;
-  border-right: 1px solid var(--v0-alpha-400) !important;
+  border-top: 1px solid var(--v0-accent) !important;
+  /* Right-side gray divider is drawn by the ::after rule below so it starts
+     below the 2px blue top border instead of butting into it. */
+  border-right: none !important;
   color: var(--v0-gray-1000) !important;
   font-family: var(--v0-font) !important;
   font-size: 14px !important;
   font-feature-settings: "zero" !important;
   -webkit-font-smoothing: antialiased !important;
   padding: 0 !important;
+  position: fixed !important;
+}
+/* Right-edge gray divider. Absolute positioning resolves against the
+   padding-box (already below the 2px blue border-top), so `top: 0` here
+   sits flush against the bottom edge of the blue stripe with no gap. */
+#ic-chats-sidebar::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 1px !important;
+  background: var(--v0-alpha-400) !important;
+  pointer-events: none !important;
 }
 
 /* Light scrollbar */
@@ -92,28 +108,9 @@
   letter-spacing: 0 !important;
   text-transform: none !important;
 }
-#ic-chats-sidebar .ic-chats-collapse-btn {
-  background: transparent !important;
-  border: none !important;
-  color: var(--v0-gray-900) !important;
-  border-radius: var(--v0-radius-sm) !important;
-  padding: 5px !important;
-  width: 28px !important;
-  height: 28px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  transition: background 0.1s ease-out, color 0.1s ease-out !important;
-}
-#ic-chats-sidebar .ic-chats-collapse-btn:hover {
-  background: var(--v0-alpha-400) !important;
-  color: var(--v0-gray-1000) !important;
-}
-#ic-chats-sidebar .ic-chats-collapse-btn svg {
-  width: 14px !important;
-  height: 14px !important;
-}
+/* Collapse button removed — chats rail is always visible. Hard-hide
+   any residual button in case a stale DOM node slips through. */
+#ic-chats-sidebar .ic-chats-collapse-btn { display: none !important; }
 
 /* ========================================================================
    "New chat" — ChatGPT-style nav row: transparent, icon + label, hover
@@ -146,7 +143,7 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  color: var(--v0-gray-900) !important;
+  color: #0d0d0d !important;
   width: 16px !important;
   height: 16px !important;
   flex-shrink: 0 !important;
@@ -154,9 +151,11 @@
 #ic-chats-sidebar .ic-chats-new-icon svg {
   width: 16px !important;
   height: 16px !important;
+  color: #0d0d0d !important;
 }
-#ic-chats-sidebar .ic-chats-new:hover .ic-chats-new-icon {
-  color: var(--v0-gray-1000) !important;
+#ic-chats-sidebar .ic-chats-new:hover .ic-chats-new-icon,
+#ic-chats-sidebar .ic-chats-new:hover .ic-chats-new-icon svg {
+  color: #0d0d0d !important;
 }
 #ic-chats-sidebar .ic-chats-new-label {
   font-size: 14px !important;
@@ -418,14 +417,21 @@
   height: 10px !important;
 }
 
-/* More-actions button — visible only on row hover/active */
+/* More-actions button — visible only on row hover/active. No background
+   fill on its own hover; we don't want the 3-dot button to tint when the
+   cursor hits it (the row already has its own hover state). */
 #ic-chats-sidebar .ic-chats-item-more {
   opacity: 0 !important;
-  transition: opacity 0.08s ease-out, background 0.1s ease-out, color 0.1s ease-out !important;
+  background: transparent !important;
+  transition: opacity 0.08s ease-out, color 0.1s ease-out !important;
 }
 #ic-chats-sidebar .ic-chats-item:hover .ic-chats-item-more,
 #ic-chats-sidebar .ic-chats-item.active .ic-chats-item-more {
   opacity: 1 !important;
+}
+#ic-chats-sidebar .ic-chats-item-more:hover {
+  background: transparent !important;
+  color: var(--v0-gray-1000) !important;
 }
 
 /* ========================================================================
@@ -484,6 +490,29 @@
 }
 
 /* ========================================================================
+   Shared header: force all tab + brand text to black (was #6b6f76 gray for
+   inactive tabs, #1a1a2e near-black for active). User wants "all the text
+   black" so we flatten both to #0d0d0d.
+   ======================================================================== */
+#interclaw-header,
+#interclaw-header .ic-header-brand,
+#interclaw-header .ic-header-tab,
+#interclaw-header .ic-header-tab span,
+#interclaw-header .ic-header-settings-btn,
+#interclaw-header .ic-header-settings-btn span {
+  color: #0d0d0d !important;
+}
+#interclaw-header .ic-header-tab.active,
+#interclaw-header .ic-header-tab.active span {
+  color: #0d0d0d !important;
+  font-weight: 500 !important;
+}
+#interclaw-header .ic-header-tab svg,
+#interclaw-header .ic-header-settings-btn svg {
+  color: #0d0d0d !important;
+}
+
+/* ========================================================================
    Chatbot panel (right side): force white background + black text, and
    kill the leftmost grey 1px line that `chatbot.css::before` draws.
    ======================================================================== */
@@ -491,9 +520,14 @@
   background: #ffffff !important;
   color: #0d0d0d !important;
 }
-/* Remove the 1px light-grey vertical line at the left edge of the panel. */
+/* Keep the 1px gray left-edge stripe. Absolute inside a box with
+   border-top: 2px resolves against the padding-box, so top: 0 sits
+   flush against the blue stripe with no 1-2px gap. */
 #chatbot-sidebar::before {
-  display: none !important;
+  display: block !important;
+  top: 0 !important;
+  background: var(--v0-alpha-400) !important;
+  width: 1px !important;
 }
 #chatbot-sidebar .chatbot-content {
   background: #ffffff !important;
