@@ -17,7 +17,10 @@
       var hashParams = new URLSearchParams(hashQ);
       ns = hashParams.get('$NAMESPACE') || hashParams.get('NAMESPACE') || '';
     }
-    if (!ns) ns = sessionStorage.getItem('interclaw-namespace') || 'INTERCLAW';
+    if (!ns) {
+      var _icCfg = window._interclawConfig || {};
+      ns = sessionStorage.getItem('interclaw-namespace') || _icCfg.namespace || 'INTERCLAW';
+    }
     return window.location.origin + (cc.pathPrefix || '') + '/csp/healthshare/' + ns.toLowerCase();
   }
 

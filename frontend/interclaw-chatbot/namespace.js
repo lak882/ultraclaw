@@ -45,7 +45,11 @@
     };
   })();
 
-  var DEFAULT_NAMESPACE = 'INTERCLAW';
+  // Install namespace is seeded into frontend/install-config.js by the installer
+  // (see InterClaw.Installer.WriteInstallConfigJs). Hard-coded "INTERCLAW" is the
+  // last-resort fallback used only if the file is missing.
+  var _icCfg = (typeof window !== 'undefined' && window._interclawConfig) || {};
+  var DEFAULT_NAMESPACE = (_icCfg.namespace || 'INTERCLAW').toUpperCase();
 
   cc.detectNamespace = function() {
     // 1. Header is the single source of truth — read from interclaw-header.js

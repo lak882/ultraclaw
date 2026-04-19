@@ -22,6 +22,12 @@
   link.href = basePath + 'chatbot.css?v=3';
   document.head.appendChild(link);
 
+  var chatsLink = document.createElement('link');
+  chatsLink.rel = 'stylesheet';
+  chatsLink.id = 'interclaw-chats-sidebar-styles';
+  chatsLink.href = basePath + 'chats-sidebar.css?v=1';
+  document.head.appendChild(chatsLink);
+
   // Load marked.js for markdown rendering
   if (typeof marked === 'undefined') {
     var markedScript = document.createElement('script');
@@ -48,11 +54,12 @@
     'namespace.js',
     'auth.js',
     'goto.js',
+    'chats-sidebar.js',
     'init.js'
   ];
 
   // Cache-busting version — bump this to force-reload all modules
-  var MODULE_VERSION = 5;
+  var MODULE_VERSION = 6;
 
   function loadNext(i) {
     if (i >= modules.length) {

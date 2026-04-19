@@ -80,7 +80,7 @@ ClassMethod Start() As %Status
     Set sessionId = obj.%Get("session_id")
     Set model = obj.%Get("model")
     Set namespace = obj.%Get("namespace")
-    If namespace = "" Set namespace = "INTERCLAW"
+    If namespace = "" Set namespace = $get(^InterClaw.Config("Namespace"), "INTERCLAW")
     Set action = obj.%Get("action")
     If action = "" Set action = $select(sessionId = "":"init", 1:"message")
 

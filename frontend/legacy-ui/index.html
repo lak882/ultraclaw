@@ -101,6 +101,7 @@ html, body {
 </style>
 </head>
 <body data-no-auth-gate>
+<script src="../install-config.js"></script>
 <script src="../interclaw-header.js?v=13"></script>
   <div id="app-root">
     <iframe id="viewer-frame"></iframe>
@@ -115,7 +116,7 @@ html, body {
   </div>
 
   <!-- Chatbot -->
-  <script src="../interclaw-chatbot.js?v=16"></script>
+  <script src="../interclaw-chatbot.js?v=19"></script>
 
 <script>
 (function() {
@@ -124,8 +125,9 @@ html, body {
   // Resolve namespace from header (single source of truth)
   var params = new URLSearchParams(window.location.search);
   var headerLabel = document.getElementById('ic-header-ns-label');
+  var _icCfg = window._interclawConfig || {};
   var namespace = (headerLabel && headerLabel.textContent.trim())
-    || params.get('$NAMESPACE') || params.get('NAMESPACE') || 'INTERCLAW';
+    || params.get('$NAMESPACE') || params.get('NAMESPACE') || _icCfg.namespace || 'INTERCLAW';
   namespace = namespace.toUpperCase();
 
   var pathParts = window.location.pathname.split('/ui/interop/');

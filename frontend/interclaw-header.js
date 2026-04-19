@@ -40,11 +40,15 @@
   var viewMode = params.get('view');
   var currentTab = viewMode === 'chat' ? 'chat' : currentEditor;
 
-  // ── Namespace: URL param > server-stored > fallback INTERCLAW ──
+  // ── Namespace: URL param > install-config global > fallback INTERCLAW ──
   // Server global ^InterClaw.Config("Namespace") is the single source of truth.
+  // The installer serialises it into frontend/install-config.js so every page
+  // has the install namespace before the first render.
   // URL param overrides for deep links; result is always persisted back to server.
+  var _icCfg = (typeof window !== 'undefined' && window._interclawConfig) || {};
+  var _installNs = (_icCfg.namespace || 'INTERCLAW').toUpperCase();
   var urlNs = params.get('$NAMESPACE') || params.get('NAMESPACE') || '';
-  var namespace = (urlNs || 'INTERCLAW').toUpperCase();
+  var namespace = (urlNs || _installNs).toUpperCase();
 
   // API base for namespace endpoints (pathPrefix resolved below)
   var _nsApiBase = ''; // set after pathPrefix is computed
