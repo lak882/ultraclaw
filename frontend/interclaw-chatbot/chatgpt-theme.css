@@ -553,11 +553,20 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
   color: var(--cgpt-sidebar-body) !important;
 }
 
-/* Header brand: ChatGPT uses a dim, small title — no uppercase, no bold */
-#ic-chats-sidebar .ic-chats-brand {
+/* Header brand: ChatGPT uses a dim, small title — no uppercase, no bold.
+   Left-align with the group labels below (which live inside `.ic-chats-list`
+   with padding-left 8 + their own padding-left 10 = 18 from the rail edge).
+   Size/weight/line-height pinned to the same spec as `.ic-chats-group-label`
+   so "Chats", "Favorites", "Recents" are indistinguishable. */
+#ic-chats-sidebar .ic-chats-header {
+  padding-left: 18px !important;
+}
+#ic-chats-sidebar .ic-chats-brand,
+#ic-chats-sidebar .ic-chats-group-label {
   color: var(--cgpt-sidebar-title) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
+  line-height: 1.2 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
 }
@@ -572,16 +581,18 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
 }
 #ic-chats-sidebar .ic-chats-new-icon,
 #ic-chats-sidebar .ic-chats-new-icon svg,
-#ic-chats-sidebar .ic-chats-new-icon svg path {
+#ic-chats-sidebar .ic-chats-new-icon svg path,
+#ic-chats-sidebar .ic-chats-new svg {
   color: var(--cgpt-sidebar-body) !important;
   stroke: currentColor !important;
+  opacity: 1 !important;
 }
 
-/* Search input: same white surface as the rail — only the faint border
-   separates it. Focus does not add an accent ring. */
+/* Search input: slightly darker than the rail so the input reads as a
+   distinct control. Focus does not add an accent ring. */
 #ic-chats-sidebar .ic-chats-search-input {
-  background: #ffffff !important;
-  border-color: var(--cgpt-border-faint) !important;
+  background: rgba(13, 13, 13, 0.04) !important;
+  border-color: rgba(13, 13, 13, 0.10) !important;
   color: var(--cgpt-sidebar-body) !important;
 }
 #ic-chats-sidebar .ic-chats-search-input::placeholder {
@@ -596,35 +607,63 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
 #ic-chats-sidebar .ic-chats-search-icon svg path {
   color: var(--cgpt-sidebar-body) !important;
   stroke: currentColor !important;
+  opacity: 1 !important;
 }
 
-/* Group labels ("Favorites", "Recents"): ChatGPT-style small, 0.5-opacity
-   near-black. No letter-spacing, no uppercase, not bold. */
+/* Search input text + placeholder: both read near-black so the field
+   matches the New-chat label / row titles. ChatGPT uses a muted placeholder
+   but the user explicitly asked for black across the search bar. */
+#ic-chats-sidebar .ic-chats-search-input {
+  color: var(--cgpt-sidebar-body) !important;
+}
+#ic-chats-sidebar .ic-chats-search-input::placeholder {
+  color: var(--cgpt-sidebar-body) !important;
+  opacity: 1 !important;
+}
+
+/* Group labels ("Favorites", "Recents") — typography pinned in the shared
+   block above; only padding differs between the header and list contexts. */
 #ic-chats-sidebar .ic-chats-group-label {
-  color: var(--cgpt-sidebar-title) !important;
-  font-size: 12px !important;
-  font-weight: 400 !important;
-  letter-spacing: 0 !important;
-  text-transform: none !important;
   padding: 10px 10px 4px 10px !important;
 }
 
 /* Rows: ChatGPT renders chat titles in near-black at rest (not muted).
-   Hover/active just change background, not text color. */
+   Hover/active change only the ROW background — the title span keeps a
+   transparent background so the two translucent tints don't stack into a
+   darker double-highlight. */
 #ic-chats-sidebar .ic-chats-item,
 #ic-chats-sidebar .ic-chats-item .ic-chats-item-title {
   color: var(--cgpt-sidebar-body) !important;
+  background: transparent !important;
 }
-#ic-chats-sidebar .ic-chats-item:hover,
-#ic-chats-sidebar .ic-chats-item:hover .ic-chats-item-title {
+#ic-chats-sidebar .ic-chats-item:hover {
   background: var(--cgpt-hover-tint) !important;
   color: var(--cgpt-sidebar-body) !important;
 }
-#ic-chats-sidebar .ic-chats-item.active,
-#ic-chats-sidebar .ic-chats-item.active .ic-chats-item-title {
+#ic-chats-sidebar .ic-chats-item:hover .ic-chats-item-title {
+  background: transparent !important;
+  color: var(--cgpt-sidebar-body) !important;
+}
+#ic-chats-sidebar .ic-chats-item.active {
   background: var(--cgpt-active-tint) !important;
   color: var(--cgpt-sidebar-body) !important;
   font-weight: 400 !important;
+}
+#ic-chats-sidebar .ic-chats-item.active .ic-chats-item-title {
+  background: transparent !important;
+  color: var(--cgpt-sidebar-body) !important;
+  font-weight: 400 !important;
+}
+
+/* Pointer cursor on rows — ChatGPT's sidebar uses a pointer, not a grab
+   hand, because clicking opens the chat; drag-to-reorder is a secondary
+   affordance. Override the v0-era `cursor: grab` block above. */
+#ic-chats-sidebar .ic-chats-item,
+#ic-chats-sidebar .ic-chats-item:active {
+  cursor: pointer !important;
+}
+#ic-chats-sidebar .ic-chats-item.ic-dragging {
+  cursor: grabbing !important;
 }
 
 /* "New chat" label and group headings also render near-black in ChatGPT,
@@ -634,12 +673,41 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
   color: var(--cgpt-sidebar-body) !important;
 }
 
-/* 3-dot action button uses the sidebar-icon tint at rest. */
+/* Rename inline editor — ChatGPT-style: title turns into a thin outlined
+   input in place. No accent-colored ring, no filled background; a 1px
+   neutral border, tight padding, inherits the row's font size/weight. */
+#ic-chats-sidebar .ic-chats-item-title[contenteditable="true"] {
+  background: #ffffff !important;
+  color: var(--cgpt-sidebar-body) !important;
+  border: 1px solid rgba(13, 13, 13, 0.18) !important;
+  border-radius: 4px !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px rgba(13, 13, 13, 0.04) !important;
+  padding: 1px 6px !important;
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: inherit !important;
+  line-height: 1.35 !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+  white-space: normal !important;
+}
+#ic-chats-sidebar .ic-chats-item-title[contenteditable="true"]:focus {
+  border-color: rgba(13, 13, 13, 0.35) !important;
+  box-shadow: 0 0 0 1px rgba(13, 13, 13, 0.08) !important;
+}
+
+/* 3-dot action button: icon color only — no background on its own hover
+   since the parent row already carries the hover/active tint and stacking
+   two translucent fills produces a double-highlight. */
 #ic-chats-sidebar .ic-chats-item-action {
   color: var(--cgpt-sidebar-icon) !important;
+  background: transparent !important;
 }
 #ic-chats-sidebar .ic-chats-item-action:hover {
-  background: var(--cgpt-active-tint) !important;
+  background: transparent !important;
   color: var(--cgpt-sidebar-body) !important;
 }
 

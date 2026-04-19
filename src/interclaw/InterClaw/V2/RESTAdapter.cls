@@ -24,6 +24,7 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 <Route Url="/api/chats/:id"  Method="PUT"  Call="ChatsPut"/>
 <Route Url="/api/chats/:id"  Method="DELETE" Call="ChatsDelete"/>
 <Route Url="/api/chats/:id/retitle" Method="POST" Call="ChatsRetitle"/>
+<Route Url="/api/chats/:id/stop" Method="POST" Call="ChatsStop"/>
 <Route Url="/api/portal-urls" Method="GET" Call="PortalUrls"/>
 </Routes>
 }
@@ -37,17 +38,14 @@ ClassMethod Health() As %Status
 
 ClassMethod ReadBody() As %String
 {
-    // Force UTF-8 decoding. The frontend always sends JSON as UTF-8, but CSP
-    // may hand us a stream whose TranslateTable defaults to the session
-    // charset (not UTF-8), which mojibakes multibyte characters like "·"
-    // into "Â·" and later double-encodes them on write.
+    // %request.Content is already a decoded character stream — CSP applies
+    // the request charset during parsing. Do NOT re-apply $ZConvert(...,UTF8);
+    // that double-decodes and mojibakes multibyte chars like "·".
     Set body = ""
     If $IsObject(%request.Content) {
         Set stream = %request.Content
-        Try { Set stream.TranslateTable = "RAW" } Catch {}
         Do stream.Rewind()
         While 'stream.AtEnd { Set body = body _ stream.Read(32000) }
-        Set body = $ZConvert(body, "I", "UTF8")
     }
     Return body
 }
@@ -124,6 +122,23 @@ ClassMethod Start() As %Status
     Set ^Inteclaw.ChatEvents(bridgeId, "seq") = 0
     Set ^Inteclaw.ChatEvents(bridgeId, "done") = 0
 
+    // Bind the bridge to a chat id so reopening the chat after a window close
+    // can resume the live stream. The frontend sends chat_id once it knows
+    // one (i.e., always except the literal first turn of a brand-new chat).
+    // The matching "completed"/"stopped" transition happens in Events() when
+    // done=1 or a stall fires, and in ChatsStop() when the user cancels.
+    Set chatId = obj.%Get("chat_id")
+    If chatId '= "" {
+        Set user = ##class(InterClaw.V2.ChatStore).ResolveUser()
+        Set seed = ##class(%DynamicObject).%New()
+        Do seed.%Set("bridgeId", bridgeId)
+        Do seed.%Set("status", "running")
+        Do seed.%Set("lastSeq", 0, "number")
+        Do ##class(InterClaw.V2.ChatStore).Put(user, chatId, seed)
+        Set ^Inteclaw.ChatEvents(bridgeId, "chatId") = chatId
+        Set ^Inteclaw.ChatEvents(bridgeId, "user") = user
+    }
+
     Set req = ##class(Inteclaw.Msg.ChatRequest).%New()
     Set req.BridgeId = bridgeId
     Set req.SessionId = obj.%Get("session_id")
@@ -149,6 +164,7 @@ ClassMethod Start() As %Status
 
     Set resp = ##class(%DynamicObject).%New()
     Do resp.%Set("bridge_id", bridgeId)
+    If chatId '= "" Do resp.%Set("chat_id", chatId)
     Write resp.%ToJSON()
     Return $$$OK
 }
@@ -188,7 +204,17 @@ ClassMethod Events() As %Status
     // frontend stops hanging forever.
     Set lastSeqSeen = after
     Set lastProgress = $ZH
+    Set cancelled = 0
     For {
+        // Honor an out-of-band cancel flag set by ChatsStop. We don't have a
+        // way to pre-empt the producer job, but we can stop feeding events to
+        // the follower and synthesize a clean terminal event.
+        If +$Get(^Inteclaw.ChatEvents(bridgeId, "cancel"), 0) = 1 {
+            Set cancelled = 1
+            Set errSeq = $Increment(^Inteclaw.ChatEvents(bridgeId, "seq"))
+            Set ^Inteclaw.ChatEvents(bridgeId, "evt", errSeq) = "{""type"":""error"",""text"":""Stopped by user.""}"
+            Set ^Inteclaw.ChatEvents(bridgeId, "done") = 1
+        }
         Set cur = +$Get(^Inteclaw.ChatEvents(bridgeId, "seq"), 0)
         If cur > lastSeqSeen {
             Set lastSeqSeen = cur
@@ -226,9 +252,25 @@ ClassMethod Events() As %Status
         Hang 0.05
     }
 
+    Set isDone = (+$Get(^Inteclaw.ChatEvents(bridgeId, "done"), 0) = 1)
+
+    // If this bridge is bound to a chat, persist lastSeq as we go so a window
+    // that reconnects can resume from the right cursor. On the terminal poll,
+    // flip status to completed/stopped so the sidebar drops the running dot.
+    Set chatIdForBridge = $Get(^Inteclaw.ChatEvents(bridgeId, "chatId"))
+    If chatIdForBridge '= "" {
+        Set userForBridge = $Get(^Inteclaw.ChatEvents(bridgeId, "user"))
+        If userForBridge = "" Set userForBridge = ##class(InterClaw.V2.ChatStore).ResolveUser()
+        Set finalStatus = ""
+        If isDone Set finalStatus = $Case(cancelled, 1:"stopped", :"completed")
+        Try {
+            Do ##class(InterClaw.V2.ChatStore).SetStatus(userForBridge, chatIdForBridge, "", finalStatus, lastSeqSeen)
+        } Catch ex {}
+    }
+
     Set result = ##class(%DynamicObject).%New()
     Do result.%Set("events", arr)
-    Do result.%Set("done", (+$Get(^Inteclaw.ChatEvents(bridgeId, "done"), 0) = 1), "boolean")
+    Do result.%Set("done", isDone, "boolean")
     Write result.%ToJSON()
     Return $$$OK
 }
@@ -375,6 +417,38 @@ ClassMethod ChatsRetitle(id As %String) As %Status
         Set title = ##class(InterClaw.V2.ChatStore).Retitle(user, id)
         Set resp = ##class(%DynamicObject).%New()
         Do resp.%Set("title", title)
+        Write resp.%ToJSON()
+    } Catch ex {
+        Set %response.Status = "500 Internal Server Error"
+        Write "{""error"":""" _ $Replace(ex.DisplayString(), """", "\""") _ """}"
+    }
+    Return $$$OK
+}
+
+/// POST /api/chats/:id/stop — mark a running chat's bridge as cancelled.
+/// The producer job can't be pre-empted, but setting a cancel flag makes
+/// Events() synthesize a terminal error event and flip the chat's status
+/// to "stopped" so the sidebar drops the running dot. Safe to call on a
+/// chat that isn't running (no-op).
+ClassMethod ChatsStop(id As %String) As %Status
+{
+    Set %response.ContentType = "application/json"
+    Set %response.CharSet = "utf-8"
+    Try {
+        Set user = ##class(InterClaw.V2.ChatStore).ResolveUser()
+        Set obj = ##class(InterClaw.V2.ChatStore).Read(user, id)
+        If '$IsObject(obj) {
+            Set %response.Status = "404 Not Found"
+            Write "{""error"":""Chat not found""}"
+            Return $$$OK
+        }
+        Set bridgeId = obj.%Get("bridgeId")
+        If bridgeId '= "" && $Data(^Inteclaw.ChatEvents(bridgeId, "seq")) {
+            Set ^Inteclaw.ChatEvents(bridgeId, "cancel") = 1
+        }
+        Do ##class(InterClaw.V2.ChatStore).SetStatus(user, id, "", "stopped")
+        Set resp = ##class(%DynamicObject).%New()
+        Do resp.%Set("stopped", 1, "boolean")
         Write resp.%ToJSON()
     } Catch ex {
         Set %response.Status = "500 Internal Server Error"

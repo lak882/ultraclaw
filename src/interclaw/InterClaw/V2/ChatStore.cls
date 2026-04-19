@@ -127,7 +127,9 @@ ClassMethod List(user As %String) As %DynamicArray
         If title = "" Set title = "Untitled"
         Set updatedAt = +obj.%Get("updatedAt")
         Set favorite = ''obj.%Get("favorite")
-        Set items(updatedAt, id) = $ListBuild(id, title, updatedAt, favorite)
+        Set status = obj.%Get("status")
+        Set bridgeId = obj.%Get("bridgeId")
+        Set items(updatedAt, id) = $ListBuild(id, title, updatedAt, favorite, status, bridgeId)
     }
     Do rs.Close()
 
@@ -147,6 +149,11 @@ ClassMethod List(user As %String) As %DynamicArray
             Do row.%Set("title", $ListGet(entry, 2))
             Do row.%Set("updatedAt", $ListGet(entry, 3), "number")
             Do row.%Set("favorite", ''$ListGet(entry, 4), "boolean")
+            // status: "running" | "completed" | "stopped" | "" (never streamed)
+            Set rowStatus = $ListGet(entry, 5)
+            If rowStatus '= "" Do row.%Set("status", rowStatus)
+            Set rowBridge = $ListGet(entry, 6)
+            If rowBridge '= "" Do row.%Set("bridgeId", rowBridge)
             Do arr.%Push(row)
         }
     }
@@ -188,11 +195,43 @@ ClassMethod Put(user As %String, id As %String, input As %DynamicObject) As %Dyn
         }
         If input.%IsDefined("model") Do existing.%Set("model", input.%Get("model"))
         If input.%IsDefined("namespace") Do existing.%Set("namespace", input.%Get("namespace"))
+        If input.%IsDefined("bridgeId") Do existing.%Set("bridgeId", input.%Get("bridgeId"))
+        If input.%IsDefined("status") Do existing.%Set("status", input.%Get("status"))
+        If input.%IsDefined("lastSeq") Do existing.%Set("lastSeq", +input.%Get("lastSeq"), "number")
     }
     Do existing.%Set("updatedAt", ..NowMs(), "number")
     Do existing.%Set("id", safeId)
 
     // Write atomically: write to .tmp then rename over the final path.
+    Set tmp = path _ ".tmp"
+    Set stream = ##class(%Stream.FileCharacter).%New()
+    Set stream.TranslateTable = "UTF8"
+    Set stream.Filename = tmp
+    Do stream.Write(existing.%ToJSON())
+    Do stream.%Save()
+    Do stream.%Close()
+    If ##class(%File).Exists(path) Do ##class(%File).Delete(path)
+    Do ##class(%File).Rename(tmp, path)
+    Return existing
+}
+
+/// Narrow status update that merges { bridgeId, status, lastSeq } without
+/// touching messages or bumping updatedAt to a full save. Used by the REST
+/// adapter to mark a chat running/completed/stopped around each bridge run.
+/// Returns the merged object, or "" if the id doesn't sanitize or the record
+/// is missing (callers should have created it via Put first).
+ClassMethod SetStatus(user As %String, id As %String, bridgeId As %String = "", status As %String = "", lastSeq As %Integer = -1) As %DynamicObject
+{
+    Set safeId = ..SafeId(id)
+    If safeId = "" Return ""
+    Set existing = ..Read(user, id)
+    If '$IsObject(existing) Return ""
+    If bridgeId '= "" Do existing.%Set("bridgeId", bridgeId)
+    If status '= "" Do existing.%Set("status", status)
+    If lastSeq >= 0 Do existing.%Set("lastSeq", lastSeq, "number")
+    Do existing.%Set("id", safeId)
+
+    Set path = ..UserDir(user) _ safeId _ ".json"
     Set tmp = path _ ".tmp"
     Set stream = ##class(%Stream.FileCharacter).%New()
     Set stream.TranslateTable = "UTF8"

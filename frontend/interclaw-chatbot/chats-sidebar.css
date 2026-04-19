@@ -143,6 +143,25 @@ body.ic-chat-mode #chatbot-sidebar {
   background: rgba(0,0,0,0.08);
   font-weight: 500;
 }
+
+/* Running indicator: a small pulsing dot in the InterClaw teal, positioned
+   flush against the title. Rendered only when the server reports the chat's
+   bridge is still streaming (status === 'running'). */
+.ic-chats-item-running {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00B2A9;
+  margin-right: 7px;
+  box-shadow: 0 0 0 0 rgba(0, 178, 169, 0.6);
+  animation: ic-chats-running-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ic-chats-running-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0, 178, 169, 0.55); }
+  70%  { box-shadow: 0 0 0 6px rgba(0, 178, 169, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 178, 169, 0); }
+}
 .ic-chats-item-title {
   flex: 1;
   white-space: nowrap;

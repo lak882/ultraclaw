@@ -16,6 +16,7 @@
   var ICON_STAR_FILLED = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
   var ICON_STAR_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>';
   var ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+  var ICON_STOP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>';
 
   // ── Chat store (M2/M3: server-backed CRUD) ──────────────────────────────
   // Shape: { chats: [{id,title,updatedAt}], activeId, user }
@@ -322,8 +323,13 @@
 
     function renderRow(c) {
       var active = c.id === cc.chatsStore.activeId ? ' active' : '';
-      return '<div class="ic-chats-item' + active + '" data-chat-id="' + escapeHtml(c.id) +
-                   '" data-favorite="' + (c.favorite ? 'true' : 'false') + '" draggable="true">' +
+      var isRunning = c.status === 'running';
+      var runningBadge = isRunning
+        ? '<span class="ic-chats-item-running" title="Running"></span>' : '';
+      return '<div class="ic-chats-item' + active + (isRunning ? ' running' : '') + '" data-chat-id="' + escapeHtml(c.id) +
+                   '" data-favorite="' + (c.favorite ? 'true' : 'false') +
+                   '" data-status="' + escapeHtml(c.status || '') + '" draggable="true">' +
+                runningBadge +
                 '<span class="ic-chats-item-title">' + escapeHtml(c.title || 'Untitled') + '</span>' +
                 '<span class="ic-chats-item-actions">' +
                   '<button class="ic-chats-item-action ic-chats-item-more" data-action="more" title="More" aria-label="More actions">' + ICON_MORE + '</button>' +
@@ -440,7 +446,13 @@
     var menu = document.createElement('div');
     menu.id = 'ic-chats-popup';
     menu.className = 'ic-chats-popup';
+    var stopItem = chat.status === 'running'
+      ? '<button class="ic-chats-popup-item" data-action="stop">' +
+          '<span class="ic-chats-popup-icon">' + ICON_STOP + '</span>Stop' +
+        '</button>'
+      : '';
     menu.innerHTML =
+      stopItem +
       '<button class="ic-chats-popup-item" data-action="favorite">' +
         '<span class="ic-chats-popup-icon">' + favIcon + '</span>' + favLabel +
       '</button>' +
@@ -488,6 +500,7 @@
       if (a === 'favorite') cc.setChatFavorite(id, !chat.favorite);
       else if (a === 'rename') cc.renameChatInline(id, itemEl);
       else if (a === 'delete') cc.deleteChat(id);
+      else if (a === 'stop') cc.stopChat(id);
     });
 
     cc._chatMenuOutsideHandler = function(e) {
@@ -529,6 +542,9 @@
     try {
       if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('chatbot-state');
     } catch (e) {}
+    if (typeof cc.showWelcomeMessage === 'function') {
+      cc.showWelcomeMessage();
+    }
   };
 
   // Roadmap: remember the Management Portal URL (or active component) that
@@ -542,6 +558,11 @@
   cc.openChat = function(id) {
     cc.chatsStore.activeId = id;
     cc.renderChatsSidebar();
+    // If a stream is currently following a different chat, stop following
+    // (the server-side bridge keeps running — we just unhook this tab).
+    if (cc.bridgePolling && cc.bridgeAbort) {
+      try { cc.bridgeAbort.abort(); } catch (_) {}
+    }
     fetch(chatsUrl('/' + encodeURIComponent(id)), { credentials: 'same-origin' })
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(chat) {
@@ -553,8 +574,23 @@
         // same file instead of creating a new one.
         cc.sessionId = chat.id;
         cc.sessionReady = true;
+        // If the chat's bridge is still streaming on the server, attach to
+        // it so the live events render into this reopened pane.
+        if (chat.status === 'running' && chat.bridgeId && cc.attachBridge) {
+          cc.attachBridge(chat.bridgeId, +chat.lastSeq || 0);
+        }
       })
       .catch(function(err) { console.warn('[interclaw] openChat failed:', err); });
+  };
+
+  cc.stopChat = function(id) {
+    fetch(chatsUrl('/' + encodeURIComponent(id) + '/stop'), {
+      method: 'POST',
+      credentials: 'same-origin'
+    })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function() { cc.refreshChatsList(); })
+    .catch(function(err) { console.warn('[interclaw] stopChat failed:', err); });
   };
 
   function clearMessagesPane() {

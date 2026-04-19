@@ -5,6 +5,10 @@
     opts = opts || {};
 
     try {
+      // Let the server bind this bridge to the chat id. Pre-existing chats
+      // adopt cc.sessionId as their id; brand-new chats have no id until the
+      // `session` event comes back and openChat/startNewChat wires it up.
+      if (cc.sessionId && !payload.chat_id) payload.chat_id = cc.sessionId;
       var startResp = await fetch(cc.chatApiBase + '/api/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -18,6 +22,7 @@
       var startData = await startResp.json();
       cc.currentBridgeId = startData.bridge_id;
       console.log('[bridge] started:', cc.currentBridgeId);
+      if (cc.refreshChatsList) cc.refreshChatsList();
 
       var after = 0;
       cc.bridgePolling = true;
@@ -85,6 +90,71 @@
       cc.bridgePolling = false;
       cc.bridgeAbort = null;
       cc.currentBridgeId = null;
+      if (cc.refreshChatsList) cc.refreshChatsList();
+    }
+    return true;
+  };
+
+  // Attach the event stream to an existing server-side bridge. Used when a
+  // user reopens a chat whose previous turn is still streaming (e.g. after a
+  // window close). afterSeq is the last event sequence the chat already has;
+  // the poll resumes from there. Shares the same event loop as bridgeSend —
+  // any new tool_use / delta / done events render into the reopened pane.
+  cc.attachBridge = async function(bridgeId, afterSeq) {
+    if (!bridgeId) return false;
+    cc.currentBridgeId = bridgeId;
+    var after = +afterSeq || 0;
+    cc.bridgePolling = true;
+    cc.bridgeAbort = new AbortController();
+    var pollRetries = 0;
+    var maxPollRetries = 3;
+    cc.showStopButton();
+    cc.showTypingIndicator();
+    cc.updateStatus('Resuming...');
+    try {
+      while (cc.bridgePolling) {
+        try {
+          var pollResp = await fetch(
+            cc.chatApiBase + '/api/events?bridge_id=' + cc.currentBridgeId + '&after=' + after,
+            { signal: cc.bridgeAbort.signal }
+          );
+          if (!pollResp.ok) {
+            if (pollResp.status >= 500 && pollRetries < maxPollRetries) {
+              pollRetries++;
+              await new Promise(function(r) { setTimeout(r, 1000 * pollRetries); });
+              continue;
+            }
+            throw new Error('Poll failed: HTTP ' + pollResp.status);
+          }
+          pollRetries = 0;
+          var pollData = await pollResp.json();
+          for (var i = 0; i < pollData.events.length; i++) {
+            var evt = pollData.events[i];
+            after = evt.seq;
+            var data = evt.data;
+            if (data.type === 'connected') continue;
+            cc.handleEvent(data);
+          }
+          if (pollData.done) {
+            cc.bridgePolling = false;
+            break;
+          }
+        } catch (e) {
+          if (e.name === 'AbortError') break;
+          throw e;
+        }
+      }
+    } catch (e) {
+      console.warn('[bridge] attach error:', e && e.message);
+      cc.updateStatus('Error');
+      cc.removeTypingIndicator();
+      cc.hideStopButton();
+      return false;
+    } finally {
+      cc.bridgePolling = false;
+      cc.bridgeAbort = null;
+      cc.currentBridgeId = null;
+      if (cc.refreshChatsList) cc.refreshChatsList();
     }
     return true;
   };
