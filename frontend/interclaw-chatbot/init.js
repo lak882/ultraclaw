@@ -11,7 +11,6 @@
       var params = new URLSearchParams(window.location.search);
       if ((params.get('FULL') || '').toUpperCase() === 'TRUE') {
         document.body.classList.add('chatbot-fullscreen');
-        cc.updateFullscreenIcon();
       }
 
       // Event delegation for reasoning steps — survives DOM serialization/restoration
@@ -42,8 +41,20 @@
         }
       });
 
+      // Save chatbot state before any page navigation so it persists across tab clicks
+      window.addEventListener('beforeunload', function() {
+        if (cc.sessionId) cc.saveState();
+      });
+
+      // Pre-set status for tab navigation so user doesn't see "Not connected" flash
+      var navType = 'navigate';
+      try { navType = performance.getEntriesByType('navigation')[0].type; } catch(e) {}
+      var isReload = navType === 'reload';
+      if (!isReload && sessionStorage.getItem('chatbot-state')) {
+        cc.updateStatus('Connected');
+      }
+
       setTimeout(function() {
-        var isProgrammatic = sessionStorage.getItem('chatbot-programmatic-reload');
         sessionStorage.removeItem('chatbot-programmatic-reload');
 
         if (sessionStorage.getItem('chatbot-close-after-reload')) {
@@ -51,24 +62,13 @@
           document.body.classList.add('chatbot-closed');
         }
 
-        if (isProgrammatic && cc.restoreState()) {
-          // Restored from programmatic reload
+        if (!isReload && cc.restoreState()) {
+          // Restored conversation from tab navigation
         } else {
           sessionStorage.removeItem('chatbot-state');
           cc.initSession();
         }
-        cc.checkPendingClick();
 
-        setTimeout(function() {
-          var overlay = document.getElementById('reload-overlay');
-          if (overlay && overlay.style.display !== 'none') {
-            overlay.classList.add('fade-out');
-            setTimeout(function() {
-              overlay.style.display = 'none';
-              overlay.classList.remove('fade-out');
-            }, 300);
-          }
-        }, 400);
 
       }, 300);
     });

@@ -14,7 +14,7 @@ Parse "$ARGUMENTS": the document name. If it doesn't end with .cls/.mac/.inc/.cs
 ## Execution
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/documents/get_doc.py --server <server> --namespace <namespace> --doc <name>
+<python> .claude/skills/interclaw/scripts/documents/get_doc.py --server <server> --namespace <namespace> --doc <name>
 ```
 
 ## Output

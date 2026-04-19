@@ -4,19 +4,21 @@
   // --- Fetch interceptor: capture namespace from Angular app's API calls ---
   // The Angular interop-editor calls /api/interop-editors/v{N}/{NAMESPACE}/...
   // and /api/atelier/v{N}/{NAMESPACE}/... — these are ground truth.
+  // IMPORTANT: Skip updates during namespace bounces to avoid contamination.
   cc._apiNamespace = null;
 
   (function() {
     var originalFetch = window.fetch;
     window.fetch = function(input, init) {
       try {
-        var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
-        var nsMatch = url.match(/\/api\/(?:interop-editors|atelier)\/v\d+\/([^\/]+)\//i);
-        if (nsMatch) {
-          var ns = decodeURIComponent(nsMatch[1]).toUpperCase();
-          // Ignore %SYS / %25SYS — not a user namespace
-          if (ns !== '%SYS' && ns !== '%25SYS' && /^[A-Z][A-Z0-9_-]*$/.test(ns)) {
-            cc._apiNamespace = ns;
+        if (!cc._isBouncingNamespace) {
+          var url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
+          var nsMatch = url.match(/\/api\/(?:interop-editors|atelier)\/v\d+\/([^\/]+)\//i);
+          if (nsMatch) {
+            var ns = decodeURIComponent(nsMatch[1]).toUpperCase();
+            if (ns !== '%SYS' && ns !== '%25SYS' && /^[A-Z][A-Z0-9_-]*$/.test(ns)) {
+              cc._apiNamespace = ns;
+            }
           }
         }
       } catch (e) { /* never break fetch */ }
@@ -29,11 +31,13 @@
     var originalOpen = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function(method, url) {
       try {
-        var nsMatch = (url || '').match(/\/api\/(?:interop-editors|atelier)\/v\d+\/([^\/]+)\//i);
-        if (nsMatch) {
-          var ns = decodeURIComponent(nsMatch[1]).toUpperCase();
-          if (ns !== '%SYS' && ns !== '%25SYS' && /^[A-Z][A-Z0-9_-]*$/.test(ns)) {
-            cc._apiNamespace = ns;
+        if (!cc._isBouncingNamespace) {
+          var nsMatch = (url || '').match(/\/api\/(?:interop-editors|atelier)\/v\d+\/([^\/]+)\//i);
+          if (nsMatch) {
+            var ns = decodeURIComponent(nsMatch[1]).toUpperCase();
+            if (ns !== '%SYS' && ns !== '%25SYS' && /^[A-Z][A-Z0-9_-]*$/.test(ns)) {
+              cc._apiNamespace = ns;
+            }
           }
         }
       } catch (e) { /* never break XHR */ }
@@ -41,27 +45,29 @@
     };
   })();
 
+  var DEFAULT_NAMESPACE = 'INTERCLAW';
+
   cc.detectNamespace = function() {
-    // Priority 1: Namespace captured from Angular's own API calls (most reliable)
+    // 1. Header is the single source of truth — read from interclaw-header.js
+    //    The header resolves: URL param > server global > fallback
+    var headerLabel = document.getElementById('ic-header-ns-label');
+    if (headerLabel && headerLabel.textContent) {
+      var headerNs = headerLabel.textContent.trim().toUpperCase();
+      if (headerNs) return headerNs;
+    }
+
+    // 2. API interceptor (Angular API calls) — secondary source
     if (cc._apiNamespace) return cc._apiNamespace;
 
-    // Priority 2: URL path — /healthshare/{NAMESPACE}/
-    var path = window.location.pathname;
-    var match = path.match(/\/healthshare\/([^\/]+)/i);
-    if (match) return match[1].toUpperCase();
-
-    // Priority 3: URL query parameters — ?$NAMESPACE= or ?NAMESPACE=
+    // 3. URL query params — for pages loaded without the header
     var params = new URLSearchParams(window.location.search);
     var ns = params.get('$NAMESPACE') || params.get('NAMESPACE');
     if (ns) return ns.toUpperCase();
 
-    // Priority 4: DOM element with namespace class (least reliable)
-    var nsEl = document.querySelector('[class*="namespace"]');
-    if (nsEl) {
-      var text = nsEl.textContent.trim().toUpperCase();
-      if (text && /^[A-Z][A-Z0-9_-]*$/.test(text)) return text;
-    }
-    return null;
+    // 4. localStorage / fallback
+    var stored = sessionStorage.getItem('interclaw-namespace');
+    if (stored) return stored.toUpperCase();
+    return DEFAULT_NAMESPACE;
   };
 
   // Set initial namespace now that detectNamespace is defined
@@ -75,7 +81,7 @@
 
   function parseEditorContext() {
     var params = new URLSearchParams(window.location.search);
-    var ctx = { namespace: null, production: null, active: null, activeType: null, components: {} };
+    var ctx = { namespace: null, production: null, active: null, activeType: null, components: {}, page: null, pageUrl: null };
     ctx.namespace = cc.detectNamespace();
     ctx.production = params.get('$PRODUCTION') || params.get('PRODUCTION') || null;
     for (var i = 0; i < EDITOR_PARAMS.length; i++) {
@@ -101,6 +107,48 @@
       ctx.active = lastVal;
       ctx.activeType = lastType.toLowerCase();
     }
+
+    // Detect current page type from URL path
+    var path = window.location.pathname;
+    if (path.indexOf('/interop-editor/') !== -1) ctx.page = 'interop-editor';
+    else if (path.indexOf('/dtl-editor/') !== -1) ctx.page = 'dtl-editor';
+    else if (path.indexOf('/rule-editor/') !== -1) ctx.page = 'rule-editor';
+    else if (path.indexOf('/bpl-editor/') !== -1) ctx.page = 'bpl-editor';
+    else if (path.indexOf('/message-viewer/') !== -1) ctx.page = 'message-viewer';
+    else if (path.indexOf('/skills-editor/') !== -1) ctx.page = 'skills-editor';
+    else if (path.indexOf('/legacy-ui/') !== -1) ctx.page = 'legacy-ui';
+    else ctx.page = 'other';
+
+    // Full page URL (path + search + hash) for backend context
+    ctx.pageUrl = path + window.location.search + window.location.hash;
+
+    // For legacy-ui: capture the viewer-frame iframe URL (the actual Zen page being viewed)
+    if (ctx.page === 'legacy-ui') {
+      try {
+        var frame = document.getElementById('viewer-frame');
+        if (frame && frame.src) ctx.viewerFrame = frame.src;
+      } catch(e) { /* cross-origin or no frame */ }
+    }
+
+    // For legacy-ui: parse hash to extract the Zen page class being viewed
+    var hash = window.location.hash;
+    if (hash && ctx.page === 'legacy-ui') {
+      // Hash format: #/csp/healthshare/<ns>/EnsPortal.DTLEditor.zen?DT=Some.DTL.cls
+      var zenMatch = hash.match(/EnsPortal\.(\w+)\.zen/);
+      if (zenMatch) ctx.zenPage = zenMatch[1];
+      var dtMatch = hash.match(/[?&]DT=([^&]+)/);
+      if (dtMatch) { ctx.active = decodeURIComponent(dtMatch[1]).replace(/\.cls$/, ''); ctx.activeType = 'dtl'; }
+      var ruleMatch = hash.match(/[?&]RULE=([^&]+)/);
+      if (ruleMatch) { ctx.active = decodeURIComponent(ruleMatch[1]); ctx.activeType = 'rule'; }
+      var bpMatch = hash.match(/[?&]BP=([^&]+)/);
+      if (bpMatch) { ctx.active = decodeURIComponent(bpMatch[1]).replace(/\.cls$/, ''); ctx.activeType = 'bpl'; }
+      var prodMatch = hash.match(/[?&]PRODUCTION=([^&]+)/);
+      if (prodMatch) { ctx.active = decodeURIComponent(prodMatch[1]); ctx.activeType = 'production'; }
+      var msMatch = hash.match(/[?&]MS=([^&]+)/);
+      if (msMatch) { ctx.active = decodeURIComponent(msMatch[1]); ctx.activeType = 'schema'; }
+    }
+
+    ctx.origin = window.location.origin;
     cc._editorContext = ctx;
     return ctx;
   }

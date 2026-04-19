@@ -21,7 +21,7 @@ Parse "$ARGUMENTS":
 ## Execution
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/diagnostics/get_errors.py --server <server> --namespace <ns> [--package <pkg>] [--count <N>] [--since <value>] [--format <fmt>]
+<python> .claude/skills/interclaw/scripts/diagnostics/get_errors.py --server <server> --namespace <ns> [--package <pkg>] [--count <N>] [--since <value>] [--format <fmt>]
 ```
 
 ## Output

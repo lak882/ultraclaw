@@ -65,6 +65,13 @@
       "mutates": true
     },
     {
+      "name": "samples",
+      "description": "Browse and run POC sample exercises",
+      "category": "building",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
       "name": "json-adapter",
       "description": "Generate JSON adapter classes from a payload structure",
       "category": "building",
@@ -252,14 +259,32 @@
       "handler": "local"
     },
     {
+      "name": "login",
+      "description": "Log in with IRIS credentials — /login <username> <password>",
+      "category": "session",
+      "handler": "local"
+    },
+    {
+      "name": "logout",
+      "description": "Clear stored IRIS credentials",
+      "category": "session",
+      "handler": "local"
+    },
+    {
       "name": "authenticate",
       "description": "Set Bedrock API key — /authenticate <ABSK...>",
       "category": "session",
       "handler": "local"
     },
     {
+      "name": "deauthenticate",
+      "description": "Remove stored Bedrock API key",
+      "category": "session",
+      "handler": "local"
+    },
+    {
       "name": "auth-status",
-      "description": "Check current authentication status",
+      "description": "Check login and API key status",
       "category": "session",
       "handler": "local"
     },

@@ -43,6 +43,15 @@
 
   cc.addReasoningStep = function(step) {
     cc.ensureStepsContainer();
+    // Track one active step per type (thinking, tool) so the user can see
+    // the latest of each simultaneously. When a new step of a given type
+    // is added, collapse the previous active step of that same type only.
+    if (!cc._autoExpandedByType) cc._autoExpandedByType = {};
+    var slot = (step.type === 'thinking') ? 'thinking' : 'tool';
+    if (cc._autoExpandedByType[slot]) {
+      cc.toggleStepContent(cc._autoExpandedByType[slot]);
+      cc._autoExpandedByType[slot] = null;
+    }
     cc.currentSteps.push(step);
 
     if (cc.currentSteps.length === 2 && cc.currentStepsListEl) {
@@ -82,6 +91,14 @@
 
     cc.currentStepsListEl.appendChild(stepEl);
     cc.updateStepsVisibility();
+
+    // Auto-expand both thinking and tool steps so the user sees the
+    // latest of each. Each type keeps its own slot; adding a new step of
+    // a type collapses the previous-active of that same type only.
+    if (step.content) {
+      cc.toggleStepContent(step.id);
+      cc._autoExpandedByType[slot] = step.id;
+    }
     return step;
   };
 
@@ -91,19 +108,20 @@
     var total = steps.length;
     var connector = cc.currentStepsListEl.querySelector('.reasoning-connector');
     if (total <= cc.MAX_VISIBLE_STEPS || cc.stepsExpandedAll) {
-      for (var i = 0; i < steps.length; i++) { steps[i].style.display = ''; steps[i].classList.remove('last-visible'); }
+      for (var i = 0; i < steps.length; i++) { steps[i].style.display = ''; steps[i].classList.remove('first-visible'); }
       var btn = cc.currentStepsListEl.querySelector('.reasoning-more-btn');
       if (btn) btn.remove();
       if (connector) connector.style.display = '';
       return;
     }
-    for (var i = 0; i < steps.length; i++) {
-      steps[i].style.display = i < cc.MAX_VISIBLE_STEPS ? '' : 'none';
-      steps[i].classList.remove('last-visible');
-    }
-    steps[cc.MAX_VISIBLE_STEPS - 1].classList.add('last-visible');
-    if (connector) connector.style.display = '';
+    // Hide older steps (at the beginning), show newest steps (at the end)
     var hiddenCount = total - cc.MAX_VISIBLE_STEPS;
+    for (var i = 0; i < steps.length; i++) {
+      steps[i].style.display = i < hiddenCount ? 'none' : '';
+      steps[i].classList.remove('first-visible');
+    }
+    steps[hiddenCount].classList.add('first-visible');
+    if (connector) connector.style.display = 'none';
     var btn = cc.currentStepsListEl.querySelector('.reasoning-more-btn');
     if (!btn) {
       btn = document.createElement('button');
@@ -113,7 +131,7 @@
           e.stopPropagation();
           // Expand all steps in THIS list, not cc.currentStepsListEl
           var allSteps = listEl.querySelectorAll('.reasoning-step');
-          for (var j = 0; j < allSteps.length; j++) { allSteps[j].style.display = ''; allSteps[j].classList.remove('last-visible'); }
+          for (var j = 0; j < allSteps.length; j++) { allSteps[j].style.display = ''; allSteps[j].classList.remove('first-visible'); }
           var connector = listEl.querySelector('.reasoning-connector');
           if (connector) connector.style.display = '';
           b.remove();
@@ -121,7 +139,13 @@
       })(btn, cc.currentStepsListEl);
     }
     btn.textContent = '+' + hiddenCount + ' more';
-    cc.currentStepsListEl.appendChild(btn);
+    // Insert button at top (before first visible step)
+    var firstStep = cc.currentStepsListEl.querySelector('.reasoning-step');
+    if (firstStep) {
+      cc.currentStepsListEl.insertBefore(btn, firstStep);
+    } else {
+      cc.currentStepsListEl.appendChild(btn);
+    }
   };
 
   cc.updateReasoningStep = function(stepId, updates) {
@@ -134,6 +158,35 @@
 
     if (updates.content !== undefined) stepEl.dataset.content = updates.content;
     if (updates.rawOutput !== undefined) stepEl.dataset.rawOutput = updates.rawOutput;
+
+    // Auto-expand the latest step once it has content. Each type has its
+    // own slot — thinking steps don't displace tool steps and vice versa.
+    if (updates.content !== undefined && updates.content) {
+      if (!cc._autoExpandedByType) cc._autoExpandedByType = {};
+      var slot = (step.type === 'thinking') ? 'thinking' : 'tool';
+      if (cc._autoExpandedByType[slot] && cc._autoExpandedByType[slot] !== stepId) {
+        cc.toggleStepContent(cc._autoExpandedByType[slot]);
+        cc._autoExpandedByType[slot] = null;
+      }
+      var isOpen = stepEl.querySelector('.reasoning-step-content');
+      if (!isOpen) {
+        cc.toggleStepContent(stepId);
+        cc._autoExpandedByType[slot] = stepId;
+      } else {
+        // Already open — update the rendered content for live streaming.
+        if (step.type === 'thinking') {
+          isOpen.innerHTML = cc.renderMarkdown(updates.content);
+        } else {
+          var lines = updates.content.split('\n');
+          var lh = '<div class="reasoning-tool-lines">';
+          for (var li = 0; li < lines.length; li++) {
+            lh += '<div class="reasoning-tool-line">' + cc.escapeHtml(lines[li]) + '</div>';
+          }
+          lh += '</div>';
+          isOpen.innerHTML = lh;
+        }
+      }
+    }
 
     var label = stepEl.querySelector('.reasoning-step-label span');
     if (label) {
@@ -218,6 +271,8 @@
     cc.stepsExpanded = {};
     cc.stepsVisible = true;
     cc.stepsExpandedAll = false;
+    cc._autoExpandedByType = {};
+    cc._finalAnswerStarted = false;
   };
 
 })(window._cc);

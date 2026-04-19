@@ -26,13 +26,12 @@
   };
 
   cc.linkifyComponents = function(html) {
-    var isZen = !document.querySelector('app-root');
     var isChatMode = document.body.classList.contains('ic-chat-mode');
     return html.replace(/(?<![\/\w"=])(\b[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*){2,})\b(?!\.cls)(?![^<]*>)/g, function(m, cls) {
       var link = cc.buildPortalLink(cls);
       if (link) {
-        var target = (isZen && !isChatMode) ? '' : ' target="_blank"';
-        var onclick = (isZen && !isChatMode) ? ' onclick="var f=document.getElementById(\'viewer-frame\');if(f){f.src=this.href;return false;}"' : '';
+        var target = isChatMode ? ' target="_blank"' : '';
+        var onclick = isChatMode ? '' : ' onclick="var f=document.getElementById(\'viewer-frame\');if(f){f.src=this.href;return false;}"';
         return '<a href="' + link.url + '"' + target + onclick + ' class="chatbot-link" title="' + link.label + '">' + cls + ' &#x2197;</a>';
       }
       return cls;
@@ -81,7 +80,12 @@
     };
     chatbotRenderer.link = function(href, title, text) {
       if (typeof href === 'object') { text = href.text; title = href.title; href = href.href; }
-      return '<a href="' + href + '" target="_blank" class="chatbot-link">' + text + '</a>';
+      // Legacy-ui links: render as clickable links that navigate the viewer-frame iframe
+      if (href && href.indexOf('/legacy-ui/') !== -1 && href.indexOf('#') !== -1) {
+        return '<a href="' + href + '" class="chatbot-link" onclick="if(window._cc&&window._cc.navigateLegacyUi(this.href))return false;">' + text + ' &#x2197;</a>';
+      }
+      // All other links: render as plain text (nav links are separate UI elements)
+      return text;
     };
     chatbotRenderer.list = function(body, ordered) {
       // marked 12.x passes object {items, ordered, start}
@@ -104,6 +108,7 @@
     // Strip SDK noise before rendering
     text = text.replace(/\[(?:View|Open) in Portal\]\([^)]+\)[ \t]*/gi, '');
     text = text.replace(/^PORTAL_URL:.*$/gm, '');
+    text = text.replace(/^OPEN:\s.*$/gm, '');
     text = text.replace(/^\/goto(?:-reload)?\s.*$/gm, '');
     text = text.replace(/^\/skill(?:-goto)?\s.*$/gm, '');
     text = text.replace(/^Token usage:.*$/gm, '');
@@ -118,9 +123,6 @@
       // Fallback: basic escaping if marked hasn't loaded yet
       html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     }
-
-    // Add portal links for IRIS component class names
-    html = cc.linkifyComponents(html);
 
     return html;
   };

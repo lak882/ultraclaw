@@ -1,0 +1,20 @@
+Class {{PACKAGE_NAME}}.BPL.{{CLASS_NAME}} Extends Ens.BusinessProcessBPL
+{
+
+/// {{DESCRIPTION}}
+
+XData BPL [ XMLNamespace = "http://www.intersystems.com/bpl" ]
+{
+<process language='objectscript' request='{{REQUEST_CLASS}}' response='{{RESPONSE_CLASS}}'>
+<context>
+  {{CONTEXT_PROPERTIES}}
+</context>
+<sequence>
+
+  {{BPL_ACTIVITIES}}
+
+</sequence>
+</process>
+}
+
+}

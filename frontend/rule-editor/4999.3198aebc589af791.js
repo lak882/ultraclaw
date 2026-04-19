@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkrule_editor=self.webpackChunkrule_editor||[]).push([[4999],{4999:e=>{e.exports=JSON.parse('{"targetLanguages":["af-za","ar-ar","cs-cz","da-dk","de-de","en-au","en-gb","es-cl","es-es","fi-fi","fr-fr","it-it","ja-jp","nl-nl","pt-br","ru-ru","sv-se","uk-ua","xh-za","zh-cn","zu-za"]}')}}]);

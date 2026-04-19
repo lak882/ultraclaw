@@ -1,43 +1,45 @@
 {
+    "default": "interclaw-dev",
     "intersystems.servers": {
-        "vmdev1": {
+        "interclaw-dev": {
             "webServer": {
                 "scheme": "http",
                 "host": "vmdev1.iscinternal.com",
                 "port": 80,
-                "pathPrefix": "/irishealth"
+                "pathPrefix": "/interclaw-dev"
             },
             "username": "superuser",
-            "password": "SYS"
+            "password": ""
         },
-        "claude-dev": {
+        "interclaw-test": {
             "webServer": {
                 "scheme": "http",
                 "host": "vmdev1.iscinternal.com",
                 "port": 80,
-                "pathPrefix": "/claude-dev"
+                "pathPrefix": "/interclaw-test"
             },
             "username": "superuser",
-            "password": "SYS"
+            "password": ""
         },
-        "claude-prod": {
+        "interclaw-prod": {
             "webServer": {
                 "scheme": "http",
                 "host": "vmdev1.iscinternal.com",
                 "port": 80,
-                "pathPrefix": "/claude-prod"
+                "pathPrefix": "/interclaw-prod"
             },
             "username": "superuser",
-            "password": "SYS"
+            "password": ""
         },
-        "irisclaw-analytics": {
+        "interclaw-clean-again": {
             "webServer": {
                 "scheme": "http",
                 "host": "localhost",
-                "port": 80
+                "port": 80,
+                "pathPrefix": "/interclaw-clean-again"
             },
             "username": "superuser",
-            "password": "SYS"
+            "password": ""
         }
     }
 }

@@ -1,0 +1,14 @@
+{
+    "intersystems.servers": {
+        "example-server": {
+            "webServer": {
+                "scheme": "http",
+                "host": "localhost",
+                "port": 80,
+                "pathPrefix": ""
+            },
+            "username": "",
+            "password": ""
+        }
+    }
+}

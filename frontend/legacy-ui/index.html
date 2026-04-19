@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>InterClaw — Legacy Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="../favicon.ico">
+
+<!-- ═══ 1. ISC Design Tokens ═══ -->
+<style>
+:root {
+  --fr-styles-color-primary-hsl: 238, 49%, 39%;
+  --fr-styles-color-primary: hsl(238, 49%, 39%);
+  --fr-styles-color-primary-contrast: hsl(0, 0%, 100%);
+  --fr-styles-color-secondary-hsl: 178, 100%, 32%;
+  --fr-styles-color-secondary: hsl(178, 100%, 32%);
+  --fr-styles-color-secondary-contrast: hsl(0, 0%, 100%);
+  --fr-styles-color-white: hsl(0, 0%, 100%);
+  --fr-styles-color-near-white: hsl(0, 0%, 98%);
+  --fr-styles-color-very-light-grey: hsl(0, 0%, 95%);
+  --fr-styles-color-light-grey: hsl(0, 0%, 88%);
+  --fr-styles-font-size-2xs: 0.75rem;
+  --fr-styles-font-size-xs: 0.8125rem;
+  --fr-styles-font-size-sm: 0.875rem;
+  --fr-styles-font-size-base: 1rem;
+  --fr-header-height-toolbar: 40px;
+  --fr-header-border-top-toolbar: 2px;
+  --chatbot-width: 25vw;
+}
+@font-face {
+  font-family: 'Noto Sans'; font-style: normal; font-weight: 400;
+  src: local('Noto Sans'), local('NotoSans'),
+       url(../noto-sans-v9-latin-regular.dbdd323d86bb9df6.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Noto Sans'; font-style: normal; font-weight: 700;
+  src: local('Noto Sans Bold'), local('NotoSans-Bold'),
+       url(../noto-sans-v9-latin-700.2813ebf28ffdbb0b.woff2) format('woff2');
+}
+</style>
+
+<!-- ═══ 2. Chatbot layout ═══ -->
+<style>
+html { --chatbot-width: 25vw; }
+#app-root {
+  position: absolute;
+  inset: 0 !important;
+  right: var(--chatbot-width) !important;
+  transform: translateZ(0);
+  transition: right 0.25s cubic-bezier(0, 0, 0.2, 1);
+  overflow: hidden;
+}
+body.chatbot-closed #app-root { right: 0 !important; }
+body.chatbot-dragging #app-root { transition: none !important; }
+body.chatbot-auth-gate #chatbot-sidebar,
+body.chatbot-auth-gate #chatbot-toggle { display: none !important; }
+body.chatbot-auth-gate #app-root { right: 0 !important; transition: none !important; }
+body.chatbot-fullscreen #app-root { display: none; }
+</style>
+
+<!-- ═══ 3. Legacy Portal styles ═══ -->
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  font-family: 'Noto Sans', 'Noto Sans Arabic', Arial, sans-serif;
+  font-size: var(--fr-styles-font-size-sm);
+  color: rgba(0,0,0,0.87);
+  background: var(--fr-styles-color-near-white);
+}
+#app-root {
+  display: flex; flex-direction: column;
+}
+#viewer-frame {
+  flex: 1;
+  border: none;
+  width: 100%;
+  min-width: 0;
+  background: var(--fr-styles-color-white);
+}
+#viewer-error {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+}
+#viewer-error svg { width: 48px; height: 48px; stroke: rgba(0,0,0,0.2); fill: none; }
+#viewer-error h2 { font-size: var(--fr-styles-font-size-base); color: rgba(0,0,0,0.87); font-weight: 600; }
+#viewer-error p { font-size: var(--fr-styles-font-size-xs); color: rgba(0,0,0,0.54); max-width: 480px; line-height: 1.5; }
+#viewer-error code {
+  display: block; margin-top: 8px; padding: 8px 12px;
+  background: var(--fr-styles-color-very-light-grey);
+  border-radius: 4px; font-family: Consolas, Monaco, monospace;
+  font-size: var(--fr-styles-font-size-2xs); color: rgba(0,0,0,0.68);
+  word-break: break-all;
+}
+</style>
+</head>
+<body data-no-auth-gate>
+<script src="../interclaw-header.js?v=13"></script>
+  <div id="app-root">
+    <iframe id="viewer-frame"></iframe>
+    <div id="viewer-error">
+      <svg viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <h2>Could not load Legacy Portal</h2>
+      <p>The IRIS Management Portal page could not be embedded. This may be due to X-Frame-Options restrictions. You can open it directly:</p>
+      <code id="viewer-direct-link"></code>
+    </div>
+  </div>
+
+  <!-- Chatbot -->
+  <script src="../interclaw-chatbot.js?v=16"></script>
+
+<script>
+(function() {
+  'use strict';
+
+  // Resolve namespace from header (single source of truth)
+  var params = new URLSearchParams(window.location.search);
+  var headerLabel = document.getElementById('ic-header-ns-label');
+  var namespace = (headerLabel && headerLabel.textContent.trim())
+    || params.get('$NAMESPACE') || params.get('NAMESPACE') || 'INTERCLAW';
+  namespace = namespace.toUpperCase();
+
+  var pathParts = window.location.pathname.split('/ui/interop/');
+  var pathPrefix = pathParts[0] || '';
+  var wrapperBase = window.location.pathname; // this page's path
+  var cspBase = pathPrefix + '/csp/healthshare/' + namespace.toLowerCase();
+
+  // ── Named page shortcuts ──
+  // URL format: /legacy-ui/index.html?$NAMESPACE=NS&page=name
+  //         or: /legacy-ui/index.html?$NAMESPACE=NS#/full/zen/path?params
+  //
+  // The hash fragment holds the zen URL — no encoding issues since the
+  // browser never parses the hash as query parameters.
+  // ?page=<name> resolves to a well-known Zen portal page.
+  // No params → Management Portal home.
+  var PAGE_MAP = {
+    'home':       'HS.HC.UI.Home.cls',
+    'production': 'EnsPortal.ProductionConfig.zen',
+    'messages':   'EnsPortal.MessageViewer.zen',
+    'events':     'EnsPortal.EventLog.zen',
+    'queues':     'EnsPortal.Queues.zen',
+    'jobs':       'EnsPortal.Jobs.zen',
+    'dtl':        'EnsPortal.DTLEditor.zen',
+    'rule':       'EnsPortal.RuleEditor.zen',
+    'bpl':        'EnsPortal.BPLEditor.zen',
+    'lookup':     'EnsPortal.LookupSettings.zen',
+    'schema':     'EnsPortal.HL7.SchemaMain.zen',
+    'settings':   'EnsPortal.Settings.zen',
+    'credentials':'EnsPortal.Credentials.zen',
+    'smp':        '/csp/sys/%CSP.Portal.Home.zen'
+  };
+
+  // Resolve the target Zen URL
+  // Priority: hash fragment > ?zen= (legacy compat) > ?page= > default
+  var hashZen = window.location.hash ? window.location.hash.substring(1) : '';
+  var zenParam = hashZen || params.get('zen');
+  var pageParam = params.get('page');
+  var zenUrl;
+
+  // Convert display-form paths (%CSP) to HTTP-form (%25CSP)
+  function toHttpPath(p) {
+    return p.replace(/%(?![0-9A-Fa-f]{2})/g, '%25');
+  }
+
+  if (zenParam) {
+    // Hash paths omit pathPrefix and use % instead of %25 for display;
+    // restore both for the actual HTTP request.
+    // Guard against hashes that already contain pathPrefix (old bookmarks).
+    var httpZen = toHttpPath(zenParam);
+    if (httpZen.startsWith('/')) {
+      zenUrl = (pathPrefix && httpZen.indexOf(pathPrefix + '/') !== 0)
+        ? pathPrefix + httpZen : httpZen;
+    } else {
+      zenUrl = cspBase + '/' + httpZen;
+    }
+  } else if (pageParam && PAGE_MAP[pageParam.toLowerCase()]) {
+    // Named page shortcut — full paths (starting with /) use pathPrefix directly
+    var page = PAGE_MAP[pageParam.toLowerCase()];
+    zenUrl = page.startsWith('/')
+      ? pathPrefix + toHttpPath(page) + '?$NAMESPACE=' + namespace
+      : cspBase + '/' + toHttpPath(page) + '?$NAMESPACE=' + namespace;
+  } else {
+    // Default: Management Portal home (HS.HC.UI.Home for HealthShare)
+    zenUrl = cspBase + '/HS.HC.UI.Home.cls?$NAMESPACE=' + namespace;
+  }
+
+  var frame = document.getElementById('viewer-frame');
+  var errorEl = document.getElementById('viewer-error');
+  var directLink = document.getElementById('viewer-direct-link');
+
+  // Build a wrapper URL that keeps InterClaw header + chatbot around any Zen page.
+  // Uses hash fragment for the zen path — clean, no encoding issues.
+  function wrapUrl(rawUrl) {
+    if (!rawUrl || rawUrl.startsWith('javascript:')) return rawUrl;
+    if (rawUrl.indexOf('/legacy-ui/') !== -1) return rawUrl;
+    // Strip pathPrefix and decode percent-escapes for clean display hash
+    var displayPath = rawUrl;
+    if (pathPrefix && displayPath.indexOf(pathPrefix) === 0) {
+      displayPath = displayPath.substring(pathPrefix.length);
+    }
+    try { displayPath = decodeURIComponent(displayPath); } catch (e) {}
+    return wrapperBase + '#' + displayPath;
+  }
+
+  // Set the direct link for fallback
+  directLink.textContent = window.location.origin + zenUrl;
+
+  // Load the iframe
+  frame.src = zenUrl;
+
+  // Navigate the iframe when the hash changes (e.g. switching Portal/Traces tabs)
+  window.addEventListener('hashchange', function() {
+    var newHash = window.location.hash ? window.location.hash.substring(1) : '';
+    if (!newHash) return;
+    var httpPath = toHttpPath(newHash);
+    var newUrl;
+    if (httpPath.startsWith('/')) {
+      newUrl = (pathPrefix && httpPath.indexOf(pathPrefix + '/') !== 0)
+        ? pathPrefix + httpPath : httpPath;
+    } else {
+      newUrl = cspBase + '/' + httpPath;
+    }
+    frame.src = newUrl;
+    directLink.textContent = window.location.origin + newUrl;
+  });
+
+  // After each iframe load: inject link interception and update browser URL
+  frame.addEventListener('load', function() {
+    try {
+      var iframeWin = frame.contentWindow;
+      var iframeDoc = frame.contentDocument || iframeWin.document;
+
+      // Detect empty/blocked page — fall back to production config
+      if (!iframeDoc || !iframeDoc.body || iframeDoc.body.innerHTML.length < 50) {
+        // Try EnsPortal.ProductionConfig.zen as fallback (works on non-HealthShare)
+        if (zenUrl.indexOf('HS.HC.UI.Home') !== -1) {
+          var fallbackUrl = cspBase + '/EnsPortal.ProductionConfig.zen?$NAMESPACE=' + namespace;
+          frame.src = fallbackUrl;
+          directLink.textContent = window.location.origin + fallbackUrl;
+          return;
+        }
+        showError();
+        return;
+      }
+
+      // --- Update browser URL to reflect iframe content ---
+      // Hash holds the zen path with pathPrefix stripped and %25 decoded.
+      // Result: /legacy-ui/index.html#/csp/.../Page.zen?$NAMESPACE=FOO
+      try {
+        var iframePath = iframeWin.location.pathname + iframeWin.location.search;
+        // Strip pathPrefix and decode percent-escapes for clean display URL
+        var displayPath = iframePath;
+        if (pathPrefix && displayPath.indexOf(pathPrefix) === 0) {
+          displayPath = displayPath.substring(pathPrefix.length);
+        }
+        try { displayPath = decodeURIComponent(displayPath); } catch (e) {}
+        var newUrl = window.location.pathname + '#' + displayPath;
+        history.replaceState(null, '', newUrl);
+      } catch (urlErr) {
+        // Cross-origin — can't read iframe URL
+      }
+
+      // --- Override window.open() to keep Zen pages inside the wrapper ---
+      var origOpen = iframeWin.open;
+      iframeWin.open = function(url, target, features) {
+        if (url && !url.startsWith('javascript:') && !url.startsWith('about:')) {
+          var resolved = new URL(url, iframeWin.location.href).pathname
+            + new URL(url, iframeWin.location.href).search;
+          // Visual Trace: open in a plain new tab (no wrapper/chatbot)
+          if (resolved.indexOf('VisualTrace.zen') !== -1) {
+            return origOpen.call(iframeWin, resolved, '_blank', features);
+          }
+          // Other Zen/portal pages: navigate within the iframe (stay in wrapper)
+          if (resolved.indexOf('.zen') !== -1 || resolved.indexOf('.cls') !== -1
+              || resolved.indexOf('EnsPortal') !== -1 || resolved.indexOf('csp/') !== -1) {
+            frame.src = resolved;
+            return null;
+          }
+          // Other URLs: open in new tab with wrapper
+          return origOpen.call(iframeWin, wrapUrl(resolved), target, features);
+        }
+        return origOpen.apply(iframeWin, arguments);
+      };
+
+      // --- Rewrite links that escape the iframe ---
+      function rewriteLinks() {
+        var links = iframeDoc.querySelectorAll('a[target="_blank"], a[target="_top"], a[target="_parent"]');
+        for (var i = 0; i < links.length; i++) {
+          var a = links[i];
+          if (a.dataset.icRewritten) continue;
+          a.dataset.icRewritten = '1';
+
+          // target="_top" and "_parent" would break out of iframe — keep in iframe instead
+          if (a.target === '_top' || a.target === '_parent') {
+            a.removeAttribute('target');
+          }
+          // target="_blank" opens a new tab — wrap the URL so it has the IC header
+          if (a.target === '_blank' && a.href) {
+            (function(anchor) {
+              anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.open(wrapUrl(anchor.getAttribute('href')), '_blank');
+              });
+            })(a);
+          }
+        }
+      }
+      rewriteLinks();
+
+      // Watch for dynamically added links (Zen pages render async)
+      if (iframeDoc.body) {
+        new MutationObserver(rewriteLinks)
+          .observe(iframeDoc.body, { childList: true, subtree: true });
+      }
+
+      // Slim the Angular mat-toolbar blue top border from 4px to 2px
+      // on /ui/interop/ and /csp/fhir-management/ editor pages,
+      // matching the InterClaw header style.
+      var ifPath = iframeWin.location.pathname;
+      try {
+        if (ifPath.indexOf('/ui/interop/') !== -1
+            || ifPath.indexOf('/csp/fhir-management/') !== -1) {
+          var styleId = 'ic-toolbar-border-override';
+          if (!iframeDoc.getElementById(styleId)) {
+            var overrideStyle = iframeDoc.createElement('style');
+            overrideStyle.id = styleId;
+            overrideStyle.textContent = ':root { --fr-header-border-top-toolbar: 2px !important; }';
+            (iframeDoc.head || iframeDoc.documentElement).appendChild(overrideStyle);
+          }
+        }
+      } catch (styleErr) {}
+
+      // System Management Portal (/csp/sys/*) Zen layout has abs-positioned
+      // title-bar items at hard-coded offsets (portalTitleMenuBox left:900px,
+      // portalTitleInfoBox left:350px). When the iframe is narrower than
+      // those offsets need, the body gains a horizontal scrollbar. Just
+      // clip the overflow — keep native positioning so the layout still
+      // reads the way SMP users expect.
+      try {
+        if (ifPath.indexOf('/csp/sys/') !== -1) {
+          var smpStyleId = 'ic-smp-fit';
+          if (!iframeDoc.getElementById(smpStyleId)) {
+            var smpStyle = iframeDoc.createElement('style');
+            smpStyle.id = smpStyleId;
+            smpStyle.textContent =
+              'html, body { overflow-x: hidden !important; }';
+            (iframeDoc.head || iframeDoc.documentElement).appendChild(smpStyle);
+          }
+        }
+      } catch (smpErr) {}
+
+      // Sync namespace from iframe to header (greyed-out display)
+      try {
+        var iframeSearch = new URLSearchParams(iframeWin.location.search);
+        var iframeNs = iframeSearch.get('$NAMESPACE') || iframeSearch.get('NAMESPACE');
+        if (!iframeNs) {
+          var pathMatch = iframeWin.location.pathname.match(/\/csp\/healthshare\/([^\/]+)\//i);
+          if (pathMatch) iframeNs = pathMatch[1];
+        }
+        if (iframeNs) {
+          iframeNs = iframeNs.toUpperCase();
+          if (iframeNs !== namespace) {
+            namespace = iframeNs;
+            cspBase = pathPrefix + '/csp/healthshare/' + iframeNs.toLowerCase();
+            var headerLabel = document.getElementById('ic-header-ns-label');
+            if (headerLabel) headerLabel.textContent = iframeNs;
+          }
+        }
+      } catch (nsErr) {}
+
+      // Update page title from iframe
+      if (iframeDoc.title) {
+        document.title = 'InterClaw — ' + iframeDoc.title;
+      }
+
+    } catch (e) {
+      // Cross-origin — can't inject, but iframe may still render fine
+      console.warn('[legacy-ui] Cannot inject into iframe (cross-origin?):', e.message);
+      setTimeout(function() {
+        if (frame.clientHeight < 10) showError();
+      }, 2000);
+    }
+  });
+
+  frame.addEventListener('error', showError);
+
+  function showError() {
+    frame.style.display = 'none';
+    errorEl.style.display = 'flex';
+  }
+
+  // Listen for namespace changes from the header
+  window.addEventListener('interclaw-namespace-change', function(e) {
+    if (e.detail && e.detail.namespace) {
+      var newNs = e.detail.namespace.toUpperCase();
+      namespace = newNs;
+      cspBase = pathPrefix + '/csp/healthshare/' + newNs.toLowerCase();
+      var newUrl = cspBase + '/HS.HC.UI.Home.cls?$NAMESPACE=' + newNs;
+      frame.src = newUrl;
+      directLink.textContent = window.location.origin + newUrl;
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

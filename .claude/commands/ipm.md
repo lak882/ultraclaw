@@ -43,7 +43,7 @@ Examples:
 ## Reference
 
 Read FIRST before any action:
-- `.claude/skills/interclaw/references/infra/IPM/module-xml-reference.md` — element/attribute reference
+- `.claude/skills/interclaw-infra/module-xml-reference.md` — element/attribute reference
 - `research/2026-04-09_0353_ipm-deep-dive-runtime-behavior.md` — runtime behavior, hidden features
 - `research/2026-04-08_2400_ipm-module-xml-comprehensive-reference.md` — schema-level detail
 
@@ -412,7 +412,7 @@ Read and display the module.xml file from the project root.
 
 When arguments are a description, analyze what the user wants and combine multiple actions:
 
-1. Read the reference: `.claude/skills/interclaw/references/infra/IPM/module-xml-reference.md`
+1. Read the reference: `.claude/skills/interclaw-infra/module-xml-reference.md`
 2. Read existing `module.xml` if present
 3. Plan the changes needed
 4. Execute the relevant actions (init, add-class, add-webapp, etc.)

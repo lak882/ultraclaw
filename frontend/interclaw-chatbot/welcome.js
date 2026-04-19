@@ -16,8 +16,8 @@
       { text: 'Interview me to gather requirements first', cmd: '/interview' },
     ]},
     { label: 'Create DTL', examples: [
+      { text: 'Create an ORU to ORU transform that truncates long lab order names and standardizes LOINC codes', cmd: '/dtl Create an ORU to ORU transform that will truncate any lab order names that are longer than 20 characters. Put in the Demo package. Make sure that the code system name is always LN for LOINC.' },
       { text: 'Transform ADT_A01 to map facility codes using a lookup table', cmd: '/dtl Transform ADT_A01 to map facility codes using a lookup table' },
-      { text: 'Transform VXU_V04 to extract patient demographics', cmd: '/dtl Transform VXU_V04 to extract patient name and vaccine code' },
     ]},
     { label: 'Create Rule', examples: [
       { text: 'Route ADT messages by message type to different targets', cmd: '/rule Route ADT messages: A01 to AdmitProcess, A08 to UpdateProcess, all others to DefaultProcess' },
@@ -126,6 +126,30 @@
   cc.buildWelcomeMessage = function() {
     var labels = cc.quickCategories.map(function(c) { return c.label; });
     return 'Welcome! I can help you build and manage interoperability productions. What would you like to do?\n\n:::quick_replies\n' + JSON.stringify(labels) + '\n:::';
+  };
+
+  cc.showSetupPrompt = function(opts) {
+    opts = opts || {};
+    var loader = document.getElementById('chatbot-loading');
+    if (loader) loader.remove();
+
+    if (opts.needsLogin) {
+      cc.addMessage('assistant', 'Please log in with your IRIS credentials to get started.\n\nEnter your IRIS username and password separated by a space:\n`/login <username> <password>`\n\nExample: `/login superuser SYS`');
+      var input = document.getElementById('chatbot-input');
+      if (input) {
+        input.value = '/login ';
+        input.focus();
+        cc.updateSendButton();
+      }
+    } else {
+      cc.addMessage('assistant', 'To connect to Claude, paste your Amazon Bedrock API key below and press Enter.\n\nYour key starts with `ABSK` and can be found in your AWS Bedrock console under Model Access.\n`/authenticate <BEDROCK_KEY>`');
+      var input = document.getElementById('chatbot-input');
+      if (input) {
+        input.value = '/authenticate ';
+        input.focus();
+        cc.updateSendButton();
+      }
+    }
   };
 
   cc.showWelcomeMessage = async function() {

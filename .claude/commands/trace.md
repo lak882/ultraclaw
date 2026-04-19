@@ -26,7 +26,7 @@ Defaults: count = 20, format = table.
 Run exactly one command:
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/diagnostics/trace.py --server <server> --namespace <ns> [--component <name>] [--session <id>] [--count <N>] [--events] [--format <fmt>]
+<python> .claude/skills/interclaw/scripts/diagnostics/trace.py --server <server> --namespace <ns> [--component <name>] [--session <id>] [--count <N>] [--events] [--format <fmt>]
 ```
 
 ## Output

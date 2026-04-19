@@ -35,7 +35,6 @@
       cc.addMessage('user', message);
       input.value = '';
       input.style.height = 'auto'; input.style.overflowY = 'hidden';
-      cc.addMessage('system', 'Navigating to ' + (componentName || editorType) + '...');
       cc.executeGoto(componentName, editorType);
       return;
     }
@@ -49,36 +48,27 @@
       return;
     }
 
-    // Handle /goto-test
-    if (message.startsWith('/goto-test ')) {
+
+    // Handle /ns — namespace diagnostic
+    if (message === '/ns') {
       cc.addMessage('user', message);
       input.value = '';
-      input.style.height = 'auto'; cc.updateSendButton(); var wrapper = document.getElementById('chatbot-input-wrapper'); if (wrapper) wrapper.classList.remove('expanded');
-      var gtParts = message.substring(11).trim().split(/\s+/);
-      var gtStrategies = (gtParts[0] || 'all').toLowerCase();
-      var gtTarget = gtParts.slice(1).join(' ') || 'Demo.Hello';
-      cc.runGotoTest(gtStrategies, gtTarget);
+      input.style.height = 'auto'; cc.updateSendButton();
+      var diag = '**Namespace Diagnostic**\n';
+      diag += '- `detectNamespace()` = `' + cc.detectNamespace() + '`\n';
+      diag += '- `cc._apiNamespace` = `' + (cc._apiNamespace || 'null') + '`\n';
+      diag += '- URL `$NAMESPACE` = `' + (new URLSearchParams(window.location.search).get('$NAMESPACE') || 'null') + '`\n';
+      diag += '- `sessionStorage(interclaw-namespace)` = `' + (sessionStorage.getItem('interclaw-namespace') || 'null') + '`\n';
+      diag += '- `window._interclawCspBase` = `' + (window._interclawCspBase || 'null') + '`\n';
+      diag += '- `sessionStorage(interclaw-cspbase)` = `' + (sessionStorage.getItem('interclaw-cspbase') || 'null') + '`\n';
+      diag += '- `cc.pathPrefix` = `' + (cc.pathPrefix || 'null') + '`\n';
+      diag += '- Sample DTL link: `' + ((cc.buildPortalLink && cc.buildPortalLink('Test.DTL.Sample', 'dtl')) || {}).url + '`';
+      cc.addMessage('system', diag);
+      cc.saveState();
       return;
     }
 
 
-    // Handle /bounce-test — verbose namespace bounce with step-by-step logging
-    if (message === '/bounce-test' || message.startsWith('/bounce-test ')) {
-      cc.addMessage('user', message);
-      input.value = '';
-      input.style.height = 'auto'; cc.updateSendButton(); var wrapper = document.getElementById('chatbot-input-wrapper'); if (wrapper) wrapper.classList.remove('expanded');
-      cc.runBounceTest(message.substring(12).trim());
-      return;
-    }
-
-    // Handle /dom-test — create class + DOM search
-    if (message === '/dom-test' || message.startsWith('/dom-test ')) {
-      cc.addMessage('user', message);
-      input.value = '';
-      input.style.height = 'auto'; cc.updateSendButton(); var wrapper = document.getElementById('chatbot-input-wrapper'); if (wrapper) wrapper.classList.remove('expanded');
-      cc.runDomTest(message.substring(9).trim());
-      return;
-    }
 
     // Handle /find <query> — fuzzy search over namespace classes
     if (message.startsWith('/find ')) {
@@ -88,17 +78,6 @@
       input.style.height = 'auto'; cc.updateSendButton(); var wrapper = document.getElementById('chatbot-input-wrapper'); if (wrapper) wrapper.classList.remove('expanded');
       if (!findQuery) { cc.addMessage('system', 'Usage: /find <class-name>'); cc.saveState(); return; }
       cc.findInNamespace(findQuery);
-      return;
-    }
-
-    // Handle /ns <namespace> — switch namespace with single bounce
-    if (message.startsWith('/ns ')) {
-      var targetNs = message.substring(4).trim().toUpperCase();
-      cc.addMessage('user', message);
-      input.value = '';
-      input.style.height = 'auto'; cc.updateSendButton(); var wrapper = document.getElementById('chatbot-input-wrapper'); if (wrapper) wrapper.classList.remove('expanded');
-      if (!targetNs) { cc.addMessage('system', 'Usage: /ns <NAMESPACE>'); cc.saveState(); return; }
-      cc.switchNamespace(targetNs);
       return;
     }
 
@@ -125,7 +104,10 @@
       return;
     }
 
-    // Handle /model command
+    // Handle /model command — selects which Anthropic model tier is sent
+    // in the `model` field of each /api/start request. No server-side
+    // state; setSelectedModel persists locally and bridge/send always
+    // picks up cc.currentModel on outbound.
     if (message.startsWith('/model')) {
       var modelArg = message.substring(6).trim().toLowerCase();
       cc.addMessage('user', message);
@@ -133,23 +115,47 @@
       input.style.height = 'auto'; input.style.overflowY = 'hidden';
       cc.hideTypeahead();
 
-      var modelNames = {
-        'opus': 'Claude Opus 4.6',
-        'sonnet': 'Claude Sonnet 4.6',
-        'haiku': 'Claude Haiku 4.5'
-      };
-      if (!modelArg || modelArg === '') {
-        cc.addMessage('system', 'Current model: ' + (cc.modelLabels[cc.getSelectedModel()] || cc.getSelectedModel()));
+      var validModels = { haiku: 1, sonnet: 1, opus: 1 };
+      if (!modelArg) {
+        cc.addMessage('assistant',
+          'Current model: **' + (cc.modelLabels[cc.getSelectedModel()] || cc.getSelectedModel()) + '**.\n\n'
+          + 'Options: `/model opus`, `/model sonnet`, `/model haiku`.');
+      } else if (validModels[modelArg]) {
+        cc.setSelectedModel(modelArg);
+        cc.saveState();
+        cc.addMessage('assistant', 'Model changed to **' + cc.modelLabels[modelArg] + '**.');
       } else {
-        var validModels = ['haiku', 'sonnet', 'opus'];
-        if (validModels.indexOf(modelArg) !== -1) {
-          cc.setSelectedModel(modelArg);
-          cc.addMessage('system', 'Model changed to ' + cc.modelLabels[modelArg]);
-        } else {
-          cc.addMessage('system', 'Invalid model. Options: opus (most capable), sonnet (balanced), haiku (fast)');
-        }
+        cc.addMessage('assistant',
+          'Invalid model `' + modelArg + '`. Options: `opus` (most capable), `sonnet` (balanced), `haiku` (fast).');
       }
-      cc.saveState();
+      return;
+    }
+
+    // Handle /effort command — controls the `effort` field on /api/start,
+    // which the adapter forwards to Bedrock's adaptive thinking as
+    // `output_config.effort`. Three levels: low, medium, high.
+    if (message.startsWith('/effort')) {
+      var effortArg = message.substring(7).trim().toLowerCase();
+      cc.addMessage('user', message);
+      input.value = '';
+      input.style.height = 'auto'; input.style.overflowY = 'hidden';
+      cc.hideTypeahead();
+
+      var validEfforts = { low: 1, medium: 1, high: 1, max: 1 };
+      var currentEffort = cc.currentEffort || 'medium';
+      if (!effortArg) {
+        cc.addMessage('assistant',
+          'Current effort: **' + currentEffort + '**.\n\n'
+          + 'Options: `/effort low` (fastest), `/effort medium` (balanced, default), `/effort high` (extra reasoning), `/effort max` (deepest reasoning).');
+      } else if (validEfforts[effortArg]) {
+        cc.currentEffort = effortArg;
+        try { sessionStorage.setItem('chatbot-effort', effortArg); } catch(e) {}
+        cc.saveState();
+        cc.addMessage('assistant', 'Effort changed to **' + effortArg + '**.');
+      } else {
+        cc.addMessage('assistant',
+          'Invalid effort `' + effortArg + '`. Options: `low`, `medium`, `high`, `max`.');
+      }
       return;
     }
 
@@ -168,20 +174,20 @@
     // Handle /authenticate
     if (message.startsWith('/authenticate ')) {
       var authKey = message.substring(14).trim();
-      cc.addMessage('user', '/authenticate ****');
+      cc.addMessage('user', message);
       input.value = '';
       input.style.height = 'auto'; input.style.overflowY = 'hidden';
       cc.updateSendButton();
       cc.hideTypeahead();
       if (!authKey) {
-        cc.addMessage('system', 'Usage: /authenticate <BEDROCK_KEY>');
+        cc.addMessage('assistant', 'Usage: `/authenticate <BEDROCK_KEY>`');
         return;
       }
       if (!authKey.startsWith('ABSK')) {
-        cc.addMessage('system', 'Invalid key format. Bedrock keys start with ABSK.');
+        cc.addMessage('assistant', 'That does not look like a valid key. Bedrock API keys start with `ABSK`.');
         return;
       }
-      cc.addMessage('system', 'Authenticating...');
+      cc.addMessage('assistant', 'Storing key...');
       cc.updateStatus('Authenticating...');
       try {
         var authResp = await fetch(cc.apiBase + '/api/authenticate', {
@@ -190,19 +196,127 @@
           body: JSON.stringify({ key: authKey }),
         });
         var authData = await authResp.json();
-        if (authResp.ok && authData.success) {
-          var irisMsg = authData.iris_credential && authData.iris_credential.stored
-            ? ' Key also stored in IRIS credential vault.'
-            : '';
-          cc.addMessage('system', 'Authenticated (' + authData.key_prefix + ').' + irisMsg + ' Backend will use this key for all new sessions.');
-          cc.updateStatus('Connected');
+        if (authResp.ok && !authData.error) {
+          // Verify the key actually works by checking auth-status
+          var verifyResp = await fetch(cc.apiBase + '/api/auth-status');
+          var verifyData = await verifyResp.json();
+          if (verifyData.authenticated) {
+            var msg = 'Authenticated as `' + (authData.key_prefix || '****') + '` in region `' + (verifyData.region || 'us-east-1') + '`.';
+            if (authData.wallet_stored) msg += ' Key stored in the IRIS wallet and will persist across restarts.';
+            cc.addMessage('assistant', msg);
+            if (!verifyData.logged_in) {
+              cc.showSetupPrompt({ needsLogin: true });
+            } else {
+              cc.updateStatus('Connected');
+              cc.showWelcomeMessage();
+            }
+          } else {
+            cc.addMessage('assistant', 'The key was stored but authentication could not be verified. Try sending a message to confirm it works.');
+            cc.updateStatus('Connected');
+          }
         } else {
-          cc.addMessage('error', 'Authentication failed: ' + (authData.error || 'Unknown error'));
+          cc.addMessage('assistant', 'Authentication failed: ' + (authData.error || authData.message || 'Unknown error'));
           cc.updateStatus('Auth failed');
         }
       } catch (authErr) {
-        cc.addMessage('error', 'Authentication failed: ' + authErr.message);
+        cc.addMessage('assistant', 'Authentication failed: ' + authErr.message);
         cc.updateStatus('Auth failed');
+      }
+      cc.saveState();
+      return;
+    }
+
+    // Handle /deauthenticate
+    if (message === '/deauthenticate' || message === '/deauth') {
+      cc.addMessage('user', message);
+      input.value = '';
+      input.style.height = 'auto'; input.style.overflowY = 'hidden';
+      cc.updateSendButton();
+      cc.hideTypeahead();
+      try {
+        var deauthResp = await fetch(cc.apiBase + '/api/deauthenticate', { method: 'POST' });
+        var deauthData = await deauthResp.json();
+        if (deauthData.success) {
+          cc.addMessage('assistant', 'API key removed.' + (deauthData.wallet_removed ? ' Wallet entry deleted.' : ''));
+          cc.updateStatus('Not authenticated');
+          cc.showSetupPrompt({});
+        } else {
+          cc.addMessage('error', 'Deauthentication failed: ' + (deauthData.error || deauthData.message || 'Unknown error'));
+        }
+      } catch (deauthErr) {
+        cc.addMessage('error', 'Deauthentication failed: ' + deauthErr.message);
+      }
+      cc.saveState();
+      return;
+    }
+
+    // Handle /login <username> <password>
+    if (message.startsWith('/login ')) {
+      var loginParts = message.substring(7).trim().split(/\s+/);
+      cc.addMessage('user', '/login ' + (loginParts[0] || '') + ' ****');
+      input.value = '';
+      input.style.height = 'auto'; input.style.overflowY = 'hidden';
+      cc.updateSendButton();
+      cc.hideTypeahead();
+      if (loginParts.length < 2) {
+        cc.addMessage('assistant', 'Usage: `/login <username> <password>`');
+        cc.saveState();
+        return;
+      }
+      cc.updateStatus('Logging in...');
+      try {
+        var loginResp = await fetch(cc.apiBase + '/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: loginParts[0], password: loginParts.slice(1).join(' ') }),
+        });
+        var loginData = await loginResp.json();
+        if (loginResp.ok && loginData.success) {
+          cc.addMessage('assistant', 'Logged in as `' + loginData.username + '`.');
+          // Check if API key is also configured
+          try {
+            var checkResp = await fetch(cc.apiBase + '/api/auth-status');
+            var checkData = await checkResp.json();
+            if (!checkData.authenticated) {
+              cc.showSetupPrompt({});
+            } else {
+              cc.updateStatus('Connected');
+              cc.showWelcomeMessage();
+            }
+          } catch (_) {
+            cc.updateStatus('Connected');
+          }
+        } else {
+          cc.addMessage('assistant', 'Login failed: ' + (loginData.error || 'Unknown error'));
+          cc.updateStatus('Login failed');
+        }
+      } catch (loginErr) {
+        cc.addMessage('assistant', 'Login failed: ' + loginErr.message);
+        cc.updateStatus('Login failed');
+      }
+      cc.saveState();
+      return;
+    }
+
+    // Handle /logout
+    if (message === '/logout') {
+      cc.addMessage('user', message);
+      input.value = '';
+      input.style.height = 'auto'; input.style.overflowY = 'hidden';
+      cc.updateSendButton();
+      cc.hideTypeahead();
+      try {
+        var logoutResp = await fetch(cc.apiBase + '/api/logout', { method: 'POST' });
+        var logoutData = await logoutResp.json();
+        if (logoutData.success) {
+          cc.addMessage('assistant', 'Logged out.');
+          cc.updateStatus('Not logged in');
+          cc.showSetupPrompt({ needsLogin: true });
+        } else {
+          cc.addMessage('error', 'Logout failed.');
+        }
+      } catch (logoutErr) {
+        cc.addMessage('error', 'Logout failed: ' + logoutErr.message);
       }
       cc.saveState();
       return;
@@ -218,11 +332,18 @@
       try {
         var statusResp = await fetch(cc.apiBase + '/api/auth-status');
         var statusData = await statusResp.json();
-        if (statusData.authenticated) {
-          cc.addMessage('system', 'Authenticated via ' + statusData.provider + ' (' + statusData.key_prefix + ') in region ' + statusData.region);
+        var statusMsg = '';
+        if (statusData.logged_in) {
+          statusMsg += 'Logged in as `' + statusData.user + '`.\n';
         } else {
-          cc.addMessage('system', 'Not authenticated. Use /authenticate <BEDROCK_KEY> to connect.');
+          statusMsg += 'Not logged in. Use `/login <username> <password>` to sign in.\n';
         }
+        if (statusData.authenticated) {
+          statusMsg += 'API key: ' + statusData.provider + ' (' + statusData.key_prefix + ') in region ' + statusData.region;
+        } else {
+          statusMsg += 'API key not configured. Use `/authenticate <BEDROCK_KEY>` to connect.';
+        }
+        cc.addMessage('assistant', statusMsg);
       } catch (statusErr) {
         cc.addMessage('error', 'Could not check auth status: ' + statusErr.message);
       }
@@ -418,7 +539,7 @@
     }
     var sdkMode = cc.SDK_PERMISSION_MODES[cc.currentMode] || 'bypassPermissions';
     var editorCtx = cc.getEditorContext();
-    var sendPayload = { action: 'message', prompt: fullMessage, session_id: cc.sessionId, model: cc.getSelectedModel(), namespace: editorCtx.namespace, permission_mode: sdkMode, effort: cc.currentEffort, editor_context: editorCtx };
+    var sendPayload = { action: 'message', prompt: fullMessage, session_id: cc.sessionId, model: cc.getSelectedModel(), namespace: editorCtx.namespace, permission_mode: sdkMode, effort: cc.currentEffort || 'medium', editor_context: editorCtx };
     cc.bridgeSend(sendPayload).then(function(ok) {
       if (!ok) {
         cc.stopTimer();

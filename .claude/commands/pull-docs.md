@@ -33,7 +33,7 @@ If user has an active server connection, add `--server <server>` to fetch from l
 ### Step 1: Run pull_docs.py
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/docs/pull_docs.py <flags from table above> [--server <server>] [--version <ver>] [--product <name>] [--output <path>]
+<python> .claude/skills/interclaw/scripts/docs/pull_docs.py <flags from table above> [--server <server>] [--version <ver>] [--product <name>] [--output <path>]
 ```
 
 ### Step 2: Display output

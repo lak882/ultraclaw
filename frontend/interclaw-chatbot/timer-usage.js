@@ -47,6 +47,8 @@
     cc.lastTurnTokens = 0;
     cc.lastInputTokens = 0;
     cc.lastOutputTokens = 0;
+    cc.lastCacheReadTokens = 0;
+    cc.lastCacheWriteTokens = 0;
     cc.isStreamingThinking = false;
     cc.currentThinkingWord = cc.thinkingWords[Math.floor(Math.random() * cc.thinkingWords.length)];
     cc.lastStatusBase = cc.currentThinkingWord + '...';

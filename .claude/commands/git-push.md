@@ -22,7 +22,7 @@ If no paths specified and user says "push my skills" or similar, default to `.cl
 ### Step 1: Check GitLab config
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_token.py --show
+<python> .claude/skills/interclaw/scripts/git/git_token.py --show
 ```
 
 If not configured, tell the user to run `/git-token` first. Stop.
@@ -30,7 +30,7 @@ If not configured, tell the user to run `/git-token` first. Stop.
 ### Step 2: Dry-run
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_push.py --dry-run <paths> [--branch <name>]
+<python> .claude/skills/interclaw/scripts/git/git_push.py --dry-run <paths> [--branch <name>]
 ```
 
 Display output (branch name, file list). **Ask for confirmation** before pushing.
@@ -38,7 +38,7 @@ Display output (branch name, file list). **Ask for confirmation** before pushing
 ### Step 3: Push
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_push.py <paths> [--branch <name>] [--message "msg"]
+<python> .claude/skills/interclaw/scripts/git/git_push.py <paths> [--branch <name>] [--message "msg"]
 ```
 
 ### Step 4: Report

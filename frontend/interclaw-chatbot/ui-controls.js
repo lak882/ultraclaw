@@ -58,19 +58,12 @@
       cc.saveState();
       sessionStorage.setItem('chatbot-programmatic-reload', '1');
       sessionStorage.setItem('chatbot-close-after-reload', '1');
-      var overlay = document.getElementById('reload-overlay');
-      if (overlay) {
-        overlay.style.display = 'block';
-        overlay.classList.remove('fade-out');
-      }
       window.location.reload();
       return;
     }
 
     document.body.classList.toggle('chatbot-closed');
     cc.updateToggleIcon();
-    // After transition, notify content that layout changed
-    setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 300);
   };
 
   cc.toggleFullscreen = function() {
@@ -156,8 +149,6 @@
         document.documentElement.style.setProperty('--chatbot-width', pendingWidth + 'px');
         pendingWidth = null;
       }
-      // Notify Angular/Zen components that layout changed so they re-render
-      window.dispatchEvent(new Event('resize'));
     });
   })();
 

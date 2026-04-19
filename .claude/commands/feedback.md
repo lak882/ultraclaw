@@ -29,7 +29,7 @@ First word is category if it matches one of: `bug`, `feature-request`, `general`
 ## Execution
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/diagnostics/feedback.py --category <category> --comment "<comment>" [--rating <1-5>] [--namespace <ns>]
+<python> .claude/skills/interclaw/scripts/diagnostics/feedback.py --category <category> --comment "<comment>" [--rating <1-5>] [--namespace <ns>]
 ```
 
 ## Output

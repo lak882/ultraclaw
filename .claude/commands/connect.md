@@ -18,7 +18,7 @@ If no password in `config/servers.json` for this server, ask the user before pro
 ### Step 1: Test connection
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/connection/test_connection.py --server <server-name> [--namespace <namespace>]
+<python> .claude/skills/interclaw/scripts/connection/test_connection.py --server <server-name> [--namespace <namespace>]
 ```
 
 Display output verbatim (connection status, IRIS version, available namespaces).
@@ -26,7 +26,7 @@ Display output verbatim (connection status, IRIS version, available namespaces).
 ### Step 2: Query instance identity
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/connection/instance_id.py --server <server-name> --config config/servers.json
+<python> .claude/skills/interclaw/scripts/connection/instance_id.py --server <server-name> --config config/servers.json
 ```
 
 Display `instanceId` and `uniqueInstanceName`. If `status` is `"created"`, note that a new instance ID was generated.

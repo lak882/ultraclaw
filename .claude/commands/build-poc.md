@@ -28,6 +28,8 @@ For exercises 2+: invoke `/production update` with the exercise description and 
 
 Each `/production` call handles its own schema fetching, DTL/rule/BPL creation (with parallel agents), test message generation, and compilation. Do NOT duplicate those instructions here — `/production` owns the build logic.
 
+**BPL mandate**: All orchestration processes MUST be BPL (`Ens.BusinessProcessBPL`), not code-based BP. This is enforced by `/production` — do not override it.
+
 ## Phase 3: Final integration test
 
 After all exercises are built:

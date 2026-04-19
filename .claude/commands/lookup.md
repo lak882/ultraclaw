@@ -31,7 +31,7 @@ The first non-flag word is the table name. Remaining `key=value` pairs (containi
 ## Execution
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/documents/manage_lookup.py --server <server> --namespace <ns> [flags from table above]
+<python> .claude/skills/interclaw/scripts/documents/manage_lookup.py --server <server> --namespace <ns> [flags from table above]
 ```
 
 ## Output

@@ -243,9 +243,9 @@
           cc.sendMessage();
         }
       }
-      if (e.key === 'Escape' && cc.isCmdPanelOpen && cc.isCmdPanelOpen()) {
+      if (e.key === 'Escape' && cc.isGenerating) {
         e.preventDefault();
-        cc.toggleCmdPanel();
+        cc.stopGeneration();
       }
     });
   })();
@@ -664,13 +664,25 @@
     var titleEl = document.querySelector('#chatbot-edit-accept .chatbot-plan-accept-title');
     var subtitleEl = document.querySelector('#chatbot-edit-accept .chatbot-plan-accept-subtitle');
     if (titleEl && context && context.tool) {
-      titleEl.textContent = 'Allow ' + context.tool + '?';
+      if (context.tool === 'ExitPlanMode') {
+        titleEl.textContent = 'Approve Plan?';
+      } else if (context.tool === 'Bash') {
+        titleEl.textContent = (context.input || 'Run command') + '?';
+      } else {
+        titleEl.textContent = 'Allow ' + context.tool + '?';
+      }
     } else if (titleEl) {
       titleEl.textContent = 'Approve this action?';
     }
-    if (subtitleEl && context && context.input) {
-      var display = context.input.length > 120 ? context.input.substring(0, 120) + '...' : context.input;
-      subtitleEl.textContent = display;
+    if (subtitleEl && context) {
+      if (context.tool === 'Bash' && context.command) {
+        subtitleEl.textContent = context.command;
+      } else if (context.input) {
+        var display = context.input.length > 120 ? context.input.substring(0, 120) + '...' : context.input;
+        subtitleEl.textContent = display;
+      } else {
+        subtitleEl.textContent = '';
+      }
     } else if (subtitleEl) {
       subtitleEl.textContent = '';
     }
@@ -725,6 +737,11 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(approvePayload),
+      }).then(function() {
+        // After denying with feedback, send the feedback as a follow-up prompt
+        if (choice === 'feedback' && feedback) {
+          cc.sendCommandToBackend(feedback);
+        }
       }).catch(function(e) {
         console.error('[approve] failed:', e);
       });

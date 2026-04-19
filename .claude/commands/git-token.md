@@ -20,25 +20,25 @@ Steps:
 2. **Run the script:**
 
    ```bash
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_token.py [args]
+   <python> .claude/skills/interclaw/scripts/git/git_token.py [args]
    ```
 
    Common invocations:
    ```bash
    # Set all three required fields at once
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_token.py --token glpat-xxx --url https://gitlab.example.com --project-id 123
+   <python> .claude/skills/interclaw/scripts/git/git_token.py --token glpat-xxx --url https://gitlab.example.com --project-id 123
 
    # Show current config
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_token.py --show
+   <python> .claude/skills/interclaw/scripts/git/git_token.py --show
 
    # Test connection
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_token.py --test
+   <python> .claude/skills/interclaw/scripts/git/git_token.py --test
 
    # Clear token
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_token.py --clear
+   <python> .claude/skills/interclaw/scripts/git/git_token.py --clear
 
    # Change branch prefix
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_token.py --branch-prefix "contrib/"
+   <python> .claude/skills/interclaw/scripts/git/git_token.py --branch-prefix "contrib/"
    ```
 
 3. **Display the result:**

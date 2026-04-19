@@ -3,7 +3,7 @@
   <Document name="interclaw.ZPM">
     <Module>
       <Name>interclaw</Name>
-      <Version>0.1.0</Version>
+      <Version>0.0.5</Version>
       <Description>InterClaw — AI-powered interoperability skill for InterSystems IRIS. Custom Interop Editor frontend with chatbot sidebar, Python automation scripts, and Claude Code integration for building productions via natural language.</Description>
       <Keywords>claude,interoperability,ai,chatbot,hl7,production,dtl</Keywords>
       <Author>
@@ -13,64 +13,76 @@
       </Author>
       <Packaging>module</Packaging>
 
-      <!-- ═══════════════════════════════════════════════════════
-           Deployed content: repo root -> ${cspDir}interclaw/
-           FileCopy deploys the repo, WebApplication creates the web app
-           pointing directly at frontend/ (no Installer fixup needed).
-           The Installer's CleanDeployRoot removes non-shipped content.
+      <!--
+        Use durable %SYS CSP root when running in a container with ISC_DATA_DIRECTORY.
+        Otherwise fall back to the normal install tree CSP root.
 
-           Deployed layout on IRIS:
-             ${cspDir}interclaw/
-               frontend/          ← Angular editors + chatbot (web-served)
-               .claude/           ← Skills, scripts, commands (not web-served)
-               config/            ← Runtime config (not web-served)
-               filedrop/          ← HL7 message drops (not web-served)
-               CLAUDE.md          ← Claude Code project instructions
-               requirements.txt   ← Python dependencies
-           ═══════════════════════════════════════════════════════ -->
-      <FileCopy Name="/" InstallDirectory="${cspDir}interclaw/" />
+        Durable root:
+          $SYSTEM.Util.GetEnviron("ISC_DATA_DIRECTORY")_"/csp"
+
+        Non-container / non-durable fallback:
+          $SYSTEM.Util.InstallDirectory()_"csp"
+      -->
+
+      <FileCopy
+        Name="README.md"
+        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/README.md&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/README.md&quot;)}" />
+
+      <FileCopy
+        Name="frontend/"
+        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/frontend/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/frontend/&quot;)}" />
+
+      <FileCopy
+        Name=".claude/"
+        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/.claude/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/.claude/&quot;)}" />
+<!-- 
+      <FileCopy
+        Name="config/commands.json"
+        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/config/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/config/&quot;)}" /> -->
+
+      <FileCopy
+        Name="config/"
+        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/config/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/config/&quot;)}" />
+
+      <FileCopy
+        Name="install/InterClaw/"
+        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/install/InterClaw/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/install/InterClaw/&quot;)}" />
+
+      <FileCopy
+        Name="module.xml"
+        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/module.xml&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/module.xml&quot;)}" />
+
+      <FileCopy
+        Name="requirements.txt"
+        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/requirements.txt&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/requirements.txt&quot;)}" />
+
+      <!--
+        Use documented WebApplication attributes:
+          Directory = physical CSP directory
+          Path      = path within that directory exposed by the app
+
+        Keep the app rooted at /ui/interop/interclaw and serve files from
+        the copied frontend directory.
+      -->
       <WebApplication
         Name="/ui/interop/interclaw"
         NameSpace="{$namespace}"
         MatchRoles=":%All"
         ServeFiles="1"
         Recurse="1"
-        Path="${cspDir}interclaw/frontend/"
+        SourcePath="/frontend"
+        DeployPath="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/frontend&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/frontend&quot;)}"
         AutheEnabled="#{$$$AutheUnauthenticated}"
         CookiePath="/ui/interop/interclaw/"
         UseCookies="2"
       />
 
-      <!-- ═══════════════════════════════════════════════════════
-           ObjectScript classes: compiled into the target namespace.
-
-           InterClaw.PKG (63 classes):
-             Core:      Installer, Reset, Production, AuditEntry, ChangeLog
-             Pipeline:  BS.ChatService, BP.ChatProcess, BO.WebSocketOperation,
-                        BO.EventHTTPOperation, BPL.*, REST.Dispatch, Bridge.*,
-                        Msg.* (13 event types), Production
-             Analytics: BS.*, BP.EventStorageProcess, BO.*, Log.* (7 tables),
-                        Msg.SessionLogRequest, SessionLog, Production
-             Portal:    Home, MenuItems, Setup
-             REST:      Dispatch (legacy), ChatBridge, SkillsEditor.Dispatch
-             WS:        Chat
-             BS/BO/Msg: ChatbotBackend, ScriptAudit, AuditLog, ConversationLog,
-                        GitHubFeedback, EventListener, message classes
-
-           EnsLib.Hub.UI.Application (1 class):
-             Portal menu hook — injected via package mapping.
-           ═══════════════════════════════════════════════════════ -->
-      <SourcesRoot>src</SourcesRoot>
+      <SourcesRoot>install</SourcesRoot>
       <Resource Name="InterClaw.PKG"/>
-      <Resource Name="EnsLib.Hub.UI.Application.CLS"/>
 
-      <!-- ═══════════════════════════════════════════════════════
-           Post-install hook: idempotent setup
-           IPM deploys files as irisusr:irisusr with 775 permissions.
-           See InterClaw.Installer class header for full step list.
-           ═══════════════════════════════════════════════════════ -->
       <Invokes>
         <Invoke Class="InterClaw.Installer" Method="Setup" />
+        <Invoke Class="InterClaw.Installer" Method="Teardown" Phase="Unconfigure" />
       </Invokes>
 
       <SystemRequirements Version=">=2025.1" Interoperability="enabled" />

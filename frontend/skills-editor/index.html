@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>InterClaw Skill Editor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="../rule-editor/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="../favicon.ico">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
 
@@ -36,8 +36,8 @@
   --fr-styles-font-size-xs: 0.8125rem;
   --fr-styles-font-size-sm: 0.875rem;
   --fr-styles-font-size-base: 1rem;
-  --fr-header-height-toolbar: 42px;
-  --fr-header-border-top-toolbar: 2px;
+  --fr-header-height-toolbar: 40px;
+  --fr-header-border-top-toolbar: 4px;
   --chatbot-width: 25vw;
 }
 
@@ -45,12 +45,12 @@
 @font-face {
   font-family: 'Noto Sans'; font-style: normal; font-weight: 400;
   src: local('Noto Sans'), local('NotoSans'),
-       url(../rule-editor/noto-sans-v9-latin-regular.dbdd323d86bb9df6.woff2) format('woff2');
+       url(../noto-sans-v9-latin-regular.dbdd323d86bb9df6.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Noto Sans'; font-style: normal; font-weight: 700;
   src: local('Noto Sans Bold'), local('NotoSans-Bold'),
-       url(../rule-editor/noto-sans-v9-latin-700.2813ebf28ffdbb0b.woff2) format('woff2');
+       url(../noto-sans-v9-latin-700.2813ebf28ffdbb0b.woff2) format('woff2');
 }
 </style>
 
@@ -59,7 +59,7 @@
 html { --chatbot-width: 25vw; }
 #app-root {
   position: absolute;
-  inset: 0 !important;
+  top: 0; bottom: 0; left: 0;
   right: var(--chatbot-width) !important;
   transform: translateZ(0);
 }
@@ -81,17 +81,21 @@ html, body {
 }
 
 /* ── App Layout ─────────────────────────────────── */
-#app-root { display: flex; flex-direction: column; overflow: hidden; }
+#app-root {
+  position: absolute;
+  inset: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+}
 
-/* ── Toolbar ────────────────────────────────────── */
+/* ── Toolbar (chatbot-style) ───────────────────── */
 #toolbar {
-  height: var(--fr-header-height-toolbar);
-  border-top: var(--fr-header-border-top-toolbar) solid var(--fr-styles-color-primary);
+  height: 40px;
   background: var(--fr-styles-color-white);
   display: flex; align-items: center;
   padding: 0 16px; gap: 12px;
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(0,0,0,0.12);
+  border-top: 2px solid var(--fr-styles-color-primary);
+  border-bottom: 1px solid rgba(0,0,0,.1215686275);
   z-index: 10;
 }
 .brand {
@@ -127,13 +131,19 @@ html, body {
 /* ── Main ───────────────────────────────────────── */
 #main { flex: 1; display: flex; overflow: hidden; }
 
-/* ── Sidebar ────────────────────────────────────── */
+/* ── Sidebar (chatbot-style) ───────────────────── */
 #sidebar {
   width: 280px; min-width: 200px; max-width: 420px;
   background: var(--fr-styles-color-white);
-  border-right: 1px solid rgba(0,0,0,0.12);
+  border-right: none;
   display: flex; flex-direction: column;
   overflow: hidden; flex-shrink: 0;
+  position: relative;
+}
+#sidebar::after {
+  content: ''; position: absolute; right: 0; top: 0; bottom: 0;
+  width: 1px; background: var(--fr-styles-color-light-grey);
+  pointer-events: none;
 }
 #sidebar-search { padding: 8px 12px; flex-shrink: 0; }
 #sidebar-search input {
@@ -145,8 +155,8 @@ html, body {
 }
 #sidebar-search input::placeholder { color: rgba(0,0,0,0.38); }
 #sidebar-search input:focus {
-  border-color: rgba(0,0,0,0.5);
-  box-shadow: none;
+  border-color: var(--fr-styles-color-secondary);
+  box-shadow: 0 0 0 1px var(--fr-styles-color-secondary);
 }
 #sidebar-content { flex: 1; overflow-y: auto; padding-bottom: 8px; }
 #sidebar-content::-webkit-scrollbar { width: 4px; }
@@ -222,30 +232,29 @@ html, body {
   background: rgba(0,0,0,0.06);
 }
 .file-item.active .file-name { font-weight: 600; }
+.file-item.root-file .file-name { font-weight: 600; }
+
 .file-icon {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 22px; height: 15px; border-radius: 3px;
-  font-size: 9px; font-weight: 700; text-transform: uppercase;
-  font-family: 'Consolas', 'Monaco', monospace;
-  flex-shrink: 0; letter-spacing: 0.3px;
+  width: 16px; height: 16px; flex-shrink: 0;
 }
-.file-icon.py { background: rgba(53,114,165,0.12); color: #3572A5; }
-.file-icon.md { background: rgba(8,63,161,0.12); color: #083fa1; }
-.file-icon.json { background: rgba(180,140,10,0.12); color: #9a7b0a; }
-.file-icon.js { background: rgba(180,140,10,0.12); color: #9a7b0a; }
-.file-icon.sh { background: rgba(78,170,37,0.12); color: #3d8a1e; }
-.file-icon.cls { background: rgba(108,52,131,0.12); color: #6c3483; }
-.file-icon.cos { background: rgba(108,52,131,0.12); color: #6c3483; }
-.file-icon.template { background: rgba(108,52,131,0.12); color: #6c3483; }
-.file-icon.html { background: rgba(227,79,38,0.12); color: #c43e1c; }
-.file-icon.css { background: rgba(21,114,182,0.12); color: #1572B6; }
-.file-icon.xml { background: rgba(227,79,38,0.12); color: #c43e1c; }
-.file-icon.yaml { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
-.file-icon.yml { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
-.file-icon.toml { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
-.file-icon.cfg { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
-.file-icon.txt { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.38); }
-.file-icon.default { background: rgba(0,0,0,0.04); color: rgba(0,0,0,0.38); }
+.file-icon svg { width: 16px; height: 16px; }
+.file-icon.py,
+.file-icon.md,
+.file-icon.json,
+.file-icon.js,
+.file-icon.sh,
+.file-icon.cls,
+.file-icon.cos,
+.file-icon.tpl,
+.file-icon.html,
+.file-icon.css,
+.file-icon.xml,
+.file-icon.yml,
+.file-icon.toml,
+.file-icon.cfg,
+.file-icon.txt,
+.file-icon.default { color: rgba(0,0,0,0.38); }
 .file-name {
   font-size: var(--fr-styles-font-size-2xs); color: rgba(0,0,0,0.87);
   overflow: hidden; text-overflow: ellipsis;
@@ -262,20 +271,36 @@ html, body {
   color: rgba(0,0,0,0.38); font-size: var(--fr-styles-font-size-2xs);
 }
 
-/* ── Resize handle ──────────────────────────────── */
+/* ── Resize handle (inside sidebar, right edge — chatbot pattern) ── */
 #resize-handle {
-  width: 4px; cursor: col-resize;
-  background: transparent; flex-shrink: 0;
-  transition: background 0.15s;
+  position: absolute; right: 0; top: 0; bottom: 0; width: 6px;
+  cursor: col-resize; z-index: 2;
+  background: transparent;
+  transition: background 0.15s ease;
 }
-#resize-handle:hover, #resize-handle.active { background: var(--fr-styles-color-secondary); }
+#resize-handle::after {
+  content: ''; position: absolute; right: 2px; top: 50%;
+  transform: translateY(-50%); width: 2px; height: 32px;
+  border-radius: 1px; background: transparent;
+  transition: background 0.15s ease, height 0.15s ease;
+}
+#resize-handle:hover::after {
+  background: var(--fr-styles-color-middle-grey); height: 48px;
+}
+#resize-handle.active::after {
+  background: var(--fr-styles-color-dark-grey); height: 48px;
+}
 
-/* ── Content panel ──────────────────────────────── */
+/* ── Content panel (chatbot-aligned) ───────────── */
 #content {
   flex: 1; display: flex; flex-direction: column;
-  overflow: hidden; background: var(--fr-styles-color-near-white);
-  min-width: 0;
+  overflow: hidden; background: white;
+  min-width: 0; max-width: 100%; width: 0;
 }
+#content ::-webkit-scrollbar { width: 4px; height: 4px; }
+#content ::-webkit-scrollbar-track { background: transparent; }
+#content ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+#content ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
 
 /* ── Code header ────────────────────────────────── */
 #code-header {
@@ -292,111 +317,164 @@ html, body {
 }
 #code-header .meta { font-size: var(--fr-styles-font-size-2xs); color: rgba(0,0,0,0.38); }
 
-/* ── Source Editor (editable textarea — serves as both source view and editor) ── */
+/* ── Source Editor (editable textarea — chatbot-aligned) ── */
 #source-editor {
   flex: 1; display: none;
   border: none; outline: none; resize: none;
-  padding: 16px;
+  padding: 16px 24px;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: var(--fr-styles-font-size-xs); line-height: 1.5; tab-size: 4;
+  font-size: 13px; line-height: 1.6; tab-size: 4;
   color: rgba(0,0,0,0.87);
-  background: var(--fr-styles-color-white);
-  white-space: pre; overflow: auto;
-  width: 100%; min-width: 0;
+  background: white;
+  white-space: pre-wrap; overflow: auto;
+  width: 100%; min-width: 0; max-width: 100%;
+  overflow-wrap: break-word; word-wrap: break-word;
 }
 #source-editor::placeholder { color: rgba(0,0,0,0.38); }
 
-/* ── Highlighted code view (Prism) ─────────────── */
+/* ── Highlighted code view (Prism, chatbot-aligned) */
 #code-view {
   flex: 1; display: none;
   margin: 0; overflow: auto;
-  background: var(--fr-styles-color-white);
-  font-size: var(--fr-styles-font-size-xs) !important;
+  min-width: 0; max-width: 100%;
+  background: white;
+  font-size: 13px !important;
+  overflow-wrap: break-word; word-wrap: break-word;
 }
 #code-view code {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
-  font-size: var(--fr-styles-font-size-xs) !important;
-  line-height: 1.5 !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: break-word; word-wrap: break-word;
 }
 
-/* ── New file button ───────────────────────────── */
-.new-btn {
-  border: 1px solid rgba(0,0,0,0.12); background: none;
-  border-radius: 3px; padding: 2px 8px;
-  font-family: inherit; font-size: var(--fr-styles-font-size-2xs);
-  color: rgba(0,0,0,0.54); cursor: pointer;
-  transition: all 0.15s; display: flex; align-items: center; gap: 4px;
-}
-.new-btn:hover {
-  background: rgba(0,0,0,0.04);
-  color: rgba(0,0,0,0.87);
-  border-color: rgba(0,0,0,0.26);
-}
-
-/* ── Markdown view ──────────────────────────────── */
+/* ── Markdown view (Linear-style) ──────────────────── */
 #markdown-view {
   flex: 1; overflow: auto;
-  padding: 24px 32px; display: none;
-  line-height: 1.6; font-size: var(--fr-styles-font-size-sm);
+  padding: 40px 48px; display: none;
+  line-height: 1.6; font-size: 14px;
+  min-width: 0; max-width: 100%;
+  overflow-wrap: break-word; word-wrap: break-word;
+  background: #fff;
+  color: #3c4149;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
-#markdown-view::-webkit-scrollbar { width: 6px; }
-#markdown-view::-webkit-scrollbar-track { background: transparent; }
-#markdown-view::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+#markdown-view > * { max-width: 100%; }
 #markdown-view h1 {
-  font-size: 1.5em; margin: 0.8em 0 0.4em; font-weight: 700;
-  color: var(--fr-styles-color-primary);
-  border-bottom: 1px solid var(--fr-styles-color-very-light-grey); padding-bottom: 0.3em;
+  font-size: 1.5em; margin: 1.5em 0 0.5em; font-weight: 600;
+  color: #1b1e23; letter-spacing: -0.02em; line-height: 1.3;
 }
-#markdown-view h2 { font-size: 1.3em; margin: 0.8em 0 0.4em; font-weight: 600; color: rgba(0,0,0,0.87); }
-#markdown-view h3 { font-size: 1.1em; margin: 0.6em 0 0.3em; font-weight: 600; }
-#markdown-view p { margin: 0.5em 0; }
+#markdown-view h1:first-child { margin-top: 0; }
+#markdown-view h2 {
+  font-size: 1.25em; margin: 1.5em 0 0.4em; font-weight: 600;
+  color: #1b1e23; letter-spacing: -0.01em; line-height: 1.3;
+}
+#markdown-view h3 {
+  font-size: 1em; margin: 1.25em 0 0.35em; font-weight: 600;
+  color: #3c4149;
+}
+#markdown-view h4 {
+  font-size: 0.875em; margin: 1em 0 0.25em; font-weight: 600;
+  color: #6b6f76;
+}
+#markdown-view p { margin: 0.75em 0; }
 #markdown-view code {
-  font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 0.9em; background: var(--fr-styles-color-very-light-grey);
-  padding: 1px 4px; border-radius: 3px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85em; background: #f2f3f5;
+  padding: 1px 5px; border-radius: 3px;
+  color: #3c4149;
 }
 #markdown-view pre {
-  background: var(--fr-styles-color-near-white);
-  border: 1px solid var(--fr-styles-color-very-light-grey);
-  border-radius: 4px; padding: 12px 16px;
-  overflow-x: auto; margin: 0.5em 0;
+  background: #f2f3f5;
+  border-radius: 6px; padding: 14px 16px;
+  overflow-x: auto; margin: 1em 0;
 }
-#markdown-view pre code { background: none; padding: 0; font-size: var(--fr-styles-font-size-xs); }
+#markdown-view pre code {
+  background: none; padding: 0; color: #3c4149;
+  font-size: 13px; line-height: 1.5;
+  white-space: pre; overflow-wrap: normal;
+}
 #markdown-view ul, #markdown-view ol { padding-left: 1.5em; margin: 0.5em 0; }
 #markdown-view li { margin: 0.2em 0; }
-#markdown-view table { border-collapse: collapse; margin: 0.5em 0; width: 100%; }
+#markdown-view li > ul, #markdown-view li > ol { margin: 0.1em 0; }
+#markdown-view table {
+  border-collapse: collapse;
+  margin: 1em 0; width: auto;
+  max-width: 100%; display: block; overflow-x: auto;
+}
 #markdown-view th, #markdown-view td {
-  border: 1px solid var(--fr-styles-color-light-grey); padding: 6px 10px;
-  text-align: left; font-size: var(--fr-styles-font-size-2xs);
+  border: 1px solid #e1e4e8;
+  padding: 6px 12px;
+  text-align: left; font-size: 13px;
 }
-#markdown-view th { background: var(--fr-styles-color-very-light-grey); font-weight: 600; }
+#markdown-view th {
+  background: #f6f8fa; font-weight: 600; color: #3c4149;
+}
 #markdown-view blockquote {
-  border-left: 3px solid var(--fr-styles-color-light-grey); padding-left: 12px;
-  margin: 0.5em 0; color: rgba(0,0,0,0.54);
+  border-left: 3px solid #d8dbe0; padding: 0 16px;
+  margin: 1em 0; color: #6b6f76;
 }
-#markdown-view a { color: var(--fr-styles-color-secondary); text-decoration: none; }
+#markdown-view blockquote p { margin: 0.4em 0; }
+#markdown-view a { color: #5e6ad2; text-decoration: none; }
 #markdown-view a:hover { text-decoration: underline; }
-#markdown-view hr { border: none; border-top: 1px solid var(--fr-styles-color-light-grey); margin: 1em 0; }
-#markdown-view strong { font-weight: 700; }
+#markdown-view hr {
+  border: none; height: 1px; background: #e1e4e8;
+  margin: 2em 0;
+}
+#markdown-view strong { font-weight: 600; color: #1b1e23; }
+#markdown-view img { max-width: 100%; height: auto; }
 
-/* ── Welcome state ──────────────────────────────── */
+/* ── Frontmatter metadata block ───────────────── */
+.frontmatter-block {
+  margin: 0 0 1.5em; padding: 14px 18px;
+  background: #f8f9fb; border: 1px solid #e8eaed;
+  border-radius: 8px; font-size: 13px;
+  line-height: 1.65; color: #555;
+}
+.frontmatter-block .fm-row {
+  display: flex; gap: 8px; padding: 2px 0;
+}
+.frontmatter-block .fm-key {
+  font-weight: 600; color: #6e7681;
+  min-width: 100px; flex-shrink: 0;
+  font-family: 'SF Mono', 'Consolas', 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+}
+.frontmatter-block .fm-val {
+  color: #1d1d1f;
+}
+
+/* ── Empty State (chatbot-style centered logo) ──── */
 #welcome {
-  flex: 1; display: flex; flex-direction: column;
+  flex: 1;
+  background: white;
+  display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  gap: 16px; padding: 40px; text-align: center;
+  gap: 20px;
+  padding: 32px;
 }
-#welcome .logo { width: 48px; height: 48px; fill: var(--fr-styles-color-primary); opacity: 0.2; }
-#welcome h2 { font-size: var(--fr-styles-font-size-base); color: rgba(0,0,0,0.87); font-weight: 600; }
-#welcome p { font-size: var(--fr-styles-font-size-xs); color: rgba(0,0,0,0.54); max-width: 400px; line-height: 1.5; }
-#welcome kbd {
-  display: inline-block; padding: 2px 6px;
-  background: var(--fr-styles-color-very-light-grey);
-  border: 1px solid var(--fr-styles-color-light-grey);
-  border-radius: 3px;
-  font-family: 'Consolas', monospace; font-size: var(--fr-styles-font-size-2xs);
-  color: rgba(0,0,0,0.54);
+.welcome-icon {
+  width: 48px; height: 48px; opacity: 0.15;
 }
-
+.welcome-icon svg { width: 100%; height: 100%; }
+.welcome-title {
+  font-size: var(--fr-styles-font-size-sm);
+  color: rgba(0,0,0,0.38);
+  font-weight: 500;
+  text-align: center;
+}
+.welcome-hint {
+  font-size: var(--fr-styles-font-size-2xs);
+  color: rgba(0,0,0,0.26);
+  text-align: center;
+  max-width: 320px;
+  line-height: 1.6;
+}
+.welcome-hint .chatbot-ref {
+  font-weight: 600;
+}
 /* ── Status Indicator ──────────────────────────── */
 .status-indicator {
   font-size: var(--fr-styles-font-size-2xs);
@@ -410,15 +488,74 @@ html, body {
 .status-indicator .dot.saved { background: hsl(152, 69%, 53%); }
 .status-indicator .dot.saving { background: hsl(45, 93%, 47%); animation: pulse-save 1s ease-in-out infinite; }
 .status-indicator .dot.modified { background: hsl(27, 96%, 61%); }
+.status-indicator .dot.refreshed { background: hsl(142, 71%, 45%); }
 @keyframes pulse-save { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
 
-/* ── Modified Badge ────────────────────────────── */
+/* ── Modified Badge (ISC Teal #00B2A9) ─────────── */
 .modified-badge {
   font-size: 9px; font-weight: 600;
-  color: var(--fr-styles-color-state-focused);
-  background: hsla(var(--fr-styles-color-secondary-hsl), 0.08);
+  color: #00B2A9;
+  background: rgba(0, 178, 169, 0.08);
   padding: 0 4px; border-radius: 3px;
   margin-left: auto; flex-shrink: 0; line-height: 16px;
+}
+
+/* ── Removed file/folder coloring (ISC Blue #2F2A95) */
+.removed-badge {
+  font-size: 9px; font-weight: 600;
+  color: #2F2A95;
+  background: rgba(47, 42, 149, 0.08);
+  padding: 0 4px; border-radius: 3px;
+  margin-left: auto; flex-shrink: 0; line-height: 16px;
+}
+.file-item.removed .file-name {
+  color: #2F2A95;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.file-item.removed .file-icon {
+  color: #2F2A95;
+  opacity: 0.7;
+}
+.group-header.removed .group-label {
+  color: #2F2A95;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.group-header.removed .group-chevron,
+.group-header.removed .group-count {
+  color: #2F2A95;
+  opacity: 0.7;
+}
+
+/* ── Modified file coloring (ISC Teal) ─────────── */
+.file-item.modified .file-name {
+  color: #00B2A9;
+  font-weight: 600;
+}
+.file-item.modified .file-icon {
+  color: #00B2A9;
+}
+
+/* ── Custom folder/section coloring (teal) ─────── */
+.group-header.custom .group-label,
+.group-header.custom .group-chevron,
+.group-header.custom .group-count {
+  color: var(--fr-styles-color-state-focused);
+}
+.group-header.custom .group-label { font-weight: 600; }
+.section-header.custom .section-label,
+.section-header.custom .section-chevron,
+.section-header.custom .section-icon,
+.section-header.custom .section-count {
+  color: var(--fr-styles-color-state-focused);
+}
+.section-header.custom .section-label { font-weight: 700; }
+.file-item.custom .file-name {
+  color: var(--fr-styles-color-state-focused);
+}
+.file-item.custom .file-icon {
+  color: var(--fr-styles-color-state-focused);
 }
 
 /* ── Restore Button ────────────────────────────── */
@@ -443,28 +580,22 @@ html, body {
   padding: 20px; color: rgba(0,0,0,0.38); font-size: var(--fr-styles-font-size-2xs);
 }
 .spinner {
-  width: 14px; height: 14px;
-  border: 2px solid rgba(0,0,0,0.12);
-  border-top-color: var(--fr-styles-color-secondary);
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
+  width: 16px; height: 16px;
   margin-right: 8px;
+  animation: spin 1.2s ease-in-out infinite;
+  opacity: 0.3;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body data-no-auth-gate>
-<script src="../interclaw-header.js"></script>
+<script src="../interclaw-header.js?v=13"></script>
   <div id="app-root">
     <!-- Toolbar -->
     <div id="toolbar">
-      <div class="brand">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg>
-        Skill Editor
-      </div>
+      <div class="brand"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Skill Editor</div>
       <div class="breadcrumb" id="breadcrumb">Select a file to view</div>
       <div class="toolbar-actions">
-        <button id="new-btn" class="new-btn" title="New custom command">+ New</button>
         <span id="status-indicator" class="status-indicator"></span>
         <button id="restore-btn" class="restore-btn">Restore</button>
         <div class="view-toggle" id="view-toggle">
@@ -481,22 +612,26 @@ html, body {
           <input type="text" id="search-input" placeholder="Search files..." spellcheck="false">
         </div>
         <div id="sidebar-content">
-          <div class="loading"><div class="spinner"></div> Loading...</div>
+          <div class="loading"><svg class="spinner" viewBox="0 0 22 57"><polygon fill="#2F2A95" points="7.2 8 0.2 4.5 0.2 49.3 14.3 56.3 14.3 48.5 7.2 44.9"/><polygon fill="#00B2A9" points="14.3 48.5 21.3 52 21.3 7.2 7.2 0.2 7.2 8 14.3 11.6"/></svg> Loading...</div>
         </div>
-      </div>
       <div id="resize-handle"></div>
+      </div>
       <div id="content">
         <div id="welcome">
-          <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z"/></svg>
-          <h2>Skill Editor</h2>
-          <p>Browse skill files, commands, scripts, and references. Select a file from the sidebar.</p>
-          <p><kbd>Ctrl+P</kbd> to search &middot; Auto-refresh every 3s</p>
+          <div class="welcome-icon">
+            <img src="../interclaw-logo.png" width="48" height="48" alt="" style="border-radius:6px">
+          </div>
+          <div class="welcome-title">Select a file to browse, or use the chatbot to develop new skills</div>
+          <div class="welcome-hint">
+            To create new commands, scripts, or skill files, describe what you need in the
+            <span class="chatbot-ref">chatbot sidebar</span> and it will scaffold and deploy them for you.
+          </div>
         </div>
         <div id="code-header">
           <span class="filename" id="file-name"></span>
           <span class="meta" id="file-meta"></span>
         </div>
-        <pre id="code-view" class="line-numbers"><code></code></pre>
+        <pre id="code-view" ><code></code></pre>
         <textarea id="source-editor" spellcheck="false"></textarea>
         <div id="markdown-view"></div>
       </div>
@@ -504,7 +639,7 @@ html, body {
   </div>
 
   <!-- Chatbot (identical injection as interop-editor / rule-editor) -->
-  <script src="../interclaw-chatbot.js?v=13"></script>
+  <script src="../interclaw-chatbot.js?v=16"></script>
 
   <!-- Prism.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
@@ -527,10 +662,12 @@ html, body {
 (function() {
   'use strict';
 
-  /* ── API Base ──────────────────────────────────────────────────────── */
-  var pathParts = window.location.pathname.split('/ui/interop/');
-  var pathPrefix = pathParts[0] || '';
-  var API_BASE = pathPrefix + '/api/interclaw/skills-editor';
+  /* ── API base URL (same derivation as chatbot state.js) ──────────── */
+  var _pathMatch = window.location.pathname.match(/^(\/[^/]+)\/ui\/interop\/(?:interclaw|cc)\//);;
+  var _apiBase = _pathMatch ? _pathMatch[1] + '/api/interclaw' : '/api/interclaw';
+
+  /* ── Content cache (fetched on demand via REST API) ────────────── */
+  var _contentCache = {};
 
   /* ── State ──────────────────────────────────────────────────────────── */
   var state = {
@@ -538,12 +675,10 @@ html, body {
     currentFileData: null,
     currentView: 'source',
     dirty: false,
-    modifiedPaths: {},
-    sections: null,
-    expanded: { core: false, commands: false, scripts: false, references: false, templates: false },
-    expandedGroups: {},
-    refreshTimer: null,
-    saveTimer: null,
+    manifest: null,
+    files: null,
+    tree: null,
+    expanded: {},
   };
 
   /* ── Helpers ────────────────────────────────────────────────────────── */
@@ -562,36 +697,6 @@ html, body {
     return (b / 1048576).toFixed(1) + ' MB';
   }
 
-  function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
-
-  function apiGet(endpoint, params) {
-    var url = API_BASE + endpoint;
-    if (params) {
-      url += '?' + Object.keys(params).map(function(k) {
-        return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-      }).join('&');
-    }
-    return fetch(url, { credentials: 'include' }).then(function(r) { return r.json(); });
-  }
-
-  function apiPut(endpoint, body) {
-    return fetch(API_BASE + endpoint, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      credentials: 'include',
-    }).then(function(r) { return r.json(); });
-  }
-
-  function apiPost(endpoint, body) {
-    return fetch(API_BASE + endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      credentials: 'include',
-    }).then(function(r) { return r.json(); });
-  }
-
   /* ── File icon from extension ──────────────────────────────────────── */
   var ICON_MAP = {
     '.py':'py', '.md':'md', '.json':'json', '.js':'js', '.sh':'sh',
@@ -599,14 +704,18 @@ html, body {
     '.xml':'xml', '.yaml':'yml', '.yml':'yml', '.toml':'toml', '.cfg':'cfg',
     '.txt':'txt', '.conf':'cfg', '.hl7':'txt'
   };
-  var ICON_LABELS = {
-    py:'PY', md:'MD', json:'{ }', js:'JS', sh:'$_', cls:'CLS', cos:'COS',
-    tpl:'TPL', html:'</', css:'#', xml:'</>', yml:'YML', toml:'CFG', cfg:'CFG',
-    txt:'TXT', 'default':'···'
+  var _doc = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M4 1.5h5l3.5 3.5V14.5H4z"/><path d="M9 1.5V5h3.5"/></svg>';
+  var _docLines = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M4 1.5h5l3.5 3.5V14.5H4z"/><path d="M9 1.5V5h3.5"/><path stroke-linecap="round" stroke-width="1" d="M6 7.5h5M6 10h4M6 12.5h3"/></svg>';
+  var _code = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3.5L1.5 8 5 12.5"/><path d="M11 3.5l3.5 4.5-3.5 4.5"/></svg>';
+  var ICON_SVGS = {
+    py: _code, md: _docLines, json: _code, js: _code,
+    sh: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4l4 4-4 4"/><path d="M9 12h4"/></svg>',
+    cls: _code, cos: _code, tpl: _doc, html: _code, css: _code, xml: _code,
+    yml: _docLines, toml: _docLines, cfg: _docLines, txt: _docLines, 'default': _doc
   };
   function fileIconClass(ext) {
     var cls = ICON_MAP[ext] || 'default';
-    return { cls: cls, label: ICON_LABELS[cls] || ICON_LABELS['default'] };
+    return { cls: cls, svg: ICON_SVGS[cls] || ICON_SVGS['default'] };
   }
 
   /* ── Prism language map ──────────────────────────────────────────── */
@@ -615,344 +724,144 @@ html, body {
     yaml:'yaml', css:'css', html:'markup', xml:'markup', markdown:'markdown',
     toml:'toml', ini:'ini'
   };
+  var EXT_LANG = {
+    '.md':'markdown', '.py':'python', '.json':'json', '.js':'javascript',
+    '.sh':'bash', '.yaml':'yaml', '.yml':'yaml', '.html':'html', '.css':'css',
+    '.xml':'xml', '.toml':'toml', '.cfg':'ini', '.cls':'text', '.cos':'text',
+    '.template':'text', '.txt':'text', '.conf':'ini', '.hl7':'text'
+  };
 
-  /* ── Section definitions ────────────────────────────────────────────── */
-  var SECTIONS = [
-    { id: 'core', label: 'Core',
-      icon: '<svg viewBox="0 0 16 16"><path d="M8 1L2 4.5v7L8 15l6-3.5v-7L8 1z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>' },
-    { id: 'commands', label: 'Commands',
-      icon: '<svg viewBox="0 0 16 16"><path d="M4 5l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><line x1="9" y1="12" x2="13" y2="12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' },
-    { id: 'scripts', label: 'Scripts',
-      icon: '<svg viewBox="0 0 16 16"><path d="M5 3v10M11 3v10M3 6h10M3 10h10" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>' },
-    { id: 'references', label: 'References',
-      icon: '<svg viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3V2z" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M10 2v3h3" fill="none" stroke="currentColor" stroke-width="1.1"/><line x1="5" y1="8" x2="11" y2="8" stroke="currentColor" stroke-width="1"/><line x1="5" y1="10.5" x2="9" y2="10.5" stroke="currentColor" stroke-width="1"/></svg>' },
-    { id: 'templates', label: 'Templates',
-      icon: '<svg viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.1"/><line x1="2" y1="6" x2="14" y2="6" stroke="currentColor" stroke-width="1"/><line x1="6" y1="6" x2="6" y2="14" stroke="currentColor" stroke-width="1"/></svg>' },
-  ];
 
-  /* ── Organize raw tree into sections ────────────────────────────────── */
-  var SKIP_RE = /__pycache__|__init__|\.pyc|\.gitkeep|node_modules|images/i;
 
-  // Filter a tree recursively, removing junk files and empty dirs
-  function filterTree(nodes) {
-    if (!nodes) return [];
-    var out = [];
-    nodes.forEach(function(n) {
-      if (SKIP_RE.test(n.path || '')) return;
-      if (n.type === 'dir') {
-        var children = filterTree(n.children);
-        if (children.length) out.push({ type: 'dir', name: n.name, path: n.path, children: children });
-      } else {
-        out.push(n);
-      }
-    });
-    // Sort: dirs first, then files, both alphabetical
-    out.sort(function(a, b) {
-      if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-    return out;
-  }
+  var FOLDER_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"><path d="M2 3h4.5l1.5 1.5H14V13H2V3z"/></svg>';
 
-  // Find a subtree node by path or name match
-  function findSubtree(nodes, matchRe) {
-    if (!nodes) return null;
-    for (var i = 0; i < nodes.length; i++) {
-      if (nodes[i].type === 'dir' && (matchRe.test(nodes[i].path || '') || matchRe.test(nodes[i].name || ''))) return nodes[i];
-      if (nodes[i].type === 'dir') {
-        var found = findSubtree(nodes[i].children, matchRe);
-        if (found) return found;
-      }
-    }
-    return null;
-  }
-
-  // Count all files in a tree recursively
-  function countFiles(nodes) {
-    if (!nodes) return 0;
-    var c = 0;
-    nodes.forEach(function(n) {
-      if (n.type === 'dir') c += countFiles(n.children);
-      else c++;
-    });
-    return c;
-  }
-
-  function organizeTree(tree, topLevelFiles) {
-    var sections = {
-      core:       { items: [], rootPath: '.claude' },
-      commands:   { tree: [] },
-      scripts:    { tree: [] },
-      references: { tree: [] },
-      templates:  { tree: [] },
-    };
-
-    // Core: SKILL.md files
-    (function findCore(items) {
-      if (!items) return;
-      items.forEach(function(it) {
-        if (it.type === 'dir') { findCore(it.children); return; }
-        if (/SKILL\.md$/.test(it.path || '')) sections.core.items.unshift(it);
-      });
-    })(tree);
-
-    if (topLevelFiles) {
-      topLevelFiles.forEach(function(f) {
-        if (f.type === 'file' && /^CLAUDE/i.test(f.name)) {
-          sections.core.items.push({ name: f.name, path: f.path, ext: f.ext || '.md' });
-        }
-      });
-    }
-
-    // Commands: preserve full subtree under .claude/commands/
-    var cmdNode = findSubtree(tree, /(?:^|\/)commands$/);
-    if (cmdNode) { sections.commands.tree = filterTree(cmdNode.children); sections.commands.rootPath = cmdNode.path; }
-
-    // Scripts: preserve full subtree under interclaw/scripts/
-    var scriptNode = findSubtree(tree, /(?:^|\/)scripts$/);
-    if (scriptNode) { sections.scripts.tree = filterTree(scriptNode.children); sections.scripts.rootPath = scriptNode.path; }
-
-    // References: preserve full subtree under interclaw/references/
-    var refNode = findSubtree(tree, /(?:^|\/)references$/);
-    if (refNode) { sections.references.tree = filterTree(refNode.children); sections.references.rootPath = refNode.path; }
-
-    // Templates: preserve full subtree under interclaw/templates/
-    var tplNode = findSubtree(tree, /(?:^|\/)templates$/);
-    if (tplNode) { sections.templates.tree = filterTree(tplNode.children); sections.templates.rootPath = tplNode.path; }
-
-    return sections;
-  }
-
-  /* ── Load modified paths from git ───────────────────────────────────── */
-  function loadModified() {
-    apiGet('/modified').then(function(paths) {
-      state.modifiedPaths = {};
-      (paths || []).forEach(function(p) { state.modifiedPaths[p] = true; });
-      renderSidebar($('#search-input').value.trim() || undefined);
-      updateRestoreButton();
-    }).catch(function() {});
-  }
-
-  /* ── Load tree ──────────────────────────────────────────────────────── */
-  function loadTree() {
-    Promise.all([
-      apiGet('/tree', { root: '.claude' }),
-      apiGet('/roots'),
-    ]).then(function(res) {
-      var tree = res[0].tree || [];
-      var roots = (res[1] && res[1].roots) || [];
-      state.sections = organizeTree(tree, roots);
-      renderSidebar();
+  /* ── Load index.json ────────────────────────────────────────────────── */
+  function loadIndex() {
+    fetch(_apiBase + '/api/skill-index?t=' + Date.now()).then(function(r) { return r.json(); })
+    .then(function(entries) {
+      state.manifest = entries;
+      state.files = entries.sort(function(a, b) { return a.path.localeCompare(b.path); });
+      state.tree = buildTree(entries);
+      var q = ($('#search-input').value || '').trim();
+      renderSidebar(q || undefined);
     }).catch(function(err) {
       $('#sidebar-content').innerHTML =
-        '<div class="loading" style="color:var(--fr-styles-color-warning)">Failed to load: ' + esc(err.message) + '</div>';
+        '<div class="loading" style="color:var(--fr-styles-color-warning)">Failed to load index: ' + esc(err.message) + '</div>';
     });
   }
 
-  /* ── Render sidebar ─────────────────────────────────────────────────── */
-
-  // Filter a tree by search query, keeping dirs that have matching descendants
-  function filterTreeByQuery(nodes, q) {
-    if (!q || !nodes) return nodes;
-    var out = [];
-    nodes.forEach(function(n) {
-      if (n.type === 'dir') {
-        var children = filterTreeByQuery(n.children, q);
-        if (children.length) out.push({ type: 'dir', name: n.name, path: n.path, children: children });
-      } else {
-        if (n.name.toLowerCase().indexOf(q) !== -1) out.push(n);
+  /* ── Build tree from flat file list ────────────────────────────────── */
+  function buildTree(entries) {
+    var root = { _files: [], _dirs: {} };
+    entries.forEach(function(e) {
+      var parts = e.path.split('/');
+      var node = root;
+      for (var i = 0; i < parts.length - 1; i++) {
+        if (!node._dirs[parts[i]]) node._dirs[parts[i]] = { _files: [], _dirs: {} };
+        node = node._dirs[parts[i]];
       }
+      node._files.push(e);
     });
-    return out;
+    return root;
   }
 
+  /* ── Render sidebar (tree) ─────────────────────────────────────────── */
   function renderSidebar(filter) {
     var container = $('#sidebar-content');
+    var scrollTop = container.scrollTop;
     container.innerHTML = '';
-    if (!state.sections) return;
+    if (!state.tree) return;
 
     var q = (filter || '').toLowerCase();
 
-    SECTIONS.forEach(function(def) {
-      var sec = state.sections[def.id];
-      if (!sec) return;
+    // Root-level files first
+    state.tree._files.forEach(function(f) {
+      if (q && f.path.toLowerCase().indexOf(q) === -1) return;
+      var el = buildFileItem(f, 0);
+      el.classList.add('root-file');
+      container.appendChild(el);
+    });
 
-      var isOpen = q ? true : state.expanded[def.id] !== false;
-      var count = 0;
-      var filtered, filteredTree;
-
-      // Core section uses flat items
-      if (sec.items) {
-        filtered = q ? sec.items.filter(function(i) { return i.name.toLowerCase().indexOf(q) !== -1; }) : sec.items;
-        count = filtered.length;
-      }
-      // Other sections use tree
-      if (sec.tree) {
-        filteredTree = q ? filterTreeByQuery(sec.tree, q) : sec.tree;
-        count = countFiles(filteredTree);
-      }
-
-      if (q && !count) return;
-
-      var sectionEl = document.createElement('div');
-      sectionEl.className = 'section';
-
-      var header = document.createElement('div');
-      header.className = 'section-header';
-      header.innerHTML =
-        '<span class="section-chevron ' + (isOpen ? '' : 'collapsed') + '">' +
-          '<svg viewBox="0 0 10 10"><path d="M2 3l3 3.5L8 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-        '</span>' +
-        '<span class="section-icon">' + def.icon + '</span>' +
-        '<span class="section-label">' + def.label + '</span>' +
-        '<span class="section-count">' + count + '</span>';
-      header.addEventListener('click', function() {
-        state.expanded[def.id] = !state.expanded[def.id];
-        setTreeSelection('folder', def.label, sec.rootPath || def.id);
-        renderSidebar(q || undefined);
-      });
-      sectionEl.appendChild(header);
-
-      var itemsEl = document.createElement('div');
-      itemsEl.className = 'section-items' + (isOpen ? '' : ' collapsed');
-
-      if (filtered) {
-        filtered.forEach(function(item) { itemsEl.appendChild(buildFileItem(item, 0)); });
-      }
-      if (filteredTree) {
-        renderTreeNodes(filteredTree, itemsEl, def.id, 0, !!q);
-      }
-
-      sectionEl.appendChild(itemsEl);
-      container.appendChild(sectionEl);
+    // Then directories
+    Object.keys(state.tree._dirs).sort().forEach(function(dirName) {
+      renderDir(container, dirName, state.tree._dirs[dirName], dirName, 0, q);
     });
 
     if (!container.children.length && q) {
       container.innerHTML = '<div class="search-empty">No matching files</div>';
     }
+
+    container.scrollTop = scrollTop;
   }
 
-  function renderTreeNodes(nodes, parentEl, sectionId, depth, forceOpen) {
-    nodes.forEach(function(n) {
-      if (n.type === 'dir') {
-        parentEl.appendChild(buildFolder(sectionId, n, depth, forceOpen));
-      } else {
-        parentEl.appendChild(buildFileItem(n, depth));
-      }
-    });
-  }
+  function renderDir(parent, name, node, fullPath, depth, filter) {
+    // Collect all files under this dir for filtering
+    var allFiles = collectFiles(node);
+    if (filter && !allFiles.some(function(f) { return f.path.toLowerCase().indexOf(filter) !== -1; })) return;
 
-  function buildFolder(sectionId, dirNode, depth, forceOpen) {
-    var key = sectionId + ':' + dirNode.path;
-    var isOpen = forceOpen ? true : !!state.expandedGroups[key];
-    var fileCount = countFiles(dirNode.children);
+    var key = fullPath;
+    var isOpen = filter ? true : !!state.expanded[key];
 
-    var wrapper = document.createElement('div');
     var header = document.createElement('div');
-    header.className = 'group-header';
-    header.style.paddingLeft = (24 + depth * 16) + 'px';
+    header.className = 'section-header';
+    header.style.paddingLeft = (12 + depth * 16) + 'px';
     header.innerHTML =
-      '<span class="group-chevron ' + (isOpen ? '' : 'collapsed') + '">' +
+      '<span class="section-chevron ' + (isOpen ? '' : 'collapsed') + '">' +
         '<svg viewBox="0 0 10 10"><path d="M2 3l3 3.5L8 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       '</span>' +
-      '<span class="group-label">' + esc(dirNode.name) + '</span>' +
-      '<span class="group-count">' + fileCount + '</span>';
+      '<span class="section-icon">' + FOLDER_ICON + '</span>' +
+      '<span class="section-label">' + esc(name) + '</span>' +
+      '<span class="section-count">' + allFiles.length + '</span>';
     header.addEventListener('click', function() {
-      state.expandedGroups[key] = !state.expandedGroups[key];
-      setTreeSelection('folder', dirNode.name, dirNode.path);
-      renderSidebar($('#search-input').value.trim() || undefined);
+      state.expanded[key] = !isOpen;
+      renderSidebar(filter || undefined);
     });
-    wrapper.appendChild(header);
+    parent.appendChild(header);
+
+    if (!isOpen) return;
 
     var itemsEl = document.createElement('div');
-    itemsEl.className = 'group-items' + (isOpen ? '' : ' collapsed');
-    renderTreeNodes(dirNode.children, itemsEl, sectionId, depth + 1, forceOpen);
-    wrapper.appendChild(itemsEl);
-    return wrapper;
+    itemsEl.className = 'section-items';
+
+    // Sub-directories first
+    Object.keys(node._dirs).sort().forEach(function(sub) {
+      renderDir(itemsEl, sub, node._dirs[sub], fullPath + '/' + sub, depth + 1, filter);
+    });
+
+    // Then files
+    node._files.sort(function(a, b) { return a.name.localeCompare(b.name); })
+    .forEach(function(f) {
+      if (filter && f.path.toLowerCase().indexOf(filter) === -1) return;
+      itemsEl.appendChild(buildFileItem(f, depth + 1));
+    });
+
+    parent.appendChild(itemsEl);
+  }
+
+  function collectFiles(node) {
+    var result = node._files.slice();
+    Object.keys(node._dirs).forEach(function(k) {
+      result = result.concat(collectFiles(node._dirs[k]));
+    });
+    return result;
   }
 
   function buildFileItem(item, depth) {
     var el = document.createElement('div');
-    el.className = 'file-item' + (depth > 0 ? ' in-group' : '');
+    el.className = 'file-item';
     el.style.paddingLeft = (28 + (depth || 0) * 16) + 'px';
     el.dataset.path = item.path;
     if (state.currentFile === item.path) el.classList.add('active');
 
     var icon = fileIconClass(item.ext);
-    var badge = item.override ? '<span class="override-badge">CUSTOM</span>' : '';
-    if (!badge && state.modifiedPaths && state.modifiedPaths[item.path]) {
-      badge = '<span class="modified-badge">MODIFIED</span>';
-    }
     el.innerHTML =
-      '<span class="file-icon ' + icon.cls + '">' + icon.label + '</span>' +
-      '<span class="file-name" title="' + esc(item.path) + '">' + esc(item.name) + '</span>' +
-      badge;
-    el.addEventListener('click', function() {
-      setTreeSelection('file', item.name, item.path);
-      openFile(item.path);
-    });
+      '<span class="file-icon ' + icon.cls + '">' + icon.svg + '</span>' +
+      '<span class="file-name" title="' + esc(item.path) + '">' + esc(item.name) + '</span>';
+    el.addEventListener('click', function() { openFile(item.path); });
     return el;
   }
 
-  /* ── Tree selection tracking ────────────────────────────────────────── */
-  // Build a listing of folder contents recursively (for context)
-  function buildFolderListing(nodes, prefix, depth) {
-    if (!nodes || depth > 3) return '';
-    var lines = [];
-    nodes.forEach(function(n) {
-      var indent = '';
-      for (var i = 0; i < depth; i++) indent += '  ';
-      if (n.type === 'dir') {
-        lines.push(indent + n.name + '/');
-        lines.push(buildFolderListing(n.children, prefix, depth + 1));
-      } else {
-        lines.push(indent + n.name);
-      }
-    });
-    return lines.join('\n');
-  }
-
-  function setTreeSelection(type, name, path, content) {
-    var sel = { type: type, name: name, path: path };
-    if (type === 'file' && content !== undefined) sel.content = content;
-    if (type === 'folder') {
-      var listing = '';
-      if (state.sections) {
-        Object.keys(state.sections).forEach(function(sid) {
-          if (listing) return;
-          var sec = state.sections[sid];
-          // Section root match
-          if (sec.rootPath === path) {
-            if (sec.tree && sec.tree.length) {
-              listing = buildFolderListing(sec.tree, '', 0);
-            } else if (sec.items && sec.items.length) {
-              listing = sec.items.map(function(i) { return i.name; }).join('\n');
-            }
-            return;
-          }
-          // Search within tree for subfolder match
-          if (sec.tree) {
-            (function findDir(nodes) {
-              if (listing || !nodes) return;
-              nodes.forEach(function(n) {
-                if (listing) return;
-                if (n.type === 'dir' && n.path === path) {
-                  listing = buildFolderListing(n.children, '', 0);
-                } else if (n.type === 'dir') {
-                  findDir(n.children);
-                }
-              });
-            })(sec.tree);
-          }
-        });
-      }
-      if (listing) sel.listing = listing;
-    }
-    localStorage.setItem('interclaw-tree-selection', JSON.stringify(sel));
-    window.dispatchEvent(new CustomEvent('interclaw-tree-selection', { detail: sel }));
-  }
-
-  /* ── Open file ──────────────────────────────────────────────────────── */
+  /* ── Open file (fetch on demand from .claude/) ──────────────────── */
   function openFile(path) {
     if (state.dirty) doSave();
 
@@ -973,58 +882,123 @@ html, body {
     $('#source-editor').style.display = 'none';
     $('#markdown-view').style.display = 'none';
 
-    apiGet('/file', { path: path }).then(function(data) {
-      if (data.error) {
-        $('#source-editor').value = 'Error: ' + data.error;
-        $('#source-editor').style.display = 'block';
-        return;
-      }
+    // If cached, display immediately
+    if (_contentCache[path]) {
+      displayFile(path, _contentCache[path]);
+      return;
+    }
 
-      state.currentFileData = data;
+    // Show loading state
+    $('#file-name').textContent = parts[parts.length - 1];
+    $('#file-meta').textContent = 'Loading...';
+    $('#source-editor').value = '';
+    $('#source-editor').style.display = 'block';
 
-      // Update tree selection with file content
-      setTreeSelection('file', data.name, path, data.content);
-
-      $('#file-name').textContent = data.name;
-      $('#file-meta').textContent = formatSize(data.size);
-      $('#source-editor').value = data.content;
-
-      if (data.language === 'markdown') {
-        // Markdown: Rendered | Source toggle, default to rendered
-        renderMarkdown(data.content);
-        $('#view-toggle').classList.add('visible');
-        $('#view-toggle').innerHTML =
-          '<button data-view="rendered">Rendered</button>' +
-          '<button data-view="source">Source</button>';
-        setView('rendered');
-      } else {
-        // Code files: View (highlighted) | Edit (textarea) toggle
-        renderHighlighted(data.content, data.language);
-        $('#view-toggle').classList.add('visible');
-        $('#view-toggle').innerHTML =
-          '<button data-view="highlighted">View</button>' +
-          '<button data-view="source">Edit</button>';
-        setView('highlighted');
-      }
-
-      updateRestoreButton();
-
-      $$('.file-item').forEach(function(el) {
-        el.classList.toggle('active', el.dataset.path === path);
+    // Fetch live from symlink
+    fetch(_apiBase + '/api/skill-file?path=' + encodeURIComponent(path) + '&t=' + Date.now())
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+      })
+      .then(function(content) {
+        var entry = findEntry(path);
+        var lang = EXT_LANG[entry ? entry.ext : ''] || 'text';
+        var data = { content: content, language: lang, name: entry ? entry.name : parts[parts.length - 1], size: content.length, ext: entry ? entry.ext : '' };
+        _contentCache[path] = data;
+        // Only display if still the current file
+        if (state.currentFile === path) displayFile(path, data);
+      })
+      .catch(function(err) {
+        if (state.currentFile === path) {
+          $('#source-editor').value = 'Failed to load file: ' + err.message;
+          $('#source-editor').style.display = 'block';
+          $('#file-meta').textContent = '';
+        }
       });
-    }).catch(function(err) {
-      $('#source-editor').value = 'Failed to load: ' + err.message;
+  }
+
+
+
+  function findEntry(path) {
+    if (!state.manifest) return null;
+    for (var i = 0; i < state.manifest.length; i++) {
+      if (state.manifest[i].path === path) return state.manifest[i];
+    }
+    return null;
+  }
+
+  function displayFile(path, data) {
+    state.currentFileData = data;
+
+    // Notify chatbot sidebar
+    setTreeSelection('file', data.name, path, data.content);
+
+    $('#file-name').textContent = data.name;
+    $('#file-meta').textContent = formatSize(data.size);
+    $('#source-editor').value = data.content;
+    $('#source-editor').scrollTop = 0;
+    $('#source-editor').selectionStart = 0;
+    $('#source-editor').selectionEnd = 0;
+
+    if (data.language === 'markdown') {
+      renderMarkdown(data.content);
+      $('#view-toggle').classList.add('visible');
+      $('#view-toggle').innerHTML =
+        '<button data-view="rendered">Rendered</button>' +
+        '<button data-view="source">Source</button>';
+      setView('rendered');
+    } else {
+      renderHighlighted(data.content, data.language);
+      $('#view-toggle').classList.add('visible');
+      $('#view-toggle').innerHTML =
+        '<button data-view="highlighted">View</button>' +
+        '<button data-view="source">Edit</button>';
+      setView('highlighted');
+    }
+
+    $$('.file-item').forEach(function(el) {
+      el.classList.toggle('active', el.dataset.path === path);
     });
+  }
+
+  /* ── Tree selection tracking (for chatbot context) ─────────────────── */
+  function setTreeSelection(type, name, path, content) {
+    var sel = { type: type, name: name, path: path };
+    if (type === 'file' && content !== undefined) sel.content = content;
+    localStorage.setItem('interclaw-tree-selection', JSON.stringify(sel));
+    window.dispatchEvent(new CustomEvent('interclaw-tree-selection', { detail: sel }));
+  }
+
+  /* ── Rendering helpers ─────────────────────────────────────────────── */
+  function parseFrontmatter(content) {
+    var match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n/);
+    if (!match) return { frontmatter: null, body: content };
+    var lines = match[1].split('\n');
+    var pairs = [];
+    lines.forEach(function(line) {
+      var idx = line.indexOf(':');
+      if (idx > 0) {
+        pairs.push({ key: line.substring(0, idx).trim(), value: line.substring(idx + 1).trim() });
+      }
+    });
+    return { frontmatter: pairs.length ? pairs : null, body: content.substring(match[0].length) };
+  }
+
+  function renderFrontmatterBlock(pairs) {
+    var html = '<div class="frontmatter-block">';
+    pairs.forEach(function(p) {
+      html += '<div class="fm-row"><span class="fm-key">' + esc(p.key) + '</span><span class="fm-val">' + esc(p.value) + '</span></div>';
+    });
+    html += '</div>';
+    return html;
   }
 
   function renderMarkdown(content) {
     var view = $('#markdown-view');
     if (typeof marked !== 'undefined') {
-      view.innerHTML = marked.parse(content, { breaks: true, gfm: true });
-      view.querySelectorAll('pre code').forEach(function(b) {
-        var m = (b.className || '').match(/language-(\w+)/);
-        if (m && Prism.languages[m[1]]) Prism.highlightElement(b);
-      });
+      var parsed = parseFrontmatter(content);
+      var fmHtml = parsed.frontmatter ? renderFrontmatterBlock(parsed.frontmatter) : '';
+      view.innerHTML = fmHtml + marked.parse(parsed.body, { breaks: true, gfm: true });
     } else {
       view.innerHTML = '<pre>' + esc(content) + '</pre>';
     }
@@ -1035,9 +1009,7 @@ html, body {
     var prismLang = PRISM_LANG[language] || 'text';
     codeEl.className = 'language-' + prismLang;
     codeEl.textContent = content;
-    if (Prism.languages[prismLang]) {
-      Prism.highlightElement(codeEl);
-    }
+    if (Prism.languages[prismLang]) Prism.highlightElement(codeEl);
   }
 
   function setView(view) {
@@ -1050,130 +1022,68 @@ html, body {
     $('#markdown-view').style.display = view === 'rendered' ? 'block' : 'none';
 
     if (view === 'source') {
-      requestAnimationFrame(function() { $('#source-editor').focus(); });
+      requestAnimationFrame(function() {
+        var ed = $('#source-editor');
+        ed.scrollTop = 0;
+        ed.selectionStart = 0;
+        ed.selectionEnd = 0;
+        ed.focus();
+      });
     }
   }
 
-  /* ── Auto-save ─────────────────────────────────────────────────────── */
+  /* ── Local edit tracking ────────────────────────────────────────────── */
   function scheduleSave() {
-    clearTimeout(state.saveTimer);
     state.dirty = true;
     showStatus('modified');
-    state.saveTimer = setTimeout(doSave, 1200);
   }
 
   function doSave() {
     if (!state.currentFile || !state.dirty) return;
-    clearTimeout(state.saveTimer);
-
     var content = $('#source-editor').value;
-    showStatus('saving');
-
-    apiPut('/file', { path: state.currentFile, content: content }).then(function(res) {
-      if (res.error) { showStatus('error'); return; }
-
-      state.dirty = false;
-      state.currentFileData.content = content;
-
-      if (state.currentFileData.language === 'markdown') renderMarkdown(content);
-      else if (state.currentView === 'highlighted') renderHighlighted(content, state.currentFileData.language);
-      $('#file-meta').textContent = formatSize(res.size);
-
-      showStatus('saved');
-      setTimeout(function() { if (!state.dirty) showStatus(''); }, 2000);
-
-      loadModified();
-    }).catch(function() {
-      showStatus('error');
-    });
+    state.dirty = false;
+    if (state.currentFileData) state.currentFileData.content = content;
+    if (_contentCache[state.currentFile]) _contentCache[state.currentFile].content = content;
+    if (state.currentFileData && state.currentFileData.language === 'markdown') renderMarkdown(content);
+    else if (state.currentView === 'highlighted' && state.currentFileData) renderHighlighted(content, state.currentFileData.language);
+    $('#file-meta').textContent = formatSize(content.length);
+    showStatus('');
   }
 
   function showStatus(type) {
     var el = $('#status-indicator');
-    switch (type) {
-      case 'modified': el.innerHTML = '<span class="dot modified"></span> Modified'; break;
-      case 'saving': el.innerHTML = '<span class="dot saving"></span> Saving\u2026'; break;
-      case 'saved': el.innerHTML = '<span class="dot saved"></span> Saved'; break;
-      case 'error': el.innerHTML = '<span class="dot" style="background:hsl(0,97%,43%)"></span> Error'; break;
-      default: el.innerHTML = '';
-    }
+    if (type === 'modified') el.innerHTML = '<span class="dot modified"></span> Edited (local)';
+    else if (type === 'refreshed') el.innerHTML = '<span class="dot refreshed"></span> Updated';
+    else el.innerHTML = '';
   }
 
-  /* ── Restore ───────────────────────────────────────────────────────── */
-  function restoreFile() {
-    if (!state.currentFile) return;
-    if (!confirm('Restore this file to the last committed version?')) return;
-
-    apiPost('/restore', { path: state.currentFile }).then(function(res) {
-      if (res.error) { alert('Restore failed: ' + res.error); return; }
-
-      state.dirty = false;
-      state.currentFileData.content = res.content;
-
-      $('#source-editor').value = res.content;
-      if (state.currentFileData.language === 'markdown') renderMarkdown(res.content);
-      else if (state.currentView === 'highlighted') renderHighlighted(res.content, state.currentFileData.language);
-      $('#file-meta').textContent = formatSize(res.size);
-
-      showStatus('');
-      loadModified();
-    }).catch(function(err) {
-      alert('Restore failed: ' + err.message);
-    });
-  }
-
-  function updateRestoreButton() {
-    var btn = $('#restore-btn');
-    if (state.currentFile && state.modifiedPaths[state.currentFile]) {
-      btn.classList.add('visible');
-    } else {
-      btn.classList.remove('visible');
-    }
-  }
-
-  /* ── Create new file ──────────────────────────────────────────────── */
-  function createNewFile() {
-    var name = prompt('New custom command name (e.g. my-command):');
-    if (!name) return;
-    name = name.trim();
-    if (!name) return;
-    // Strip .md if user typed it; we add it
-    name = name.replace(/\.md$/i, '');
-    // Sanitize: only allow alphanumeric, hyphens, underscores
-    if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-      alert('Name can only contain letters, numbers, hyphens, and underscores.');
-      return;
-    }
-    var path = '.claude/commands/custom/' + name + '.md';
-    var template = '---\nallowed-tools: Bash, Read\ndescription: Custom command\n---\n\n# ' + name + '\n\nUsage: /' + name + ' $ARGUMENTS\n\n## Steps\n\n1. ...\n';
-
-    apiPost('/file', { path: path, content: template }).then(function(res) {
-      if (res.error) { alert('Create failed: ' + res.error); return; }
-      state.expanded.commands = true;
-      loadTree();
-      loadModified();
-      setTimeout(function() { openFile(path); }, 600);
-    }).catch(function(err) {
-      alert('Create failed: ' + err.message);
-    });
-  }
-
-  /* ── Auto-refresh ───────────────────────────────────────────────────── */
-  function startAutoRefresh() {
-    if (state.refreshTimer) clearInterval(state.refreshTimer);
-    state.refreshTimer = setInterval(function() {
+  /* ── Live refresh: poll current file for external changes ──────────── */
+  (function() {
+    var POLL_INTERVAL = 2000; // 2 seconds
+    setInterval(function() {
+      // Skip if no file open, user has local edits, or not a .claude file
       if (!state.currentFile || state.dirty) return;
-      apiGet('/file', { path: state.currentFile }).then(function(data) {
-        if (!data.error && data.content !== state.currentFileData.content) {
-          state.currentFileData.content = data.content;
-          $('#source-editor').value = data.content;
-          if (data.language === 'markdown') renderMarkdown(data.content);
-          else if (state.currentView === 'highlighted') renderHighlighted(data.content, data.language);
-          $('#file-meta').textContent = formatSize(data.size);
-        }
-      }).catch(function() {});
-    }, 3000);
-  }
+
+      
+      fetch(_apiBase + "/api/skill-file?path=" + encodeURIComponent(state.currentFile) + "&t=" + Date.now())
+        .then(function(r) { return r.ok ? r.text() : null; })
+        .then(function(content) {
+          if (!content) return;
+          var cached = _contentCache[state.currentFile];
+          if (cached && cached.content !== content) {
+            // File changed externally - update cache and display
+            cached.content = content;
+            cached.size = content.length;
+            if (state.currentFile === state.currentFile) {
+              displayFile(state.currentFile, cached);
+              showStatus("refreshed");
+              setTimeout(function() { showStatus(""); }, 1500);
+            }
+          }
+        })
+        .catch(function() { /* ignore fetch errors */ });
+    }, POLL_INTERVAL);
+  })();
 
   /* ── Resize handle ──────────────────────────────────────────────────── */
   (function() {
@@ -1190,7 +1100,14 @@ html, body {
     document.addEventListener('mousemove', function(e) {
       if (!dragging) return;
       var w = startW + (e.clientX - startX);
-      if (w >= 200 && w <= 420) sidebar.style.width = w + 'px';
+      if (w >= 200 && w <= 420) {
+        sidebar.style.width = w + 'px';
+        var ta = $('#source-editor');
+        if (ta.style.display !== 'none') {
+          ta.style.width = '0';
+          requestAnimationFrame(function() { ta.style.width = '100%'; });
+        }
+      }
     });
     document.addEventListener('mouseup', function() {
       if (!dragging) return;
@@ -1212,8 +1129,6 @@ html, body {
     var btn = e.target.closest('button');
     if (btn && btn.dataset.view) setView(btn.dataset.view);
   });
-
-  // Source editor (editable — serves as both source view and editor)
   $('#source-editor').addEventListener('input', scheduleSave);
   $('#source-editor').addEventListener('keydown', function(e) {
     if (e.key === 'Tab') {
@@ -1225,77 +1140,36 @@ html, body {
       scheduleSave();
     }
   });
-
-  $('#restore-btn').addEventListener('click', restoreFile);
-  $('#new-btn').addEventListener('click', createNewFile);
-
   document.addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-      e.preventDefault();
-      doSave();
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
-      e.preventDefault();
-      $('#search-input').focus();
-      $('#search-input').select();
-    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); doSave(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); $('#search-input').focus(); $('#search-input').select(); }
   });
-
-  /* ── Expand section/group for a given file path ──────────────────────── */
-  function expandForPath(path) {
-    if (!state.sections) return;
-    var p = path || '';
-    if (/SKILL\.md$|^CLAUDE/i.test(p.split('/').pop())) {
-      state.expanded.core = true;
-    } else if (/\.claude\/commands\//.test(p)) {
-      state.expanded.commands = true;
-    } else if (/interclaw\/scripts\//.test(p)) {
-      state.expanded.scripts = true;
-    } else if (/interclaw\/references\//.test(p)) {
-      state.expanded.references = true;
-      var m = p.match(/references\/([^/]+)\//);
-      if (m) state.expandedGroups['references:' + m[1]] = true;
-    } else if (/interclaw\/templates\//.test(p)) {
-      state.expanded.templates = true;
-      var m = p.match(/templates\/([^/]+)\//);
-      if (m) state.expandedGroups['templates:' + m[1]] = true;
-    }
-    renderSidebar();
-  }
 
   /* ── Public API for chatbot integration ─────────────────────────────── */
   window._skillsEditor = {
     openFile: function(path) {
-      expandForPath(path);
       openFile(path);
+      renderSidebar();
     },
-    isReady: function() { return !!state.sections; }
+    isReady: function() { return !!state.tree; }
   };
 
   /* ── Init ───────────────────────────────────────────────────────────── */
-  // Clear stale tree selection on mount
   localStorage.removeItem('interclaw-tree-selection');
   window.dispatchEvent(new CustomEvent('interclaw-tree-selection', { detail: null }));
-
-  // Clear on unmount (navigating away)
   window.addEventListener('pagehide', function() {
     localStorage.removeItem('interclaw-tree-selection');
   });
 
-  loadTree();
-  loadModified();
-  startAutoRefresh();
+  loadIndex();
 
-  // Handle ?open= query param (cross-page navigation from chatbot)
   var openParam = new URLSearchParams(window.location.search).get('open');
   if (openParam) {
-    // Wait for tree to load, then open the file
-    var waitForTree = setInterval(function() {
-      if (state.sections) {
-        clearInterval(waitForTree);
-        expandForPath(openParam);
+    var waitForLoad = setInterval(function() {
+      if (state.tree) {
+        clearInterval(waitForLoad);
         openFile(openParam);
-        // Clean up URL
+        renderSidebar();
         history.replaceState(null, '', window.location.pathname);
       }
     }, 200);

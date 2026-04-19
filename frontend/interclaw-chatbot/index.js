@@ -19,7 +19,7 @@
   var link = document.createElement('link');
   link.rel = 'stylesheet';
   link.id = 'interclaw-chatbot-styles';
-  link.href = basePath + 'chatbot.css';
+  link.href = basePath + 'chatbot.css?v=3';
   document.head.appendChild(link);
 
   // Load marked.js for markdown rendering
@@ -51,6 +51,9 @@
     'init.js'
   ];
 
+  // Cache-busting version — bump this to force-reload all modules
+  var MODULE_VERSION = 5;
+
   function loadNext(i) {
     if (i >= modules.length) {
       if (window._cc && window._cc.init) {
@@ -59,7 +62,7 @@
       return;
     }
     var s = document.createElement('script');
-    s.src = basePath + modules[i];
+    s.src = basePath + modules[i] + '?v=' + MODULE_VERSION;
     s.onload = function() { loadNext(i + 1); };
     s.onerror = function() {
       console.error('[interclaw] Failed to load module:', modules[i]);

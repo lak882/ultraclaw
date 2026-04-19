@@ -13,6 +13,6 @@ Steps:
    - `\r` as segment terminator
 4. Send:
    ```bash
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/hl7/send_hl7.py --server <server> --namespace <ns> --to <configItem> --input <file>
+   <python> .claude/skills/interclaw/scripts/hl7/send_hl7.py --server <server> --namespace <ns> --to <configItem> --input <file>
    ```
 5. Display result. If rejected/errored, offer to check format and run `/trace`.

@@ -18,7 +18,7 @@ Ensure the document name ends with .cls (or appropriate extension).
 ## Execution
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/documents/put_doc.py --server <server> --namespace <namespace> --doc <name>.cls --input <filepath> --compile
+<python> .claude/skills/interclaw/scripts/documents/put_doc.py --server <server> --namespace <namespace> --doc <name>.cls --input <filepath> --compile
 ```
 
 ## Output

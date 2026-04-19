@@ -10,7 +10,11 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!startResp.ok) throw new Error('Bridge start failed: HTTP ' + startResp.status);
+      if (!startResp.ok) {
+        var errText = '';
+        try { var errJson = await startResp.json(); errText = errJson.error || ''; } catch(_) {}
+        throw new Error(errText || ('Bridge start failed: HTTP ' + startResp.status));
+      }
       var startData = await startResp.json();
       cc.currentBridgeId = startData.bridge_id;
       console.log('[bridge] started:', cc.currentBridgeId);
@@ -19,13 +23,26 @@
       cc.bridgePolling = true;
       cc.bridgeAbort = new AbortController();
 
+      var pollRetries = 0;
+      var maxPollRetries = 3;
+
       while (cc.bridgePolling) {
         try {
           var pollResp = await fetch(
             cc.chatApiBase + '/api/events?bridge_id=' + cc.currentBridgeId + '&after=' + after,
             { signal: cc.bridgeAbort.signal }
           );
-          if (!pollResp.ok) throw new Error('Poll failed: HTTP ' + pollResp.status);
+          if (!pollResp.ok) {
+            // Retry transient 500s up to maxPollRetries before giving up
+            if (pollResp.status >= 500 && pollRetries < maxPollRetries) {
+              pollRetries++;
+              console.warn('[bridge] poll 500, retry ' + pollRetries + '/' + maxPollRetries);
+              await new Promise(function(r) { setTimeout(r, 1000 * pollRetries); });
+              continue;
+            }
+            throw new Error('Poll failed: HTTP ' + pollResp.status);
+          }
+          pollRetries = 0; // Reset on success
           var pollData = await pollResp.json();
 
           for (var i = 0; i < pollData.events.length; i++) {
@@ -86,7 +103,7 @@
     cc.showTypingIndicator();
 
     var editorCtx = cc.getEditorContext();
-    cc.wsSend({ action: 'message', prompt: command, session_id: cc.sessionId, model: cc.getSelectedModel(), namespace: editorCtx.namespace, effort: cc.currentEffort, editor_context: editorCtx });
+    cc.wsSend({ action: 'message', prompt: command, session_id: cc.sessionId, model: cc.getSelectedModel(), namespace: editorCtx.namespace, effort: cc.currentEffort || 'medium', editor_context: editorCtx });
   };
 
   cc.initSession = async function(opts) {
@@ -98,26 +115,43 @@
     cc.updateStatus('Connecting...');
 
     try {
-      var healthResp = await fetch(cc.chatApiBase + '/api/health', { signal: AbortSignal.timeout(5000) });
-      if (!healthResp.ok) throw new Error('HTTP ' + healthResp.status);
-      var healthData = await healthResp.json();
-      if (healthData.status !== 'ok') throw new Error('Production unhealthy');
+      var authResp = await fetch(cc.apiBase + '/api/auth-status', { signal: AbortSignal.timeout(5000) });
+      if (!authResp.ok) {
+        var errBody = '';
+        try { var ej = await authResp.json(); errBody = ej.error || ej.message || ''; } catch(_) {}
+        throw new Error(errBody || ('auth-status returned HTTP ' + authResp.status));
+      }
+      var authData = await authResp.json();
 
       cc.bridgeConnected = true;
       cc.updateStatus('Ready');
-      console.log('[bridge] health check passed');
+      console.log('[bridge] auth-status check passed');
+
+      if (!authData.logged_in) {
+        opts._needsAuth = true;
+        opts._needsLogin = true;
+        console.log('[bridge] not logged in — showing login prompt');
+      } else if (!authData.authenticated) {
+        opts._needsAuth = true;
+        console.log('[bridge] logged in as ' + authData.user + ' but API key not configured — showing setup prompt');
+      } else {
+        console.log('[bridge] authenticated via ' + authData.provider + ' (' + authData.key_prefix + '), user: ' + authData.user);
+      }
     } catch (e) {
       if (cc.isReloading) return;
-      var initErr = e.message || 'Unknown error';
-      if (initErr.indexOf('HTTP 5') !== -1 || initErr.indexOf('HTTP 4') !== -1) initErr = 'Could not reach the chat service. Check that InterClaw.Pipeline.Production is running.';
-      else if (initErr.indexOf('timeout') !== -1 || initErr.indexOf('Timeout') !== -1) initErr = 'Connection timed out. The server may be starting up \u2014 try again in a moment.';
-      cc.addMessage('error', initErr);
+      console.error('[bridge] init error:', e.message);
+      opts._needsAuth = true;
       cc.updateStatus('Offline');
-      opts._initFailed = true;
     } finally {
       cc.setInputDisabled(false);
       cc.updateSendButton();
-      if (!opts.skipWelcome && !opts._initFailed) cc.showWelcomeMessage();
+      if (!opts.skipWelcome) {
+        if (opts._needsAuth) {
+          cc.showSetupPrompt({ needsLogin: opts._needsLogin });
+        } else {
+          cc.showWelcomeMessage();
+        }
+      }
     }
   };
 

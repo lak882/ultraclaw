@@ -38,24 +38,24 @@ Determine the active server and namespace from the conversation context.
 ## Action: list
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --list
+<python> .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --list
 ```
 
 Optionally filter by namespace:
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --list --filter-namespace <ns>
+<python> .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --list --filter-namespace <ns>
 ```
 
 ## Action: get
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --get <name>
+<python> .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --get <name>
 ```
 
 ## Action: create
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --create <name> --namespace <ns> --type <rest|wsgi|csp> [options]
+<python> .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --create <name> --namespace <ns> --type <rest|wsgi|csp> [options]
 ```
 
 Options:
@@ -72,7 +72,7 @@ Options:
 ## Action: delete
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --delete <name>
+<python> .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --delete <name>
 ```
 
 ---
@@ -94,10 +94,10 @@ From the description, determine:
 ### Step 2 — Read references
 
 Read the relevant reference docs:
-- REST: `.claude/skills/interclaw/references/web/WebApp/rest-applications.md`
-- WSGI: `.claude/skills/interclaw/references/web/WebApp/wsgi-applications.md`
-- CSP/Zen: `.claude/skills/interclaw/references/web/WebApp/csp-zen-applications.md`
-- Always: `.claude/skills/interclaw/references/web/WebApp/web-application-config.md`
+- REST: `.claude/skills/interclaw-infra/rest-applications.md`
+- WSGI: `.claude/skills/interclaw-infra/wsgi-applications.md`
+- CSP/Zen: `.claude/skills/interclaw-infra/csp-zen-applications.md`
+- Always: `.claude/skills/interclaw-infra/web-application-config.md`
 
 ### Step 3 — Plan
 
@@ -112,7 +112,7 @@ Show the user a plan with:
 
 #### Step 4a — Generate the dispatch class
 
-Read the template: `.claude/skills/interclaw/templates/web/rest-dispatch.cls.template`
+Read the template: `.claude/skills/interclaw-infra/rest-dispatch.cls.template`
 
 Create a `%CSP.REST` subclass with:
 - `XData UrlMap` with routes for all endpoints
@@ -127,20 +127,20 @@ Write to `src/<Namespace>/<Pkg>/REST/Dispatch.cls` (and sub-dispatches if needed
 #### Step 5a — Push and compile
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/documents/put_doc.py --server <server> --namespace <ns> --doc <Pkg>.REST.Dispatch.cls --input src/<Namespace>/<Pkg>/REST/Dispatch.cls --compile --force
+<python> .claude/skills/interclaw/scripts/documents/put_doc.py --server <server> --namespace <ns> --doc <Pkg>.REST.Dispatch.cls --input src/<Namespace>/<Pkg>/REST/Dispatch.cls --compile --force
 ```
 
 #### Step 6a — Create the web application
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --create /api/<app-path> --namespace <ns> --type rest --dispatch <Pkg>.REST.Dispatch --auth 64
+<python> .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --create /api/<app-path> --namespace <ns> --type rest --dispatch <Pkg>.REST.Dispatch --auth 64
 ```
 
 #### Step 7a — Test
 
 Test each endpoint with curl-style requests using the Atelier API or direct HTTP:
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/hl7/send_json.py --server <server> --url /<pathPrefix>/api/<app-path>/<route> --input <test-payload.json>
+<python> .claude/skills/interclaw/scripts/hl7/send_json.py --server <server> --url /<pathPrefix>/api/<app-path>/<route> --input <test-payload.json>
 ```
 
 Use `run_query.py --sql "..."` to verify data was created/modified correctly.
@@ -152,38 +152,34 @@ Use `run_query.py --sql "..."` to verify data was created/modified correctly.
 #### Step 4b — Generate the Python app
 
 Read the relevant template:
-- Flask: `.claude/skills/interclaw/templates/python/flask-app.py.template`
-- FastAPI: `.claude/skills/interclaw/templates/python/fastapi-app.py.template`
+- Flask: `.claude/skills/interclaw-infra/flask-app.py.template`
+- FastAPI: `.claude/skills/interclaw-infra/fastapi-app.py.template`
 
 Create the Python application file with:
 - Route handlers for all endpoints
 - IRIS data access via the `iris` module
 - Proper error handling
 
-Determine the app deployment path on the IRIS server (e.g., `/opt/iris-apps/<app-name>/`).
+Determine the app deployment path on the IRIS server (e.g., `<IRIS>/csp/interclaw/apps/<app-name>/`).
 
 #### Step 5b — Deploy the Python app
 
+Create the directory and copy the app file:
 ```bash
-sudo mkdir -p /opt/iris-apps/<app-name>
-```
-
-Write the app file:
-```bash
-sudo cp <local-app-file> /opt/iris-apps/<app-name>/app.py
-sudo chmod 644 /opt/iris-apps/<app-name>/app.py
+mkdir -p <IRIS>/csp/interclaw/apps/<app-name>
+cp <local-app-file> <IRIS>/csp/interclaw/apps/<app-name>/app.py
 ```
 
 #### Step 6b — Install dependencies (if needed)
 
 ```bash
-/usr/local/InterSystems/IRISHealth/bin/irispython -m pip install <packages>
+python3 -m pip install <packages>
 ```
 
 #### Step 7b — Create the web application
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --create /<app-path> --namespace <ns> --type wsgi --wsgi-location /opt/iris-apps/<app-name>/ --wsgi-module app --wsgi-callable app [--wsgi-async]
+<python> .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --create /<app-path> --namespace <ns> --type wsgi --wsgi-location /opt/iris-apps/<app-name>/ --wsgi-module app --wsgi-callable app [--wsgi-async]
 ```
 
 Use `--wsgi-async` for FastAPI.
@@ -199,8 +195,8 @@ Provide the URL for testing: `http://<host>:<port>/<app-path>/`
 #### Step 4c — Generate the page class(es)
 
 Read the relevant template:
-- CSP: `.claude/skills/interclaw/templates/web/csp-page.cls.template`
-- Zen: `.claude/skills/interclaw/templates/web/zen-page.cls.template` + `.claude/skills/interclaw/templates/web/zen-app.cls.template`
+- CSP: `.claude/skills/interclaw-infra/csp-page.cls.template`
+- Zen: `.claude/skills/interclaw-infra/zen-page.cls.template` + `.claude/skills/interclaw-infra/zen-app.cls.template`
 
 Create the page class(es) with appropriate content.
 
@@ -209,13 +205,13 @@ Write to `src/<Namespace>/<Pkg>/Page/<ClassName>.cls` or `src/<Namespace>/<Pkg>/
 #### Step 5c — Push and compile
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/documents/put_doc.py --server <server> --namespace <ns> --doc <Pkg>.Page.<Name>.cls --input src/<Namespace>/<Pkg>/Page/<Name>.cls --compile --force
+<python> .claude/skills/interclaw/scripts/documents/put_doc.py --server <server> --namespace <ns> --doc <Pkg>.Page.<Name>.cls --input src/<Namespace>/<Pkg>/Page/<Name>.cls --compile --force
 ```
 
 #### Step 6c — Create the web application
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --create /csp/<app-path> --namespace <ns> --type csp --serve-files 1
+<python> .claude/skills/interclaw/scripts/infrastructure/manage_webapp.py --server <server> --create /csp/<app-path> --namespace <ns> --type csp --serve-files 1
 ```
 
 #### Step 7c — Test

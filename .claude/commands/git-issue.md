@@ -11,7 +11,7 @@ Steps:
 
 1. **Check GitLab config** by running:
    ```bash
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_token.py --show
+   <python> .claude/skills/interclaw/scripts/git/git_token.py --show
    ```
    If not configured, tell the user to run `/git-token` first.
 
@@ -23,12 +23,12 @@ Steps:
 
 3. **Create the issue:**
    ```bash
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_issue.py --title "Issue title" --description "Detailed description" --labels "bug,interclaw"
+   <python> .claude/skills/interclaw/scripts/git/git_issue.py --title "Issue title" --description "Detailed description" --labels "bug,interclaw"
    ```
 
    For confidential issues (if the user mentions sensitive data):
    ```bash
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/git/git_issue.py --title "..." --description "..." --confidential
+   <python> .claude/skills/interclaw/scripts/git/git_issue.py --title "..." --description "..." --confidential
    ```
 
 4. **Display the result:**

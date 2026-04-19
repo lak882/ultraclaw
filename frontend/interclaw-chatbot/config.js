@@ -14,12 +14,8 @@
 
   cc.setSelectedModel = function(model) {
     var valid = ['haiku', 'sonnet', 'opus'];
-    if (valid.indexOf(model) === -1) model = 'sonnet';
+    if (valid.indexOf(model) === -1) return;
     cc.currentModel = model;
-    document.getElementById('chatbot-model-label').textContent = cc.modelLabels[model] || model;
-    var opts = document.querySelectorAll('#chatbot-model-dropdown .chatbot-model-option');
-    opts.forEach(function(o) { o.classList.toggle('selected', o.dataset.value === model); });
-    // Sync header model selector
     var hLabel = document.getElementById('ic-header-model-label');
     if (hLabel) hLabel.textContent = cc.modelLabels[model] || model;
     var hOpts = document.querySelectorAll('#ic-header-model-dropdown .ic-header-model-option');
@@ -29,31 +25,10 @@
 
   cc.applyModelConfig = function(defaultModel) {
     var saved = sessionStorage.getItem('chatbot-model');
-    cc.setSelectedModel(saved || defaultModel || 'sonnet');
+    if (saved || defaultModel) cc.setSelectedModel(saved || defaultModel);
   };
 
-  // Custom model dropdown logic
-  (function() {
-    var btn = document.getElementById('chatbot-model-btn');
-    var dropdown = document.getElementById('chatbot-model-dropdown');
 
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      dropdown.classList.toggle('open');
-    });
-
-    dropdown.addEventListener('click', function(e) {
-      var opt = e.target.closest('.chatbot-model-option');
-      if (opt && opt.dataset.value) {
-        cc.setSelectedModel(opt.dataset.value);
-        dropdown.classList.remove('open');
-      }
-    });
-
-    document.addEventListener('click', function() {
-      dropdown.classList.remove('open');
-    });
-  })();
 
   cc.fetchConfig = function() {
     return fetch(cc.apiBase + '/api/config')

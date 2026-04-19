@@ -20,13 +20,13 @@ Parse "$ARGUMENTS":
 ### Step 1: Stop the production (avoids Suspended state)
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/production/manage_production.py --server <server> --namespace <ns> --stop
+<python> .claude/skills/interclaw/scripts/production/manage_production.py --server <server> --namespace <ns> --stop
 ```
 
 ### Step 2: Execute reset immediately (with auto-lookup)
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/reset_package.py --server <server> --namespace <ns> --package <package> --auto-lookup [--keep-local]
+<python> .claude/skills/interclaw/scripts/infrastructure/reset_package.py --server <server> --namespace <ns> --package <package> --auto-lookup [--keep-local]
 ```
 
 ### Step 3: Delete local files (unless --keep-local)

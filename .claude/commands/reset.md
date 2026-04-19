@@ -20,7 +20,7 @@ Parse "$ARGUMENTS":
 ### Step 1: Check permission mode
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/permissions.py --check reset
+<python> .claude/skills/interclaw/scripts/infrastructure/permissions.py --check reset
 ```
 
 Exit 0 → skip confirmation. Exit 2 → require confirmation below.
@@ -28,7 +28,7 @@ Exit 0 → skip confirmation. Exit 2 → require confirmation below.
 ### Step 2: Dry-run (includes auto-lookup detection)
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/reset_package.py --server <server> --namespace <ns> --package <package> --auto-lookup --dry-run [--keep-local]
+<python> .claude/skills/interclaw/scripts/infrastructure/reset_package.py --server <server> --namespace <ns> --package <package> --auto-lookup --dry-run [--keep-local]
 ```
 
 Display the dry-run output. **Stop and ask the user to confirm** (unless permissions.py said exit 0).
@@ -36,7 +36,7 @@ Display the dry-run output. **Stop and ask the user to confirm** (unless permiss
 ### Step 3: Execute reset
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/infrastructure/reset_package.py --server <server> --namespace <ns> --package <package> --auto-lookup [--keep-local]
+<python> .claude/skills/interclaw/scripts/infrastructure/reset_package.py --server <server> --namespace <ns> --package <package> --auto-lookup [--keep-local]
 ```
 
 ### Step 4: Report

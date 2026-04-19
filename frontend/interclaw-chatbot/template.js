@@ -1,23 +1,11 @@
-// interclaw-chatbot/template.js — HTML template injection (drag overlay, reload overlay, sidebar, toggle button)
+// interclaw-chatbot/template.js — HTML template injection (drag overlay, sidebar, toggle button)
 (function(cc) {
 
-  // Drag overlay (must be before app-root for z-index stacking)
+  // Drag overlay (captures mouse events during resize)
   var dragOverlay = document.createElement('div');
   dragOverlay.className = 'drag-overlay';
   document.body.insertBefore(dragOverlay, document.body.firstChild);
 
-  // Reload overlay
-  var reloadOverlay = document.createElement('div');
-  reloadOverlay.className = 'reload-overlay';
-  reloadOverlay.id = 'reload-overlay';
-  reloadOverlay.style.display = 'none';
-  document.body.insertBefore(reloadOverlay, document.body.firstChild);
-
-  if (sessionStorage.getItem('chatbot-programmatic-reload')) {
-    reloadOverlay.style.display = 'block';
-    document.documentElement.style.background = 'white';
-    document.body.style.background = 'white';
-  }
 
   // Sidebar + toggle button
   var _ccTmp = document.createElement('div');
@@ -25,28 +13,9 @@
     <div class="chatbot-resize-handle" id="chatbot-resize-handle"></div>
     <div class="chatbot-toolbar">
       <div class="chatbot-toolbar-title">
-        <span class="chatbot-brand"><svg class="chatbot-brand-icon" width="20" height="20" viewBox="0 0 512 512" stroke="none"><path fill="#2F2A95" d="m175.656 22.375-48.47 82.094c-23.017 4.384-43.547 11.782-60.124 22.374-24.436 15.613-40.572 37.414-45.5 67.875-4.79 29.62 1.568 68.087 24.125 116.093 93.162 22.88 184.08-10.908 257.25-18.813 37.138-4.012 71.196-.898 96.344 22.97 22.33 21.19 36.21 56.808 41.908 113.436 29.246-35.682 44.538-69.065 49.343-99.594 5.543-35.207-2.526-66.97-20.31-95.593-8.52-13.708-19.368-26.618-32-38.626l14.217-33-41.218 10.625c-8.637-6.278-17.765-12.217-27.314-17.782l-7.03-59.782-38.157 37.406a423.505 423.505 0 0 0-38.158-13.812l-8.375-71.28-57.625 56.5c-9.344-1.316-18.625-2.333-27.812-2.97l-31.094-78.125z"/><path fill="#00B2A9" d="M222 325.345c-39.146 7.525-82.183 14.312-127.156 11.686 47.403 113.454 207.056 224.082 260.125 87-101.18 33.84-95.303-49.595-132.97-98.686z"/></svg> InterClaw</span>
+        <span class="chatbot-brand"><svg class="chatbot-brand-icon" width="16" height="16" viewBox="-18 0 57 57" stroke="none"><polygon fill="#2F2A95" points="7.2 8 0.2 4.5 0.2 49.3 14.3 56.3 14.3 48.5 7.2 44.9"/><polygon fill="#00B2A9" points="14.3 48.5 21.3 52 21.3 7.2 7.2 0.2 7.2 8 14.3 11.6"/></svg> InterClaw</span>
         <span class="chatbot-brand-sep"></span>
-        <div class="chatbot-model-selector" id="chatbot-model-selector">
-          <button class="chatbot-model-ghost" id="chatbot-model-btn" type="button">
-            <span id="chatbot-model-label">Claude Sonnet 4.5</span>
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><path d="M2 4l3 3 3-3"/></svg>
-          </button>
-          <div class="chatbot-model-dropdown" id="chatbot-model-dropdown">
-            <div class="chatbot-model-option" data-value="opus">
-              <span class="model-name">Claude Opus 4.6</span>
-              <span class="model-desc">Most capable for complex, ambitious work</span>
-            </div>
-            <div class="chatbot-model-option selected" data-value="sonnet">
-              <span class="model-name">Claude Sonnet 4.5</span>
-              <span class="model-desc">Best balance of speed and intelligence</span>
-            </div>
-            <div class="chatbot-model-option" data-value="haiku">
-              <span class="model-name">Claude Haiku 4.5</span>
-              <span class="model-desc">Fastest responses for simple tasks</span>
-            </div>
-          </div>
-        </div>
+
       </div>
       <div style="display:flex;align-items:center;gap:2px">
       </div>
@@ -57,7 +26,7 @@
       <span id="chatbot-status-text">Not connected</span>
     </div>
 
-    <div class="chatbot-content" id="chatbot-content"><div id="chatbot-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;opacity:1;transition:opacity 0.4s ease"><div style="width:64px;height:64px;animation:ic-pulse 2s ease-in-out infinite"><style>@keyframes ic-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.95)}}</style><svg width="64" height="64" viewBox="0 0 512 512" stroke="none"><path fill="#2F2A95" d="m175.656 22.375-48.47 82.094c-23.017 4.384-43.547 11.782-60.124 22.374-24.436 15.613-40.572 37.414-45.5 67.875-4.79 29.62 1.568 68.087 24.125 116.093 93.162 22.88 184.08-10.908 257.25-18.813 37.138-4.012 71.196-.898 96.344 22.97 22.33 21.19 36.21 56.808 41.908 113.436 29.246-35.682 44.538-69.065 49.343-99.594 5.543-35.207-2.526-66.97-20.31-95.593-8.52-13.708-19.368-26.618-32-38.626l14.217-33-41.218 10.625c-8.637-6.278-17.765-12.217-27.314-17.782l-7.03-59.782-38.157 37.406a423.505 423.505 0 0 0-38.158-13.812l-8.375-71.28-57.625 56.5c-9.344-1.316-18.625-2.333-27.812-2.97l-31.094-78.125z"/><path fill="#00B2A9" d="M222 325.345c-39.146 7.525-82.183 14.312-127.156 11.686 47.403 113.454 207.056 224.082 260.125 87-101.18 33.84-95.303-49.595-132.97-98.686z"/></svg></div><span style="font-size:var(--fr-styles-font-size-xs);color:var(--fr-styles-color-dark-grey)">Connecting...</span></div></div>
+    <div class="chatbot-content" id="chatbot-content"><div id="chatbot-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:16px;opacity:1;transition:opacity 0.4s ease"><svg viewBox="0 0 22 57" style="width:80px;height:80px;animation:chatbot-logo-pulse 2s ease-in-out infinite"><polygon fill="#2F2A95" points="7.2 8 0.2 4.5 0.2 49.3 14.3 56.3 14.3 48.5 7.2 44.9"/><polygon fill="#00B2A9" points="14.3 48.5 21.3 52 21.3 7.2 7.2 0.2 7.2 8 14.3 11.6"/></svg><span style="font-size:var(--fr-styles-font-size-xs);color:var(--fr-styles-color-dark-grey)">Connecting...</span></div></div>
 
     <div class="chatbot-input-container">
       <div class="chatbot-typeahead" id="chatbot-typeahead"></div>
@@ -89,14 +58,15 @@
             <div class="chatbot-mode-item-text"><div class="chatbot-mode-item-title">Bypass permissions</div><div class="chatbot-mode-item-desc">Agent uses all tools without asking for approval</div></div>
           </div>
           -->
+          <div class="chatbot-mode-separator"></div>
           <div class="chatbot-effort-row">
             <div class="chatbot-effort-label">
               <div class="chatbot-mode-item-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></div>
-              <span>Reasoning Effort</span>
+              <span>Effort</span>
             </div>
             <div class="chatbot-effort-switch" id="chatbot-effort-switch">
               <button class="chatbot-effort-opt" data-effort="low">Low</button>
-              <button class="chatbot-effort-opt active" data-effort="medium">Medium</button>
+              <button class="chatbot-effort-opt active" data-effort="medium">Med</button>
               <button class="chatbot-effort-opt" data-effort="high">High</button>
               <button class="chatbot-effort-opt" data-effort="max">Max</button>
             </div>
@@ -114,7 +84,7 @@
             <button class="chatbot-plan-opt" data-edit="reject"><span class="chatbot-plan-opt-num">3</span>No</button>
           </div>
           <div class="chatbot-plan-accept-input">
-            <textarea class="chatbot-input" id="chatbot-edit-input" placeholder="Tell Claude what to change instead" rows="1"></textarea>
+            <textarea class="chatbot-input" id="chatbot-edit-input" placeholder="Tell InterClaw what to change instead" rows="1"></textarea>
           </div>
           <div class="chatbot-plan-accept-hint">Esc to cancel</div>
         </div>
@@ -129,7 +99,7 @@
             <button class="chatbot-plan-opt" data-plan="keep"><span class="chatbot-plan-opt-num">3</span>No, keep planning</button>
           </div>
           <div class="chatbot-plan-accept-input">
-            <textarea class="chatbot-input" id="chatbot-plan-input" placeholder="Tell Claude what to do instead" rows="1"></textarea>
+            <textarea class="chatbot-input" id="chatbot-plan-input" placeholder="Tell InterClaw what to do instead" rows="1"></textarea>
           </div>
           <div class="chatbot-plan-accept-hint">Esc to cancel</div>
         </div>
@@ -156,7 +126,12 @@
     </div>
   </div>
 
-  <button id="chatbot-toggle" onclick="toggleChatbot()" title="Open chat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/><path d="m10 15-3-3 3-3"/></svg></button>`;
+  <button id="chatbot-toggle" onclick="toggleChatbot()" title="Open chat"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/><path d="m8 9 3 3-3 3"/></svg></button>`;
   while (_ccTmp.firstChild) document.body.appendChild(_ccTmp.firstChild);
+
+  // Move toggle button into the header bar (flex child, not fixed-positioned)
+  var _toggleSlot = document.getElementById('ic-header-toggle-slot');
+  var _toggle = document.getElementById('chatbot-toggle');
+  if (_toggleSlot && _toggle) _toggleSlot.appendChild(_toggle);
 
 })(window._cc);

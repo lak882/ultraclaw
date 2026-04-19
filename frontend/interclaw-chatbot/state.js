@@ -26,9 +26,14 @@
   // Font size configuration
   cc.fontSizeCodeMap = {'3xs':'3xs','2xs':'3xs','xs':'3xs','sm':'2xs','base':'xs'};
 
-  // Model state
-  cc.modelLabels = { opus: 'Claude Opus 4.6', sonnet: 'Claude Sonnet 4.5', haiku: 'Claude Haiku 4.5' };
-  cc.currentModel = 'sonnet';
+  // Model state — labels match the actual Bedrock inference profiles
+  // resolved in InterClaw.V2.RESTAdapter.ResolveModelAlias.
+  cc.modelLabels = { opus: 'Claude Opus 4.7', sonnet: 'Claude Sonnet 4.6', haiku: 'Claude Haiku 4.5' };
+  cc.currentModel = 'opus';
+
+  // Effort state — low/medium/high. Sent as the `effort` field on
+  // /api/start, mapped to Bedrock adaptive-thinking output_config.effort.
+  try { cc.currentEffort = sessionStorage.getItem('chatbot-effort') || 'medium'; } catch(e) { cc.currentEffort = 'medium'; }
 
   // Abort controller for current request
   cc.currentAbortController = null;
@@ -113,6 +118,96 @@
   cc.getToolIcon = function(toolName) {
     if (cc.TOOL_ICONS[toolName]) return cc.TOOL_ICONS[toolName];
     return cc.TOOL_ICONS.wrench;
+  };
+
+  // Descriptive tool labels — fallback when backend doesn't send data.label
+  cc.TOOL_LABELS = {
+    // Skill + Agent (kept — slash commands and sub-agent dispatch map to these)
+    Skill: 'Using skill',
+    Agent: 'Running agent task',
+    // Inteclaw IRIS-native tools
+    put_class: 'Pushing class',
+    compile_class: 'Compiling class',
+    test_dtl: 'Testing DTL',
+    exec: 'Running Python',
+    spawn_agent: 'Spawning sub-agents',
+    enter_plan_mode: 'Entering plan mode',
+    exit_plan_mode: 'Exiting plan mode',
+    run_sql: 'Running SQL',
+    get_doc: 'Pulling class',
+    get_schema: 'Fetching HL7 schema',
+    list_docs: 'Listing classes',
+    list_skill_files: 'Listing skill files',
+    read_skill_file: 'Reading skill file',
+    production_status: 'Checking production',
+    echo: 'Echo'
+  };
+
+  cc.getToolLabel = function(toolName, inputStr) {
+    if (toolName === 'Bash' && inputStr) {
+      try {
+        var parsed = JSON.parse(inputStr);
+        if (parsed.description) return parsed.description;
+      } catch(e) {}
+    }
+    if ((toolName === 'Read' || toolName === 'Write' || toolName === 'Edit') && inputStr) {
+      try {
+        var parsed = JSON.parse(inputStr);
+        var path = parsed.file_path || '';
+        var fname = path.split('/').pop();
+        if (fname) return (toolName === 'Read' ? 'Reading ' : toolName === 'Write' ? 'Writing ' : 'Editing ') + fname;
+      } catch(e) {}
+    }
+    if (toolName === 'Skill' && inputStr) {
+      try {
+        var parsed = JSON.parse(inputStr);
+        if (parsed.skill) return '/' + parsed.skill;
+      } catch(e) {}
+    }
+    return cc.TOOL_LABELS[toolName] || ('Using ' + toolName);
+  };
+
+  // Script name → approval title (frontend fallback when backend label is missing)
+  var _SCRIPT_TITLES = {
+    manage_production: { status: 'Check production status', start: 'Start production',
+      stop: 'Stop production', list: 'List productions', _default: 'Manage production' },
+    get_doc: 'Pull class from server', put_doc: 'Push and compile class',
+    get_schema: 'Fetch HL7 schema', list_docs: 'List classes',
+    send_hl7: 'Send HL7 message', send_json: 'Send JSON message',
+    test_dtl: 'Test data transformation', trace: 'Pull message trace',
+    get_errors: 'Check event log', run_query: 'Run SQL query',
+    manage_namespace: 'Manage namespace', manage_lookup: 'Manage lookup table',
+    diagram_production: 'Generate production diagram',
+    validate_package: 'Validate package', test_suite: 'Run test suite',
+    route_test: 'Run route coverage test', compile: 'Compile class',
+    search_code: 'Search code', class_inspect: 'Inspect class',
+    permissions: 'Check permissions', manage_webapp: 'Manage web application',
+    reset_package: 'Reset package', register_schema: 'Register HL7 schema'
+  };
+
+  cc.getBashApprovalTitle = function(input) {
+    if (!input) return 'Run command';
+    // If input is already a descriptive label (no path separators), use it directly
+    if (!/[\/\\]/.test(input)) return input;
+    // Try to extract InterClaw script name from the command
+    var m = input.match(/\/scripts\/\w+\/(\w+)\.py/);
+    if (m) {
+      var script = m[1];
+      var entry = _SCRIPT_TITLES[script];
+      if (typeof entry === 'string') return entry;
+      if (entry) {
+        var am = input.match(/--action\s+(\w+)/);
+        if (am && entry[am[1]]) return entry[am[1]];
+        if (entry._default) return entry._default;
+      }
+      // Fallback: humanize script name
+      return script.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    }
+    // Non-InterClaw command: show first meaningful word
+    var parts = input.replace(/^[^\s]*irispython\s+/, '').split(/\s+/);
+    var last = parts[0] ? parts[0].split('/').pop().replace(/\.py$/, '') : '';
+    if (last) return 'Run ' + last.replace(/_/g, ' ');
+    return 'Run command';
   };
 
   cc.escapeHtml = function(str) {

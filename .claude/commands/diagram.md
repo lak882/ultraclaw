@@ -16,7 +16,7 @@ Parse "$ARGUMENTS":
 ## Execution
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/production/diagram_production.py --server <server> --namespace <ns> --package <package> [--local]
+<python> .claude/skills/interclaw/scripts/production/diagram_production.py --server <server> --namespace <ns> --package <package> [--local]
 ```
 
 If the script fails (not found on server), retry with `--local`.

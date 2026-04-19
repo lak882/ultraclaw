@@ -1,3 +1,5 @@
 # InterClaw Python dependencies
-# Installed by InterClaw.Installer::InstallPythonDeps() via embedded Python pip
+# Installed by InterClaw.Installer::InstallPythonDeps() via irispython -m pip
 claude-agent-sdk>=0.1.56
+python-docx>=1.0.0
+pywin32>=306; sys_platform == 'win32'

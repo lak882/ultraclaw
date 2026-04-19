@@ -9,7 +9,10 @@
   for (var i = 0; i < scripts.length; i++) {
     if (scripts[i].src && scripts[i].src.indexOf('interclaw-chatbot.js') !== -1) {
       var s = document.createElement('script');
-      s.src = scripts[i].src.replace(/interclaw-chatbot\.js.*$/, '') + 'interclaw-chatbot/index.js';
+      // Extract cache-busting param from loader URL and pass to index.js
+      var vMatch = scripts[i].src.match(/[?&]v=(\d+)/);
+      var vParam = vMatch ? '?v=' + vMatch[1] : '';
+      s.src = scripts[i].src.replace(/interclaw-chatbot\.js.*$/, '') + 'interclaw-chatbot/index.js' + vParam;
       document.head.appendChild(s);
       break;
     }

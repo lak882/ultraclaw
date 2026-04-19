@@ -1,4 +1,4 @@
-Manage production hosts â add, update, remove, or list hosts in a production.
+Manage production hosts — add, update, remove, or list hosts in a production.
 
 Usage: /host <action> [arguments]
 
@@ -6,7 +6,7 @@ Actions: add, update, remove, list, settings.
 
 Steps:
 
-1. Parse "$ARGUMENTS" â action, production class, host name, className (for add), key=value settings (for add/update), type (for settings).
+1. Parse "$ARGUMENTS" — action, production class, host name, className (for add), key=value settings (for add/update), type (for settings).
 2. Build InteropEditors API base URL: `{scheme}://{host}:{port}{pathPrefix}/api/interop-editors/v3/{namespace}`
 
 ---
@@ -16,7 +16,7 @@ Steps:
 Call `GET {baseUrl}/productions/{productionClass}` with Basic Auth. Display hosts grouped by type (Services, Processes, Operations).
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython -c "
+python3 -c "
 import json, sys
 sys.path.insert(0, '.claude/skills/interclaw/scripts')
 from iris_api import load_server_config, build_interop_url, make_interop_request
@@ -33,9 +33,9 @@ print(json.dumps(json.loads(resp), indent=2))
 
 1. **Fetch settings** for the host class to determine correct Target values (Host vs Adapter):
    ```bash
-   cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/connection/get_settings.py --server <server> --namespace <ns> --class <className> --type <service|process|operation>
+   <python> .claude/skills/interclaw/scripts/connection/get_settings.py --server <server> --namespace <ns> --class <className> --type <service|process|operation>
    ```
-   Determine type from className: `Service`/`.BS.`âservice, `Process`/`MsgRouter`/`.BP.`/`.BPL.`âprocess, `Operation`/`.BO.`âoperation.
+   Determine type from className: `Service`/`.BS.`--service, `Process`/`MsgRouter`/`.BP.`/`.BPL.`--process, `Operation`/`.BO.`--operation.
 
 2. **Create host** via `PUT {baseUrl}/productions/{productionClass}/{hostName}`:
    ```json
@@ -43,7 +43,7 @@ print(json.dumps(json.loads(resp), indent=2))
    ```
    HTTP Services default: `EnableStandardRequests=1` (Host), `PoolSize=0`.
 
-3. **Create FileDrop directories** under `${cspdir}interclaw/filedrop/<Package>/<Component>/` if file-based adapter (see CLAUDE.md "File Directories"). No `sudo` needed â `irisusr` owns this tree.
+3. **Create FileDrop directories** under `${cspdir}interclaw/filedrop/<Package>/<Component>/` if file-based adapter (see CLAUDE.md "File Directories").
 
 4. **Restart production** with `manage_production.py --start <prod> --stop-first`.
 
@@ -71,7 +71,7 @@ print(json.dumps(json.loads(resp), indent=2))
 ### Action: settings
 
 ```bash
-cd "/usr/local/InterSystems/interop-agent-orchestrator" && /usr/local/InterSystems/IRISHealth/bin/irispython .claude/skills/interclaw/scripts/connection/get_settings.py --server <server> --namespace <ns> --class <className> --type <type>
+<python> .claude/skills/interclaw/scripts/connection/get_settings.py --server <server> --namespace <ns> --class <className> --type <type>
 ```
 Display grouped by Target (Host vs Adapter).
 

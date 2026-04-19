@@ -63,9 +63,9 @@ When generating clickable hyperlinks in responses, **always read `config/servers
 portal_base = {scheme}://{host}:{port}{pathPrefix}/csp/healthshare/{namespace_lower}
 ```
 
-Example for vmdev1 (pathPrefix = `/irishealth`), namespace CLAUDE:
-- **WRONG** (missing pathPrefix): `http://vmdev1.iscinternal.com/csp/healthshare/claude/...`
-- **RIGHT**: `http://vmdev1.iscinternal.com:80/irishealth/csp/healthshare/claude/...`
+Example for myserver (pathPrefix = `/irishealth`), namespace CLAUDE:
+- **WRONG** (missing pathPrefix): `http://myserver.example.com/csp/healthshare/claude/...`
+- **RIGHT**: `http://myserver.example.com:80/irishealth/csp/healthshare/claude/...`
 
 Alternatively, run `portal_urls.py` to auto-generate correct links.
 
@@ -145,7 +145,7 @@ ${cspdir}interclaw/filedrop/<Package>/<Component>/Out   — operations write her
 ${cspdir}interclaw/filedrop/<Package>/<Component>/Files — sample/reference files
 ```
 
-IPM deploys as `irisusr` with `775` permissions, so `filedrop/` is writable immediately after install. Create subdirectories with `os.makedirs()` — they inherit irisusr ownership. Set adapter `FilePath` settings to these paths.
+IPM deploys as the IRIS process user with `775` permissions, so `filedrop/` is writable immediately after install. Create subdirectories with `os.makedirs()` — they inherit the process user's ownership. Set adapter `FilePath` settings to these paths.
 
 File-based adapter classes that trigger directory creation:
 - **Services** (`/In` + `/Files`): `EnsLib.HL7.Service.FileService`, `EnsLib.File.PassthroughService`, `EnsLib.RecordMap.Service.FileService`, `EnsLib.EDI.XML.Service.FileService`, custom BS with `EnsLib.File.InboundAdapter`
@@ -187,58 +187,62 @@ Detailed HealthShare-focused reference docs for building production components:
 
 | Reference | Content |
 |-----------|---------|
-| **Interop Components** (`references/interop/`) | |
-| `interop/Production/production-class.md` | Production XML structure, Item elements, settings |
-| `interop/Service/business-services.md` | BS patterns, adapter catalog, OnProcessInput |
-| `interop/Process/business-processes.md` | BPL vs code-based, routing engines |
-| `interop/BPL/bpl-reference.md` | Complete BPL XML reference, all activities, patterns |
-| `interop/Operation/business-operations.md` | BO patterns, MessageMap, adapter catalog |
-| `interop/Rule/routing-rules.md` | Rule class structure, conditions, HL7 routing |
-| `interop/Msg/messages.md` | Request/Response classes, HL7 message paths |
-| **Data & Transforms** (`references/data/`) | |
-| `data/DTL/data-transformations.md` | DTL structure, HL7/SDA3 transform patterns |
-| `data/RecordMap/record-maps.md` | Flat file parsing, delimited/fixed-width |
-| `data/LookupTable/lookup-tables.md` | Key-value tables, code translation |
-| `data/JSONAdapter/json-adaptor.md` | %JSON.Adaptor, JSON HTTP service pattern |
-| `data/ZSegment/custom-z-segments.md` | Custom HL7 Z-segment definitions |
-| `data/UtilityFunctions/custom-utility-functions.md` | Utility function reference |
-| **Web Applications** (`references/web/`) | |
-| `web/WebApp/rest-applications.md` | REST API development with %CSP.REST, UrlMap, handlers |
-| `web/WebApp/wsgi-applications.md` | Python WSGI/ASGI apps (Flask/Django/FastAPI) in IRIS |
-| `web/WebApp/csp-zen-applications.md` | CSP pages (%CSP.Page) and Zen component pages |
-| `web/WebApp/web-application-config.md` | Security.Applications config, auth, static files, CORS |
-| **Infrastructure** (`references/infra/`) | |
-| `infra/IPM/module-xml-reference.md` | IPM package module.xml reference |
-| `infra/Navigation/goto-dom-logic.md` | Goto DOM logic reference |
-| **IDE Tools** (`references/ide/`) | |
-| `ide/LanguageServer/` | ObjectScript LSP implementation |
-| `ide/ServerManager/` | VS Code IRIS server management extension |
-| `ide/VSCodeObjectScript/` | ObjectScript language extension for VS Code |
-| `ide/WebTerminal/` | Web-based IRIS terminal interface |
+| **Production** (`production/`) | |
+| `production/production-class.md` | Production XML structure, Item elements, settings |
+| `production/services/business-services.md` | BS patterns, adapter catalog, OnProcessInput |
+| `production/processes/business-processes.md` | BPL vs code-based, routing engines |
+| `production/operations/business-operations.md` | BO patterns, MessageMap, adapter catalog |
+| `production/messages/messages.md` | Request/Response classes, HL7 message paths |
+| **BPL** (`bpl/`) | |
+| `bpl/bpl-reference.md` | Complete BPL XML reference, all activities, patterns |
+| **Rules** (`rules/`) | |
+| `rules/routing-rules.md` | Rule class structure, conditions, HL7 routing |
+| **DTL** (`dtl/`) | |
+| `dtl/data-transformations.md` | DTL structure, HL7/SDA3 transform patterns |
+| `dtl/datetime-formats.md` | Date/time format conversion reference |
+| `dtl/poc-quality-criteria.md` | Quality scorecard for DTL evaluation |
+| **Data** (`data/`) | |
+| `data/record-maps.md` | Flat file parsing, delimited/fixed-width |
+| `data/lookup-tables.md` | Key-value tables, code translation |
+| `data/json-adaptor.md` | %JSON.Adaptor, JSON HTTP service pattern |
+| `data/custom-z-segments.md` | Custom HL7 Z-segment definitions |
+| `data/custom-utility-functions.md` | Utility function reference |
+| **Web** (`web/`) | |
+| `web/rest-applications.md` | REST API development with %CSP.REST, UrlMap, handlers |
+| `web/wsgi-applications.md` | Python WSGI/ASGI apps (Flask/Django/FastAPI) in IRIS |
+| `web/csp-zen-applications.md` | CSP pages (%CSP.Page) and Zen component pages |
+| `web/web-application-config.md` | Security.Applications config, auth, static files, CORS |
+| **Infrastructure** (`infra/`) | |
+| `infra/module-xml-reference.md` | IPM package module.xml reference |
+| `infra/goto-dom-logic.md` | Goto DOM logic reference |
 
 Read the relevant reference docs before generating ObjectScript code to ensure accurate class hierarchies, method signatures, and adapter class names.
 
 ## Templates
 
-Class templates with `{{PLACEHOLDER}}` markers in `.claude/skills/interclaw/templates/`:
+Class templates with `{{PLACEHOLDER}}` markers, co-located with their domain:
 
-**Interop** (`templates/interop/`):
-- `business-service.cls.template`
-- `business-process.cls.template`
-- `business-operation.cls.template`
-- `message-request.cls.template`
-- `message-response.cls.template`
+**Production** (`production/`):
+- `bpl-process.cls.template` — in `bpl/`, **preferred** for all orchestration processes
+- `processes/business-process.cls.template` — code-based BP (rare — only when BPL is insufficient)
+- `services/business-service.cls.template`
+- `operations/business-operation.cls.template`
+- `messages/message-request.cls.template`
+- `messages/message-response.cls.template`
+
+**DTL** (`dtl/`):
 - `dtl.cls.template`
 
-**Web** (`templates/web/`):
+**BPL** (`bpl/`):
+- `bpl-process.cls.template`
+
+**Web** (`web/`):
 - `rest-dispatch.cls.template`
 - `rest-handler-method.template`
 - `csp-page.cls.template`
 - `zen-page.cls.template`
 - `zen-app.cls.template`
 - `openapi-spec.json.template`
-
-**Python** (`templates/python/`):
 - `flask-app.py.template`
 - `fastapi-app.py.template`
 
