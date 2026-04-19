@@ -41,10 +41,16 @@
         }
       });
 
-      // Save chatbot state before any page navigation so it persists across tab clicks
-      window.addEventListener('beforeunload', function() {
+      // Save chatbot state before any page navigation so it persists across
+      // tab clicks. `beforeunload` covers navigation; `pagehide` covers the
+      // bfcache/tab-close paths some browsers use instead. Both fire — the
+      // server-side PUT is idempotent, so a duplicate call is harmless.
+      function flushOnExit() {
         if (cc.sessionId) cc.saveState();
-      });
+        if (cc.flushPersistChat) cc.flushPersistChat();
+      }
+      window.addEventListener('beforeunload', flushOnExit);
+      window.addEventListener('pagehide', flushOnExit);
 
       // Pre-set status for tab navigation so user doesn't see "Not connected" flash
       var navType = 'navigate';

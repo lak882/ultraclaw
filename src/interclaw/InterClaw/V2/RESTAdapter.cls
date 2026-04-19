@@ -36,18 +36,36 @@ ClassMethod Health() As %Status
     Return $$$OK
 }
 
+/// Read the request body. %request.Content is a byte stream on this CSP
+/// build — reading it into a %String gives one character per raw byte. For
+/// JSON payloads containing multibyte chars (e.g. "·"), those bytes need
+/// to be re-decoded as UTF-8 so downstream code sees single codepoints.
+/// Otherwise %ToJSON later re-UTF-8-encodes each byte and produces mojibake.
 ClassMethod ReadBody() As %String
 {
-    // %request.Content is already a decoded character stream — CSP applies
-    // the request charset during parsing. Do NOT re-apply $ZConvert(...,UTF8);
-    // that double-decodes and mojibakes multibyte chars like "·".
     Set body = ""
     If $IsObject(%request.Content) {
         Set stream = %request.Content
         Do stream.Rewind()
         While 'stream.AtEnd { Set body = body _ stream.Read(32000) }
+        Set body = $ZConvert(body, "I", "UTF8")
     }
     Return body
+}
+
+/// Parse the request body as JSON. Applies the same UTF-8 decoding as
+/// ..ReadBody() before handing off to %FromJSON.
+ClassMethod ReadJSON(ByRef status As %Status) As %DynamicAbstractObject
+{
+    Set status = $$$OK
+    Set body = ..ReadBody()
+    If body = "" Return ""
+    Try {
+        Return ##class(%DynamicAbstractObject).%FromJSON(body)
+    } Catch ex {
+        Set status = ex.AsStatus()
+        Return ""
+    }
 }
 
 ClassMethod EnsureProduction() As %Status
@@ -76,13 +94,15 @@ ClassMethod Start() As %Status
         Return $$$OK
     }
 
-    Set body = ..ReadBody()
-    Try { Set obj = ##class(%DynamicObject).%FromJSON(body) }
-    Catch ex {
+    Set obj = ..ReadJSON(.jsonSc)
+    If $$$ISERR(jsonSc) || '$IsObject(obj) {
         Set %response.Status = "400 Bad Request"
         Write "{""error"":""Invalid JSON""}"
         Return $$$OK
     }
+    // Echo the raw body string for PayloadJSON downstream. This is only
+    // used for debug/archival; the authoritative parse is `obj` above.
+    Set body = ..ReadBody()
 
     Set prompt = obj.%Get("prompt")
     If prompt = "" {
@@ -325,15 +345,11 @@ ClassMethod ChatsPut(id As %String) As %Status
     Set %response.CharSet = "utf-8"
     Try {
         Set user = ##class(InterClaw.V2.ChatStore).ResolveUser()
-        Set body = ..ReadBody()
-        Set input = ""
-        If body '= "" {
-            Try { Set input = ##class(%DynamicObject).%FromJSON(body) }
-            Catch ex {
-                Set %response.Status = "400 Bad Request"
-                Write "{""error"":""Invalid JSON""}"
-                Return $$$OK
-            }
+        Set input = ..ReadJSON(.jsonSc)
+        If $$$ISERR(jsonSc) {
+            Set %response.Status = "400 Bad Request"
+            Write "{""error"":""Invalid JSON""}"
+            Return $$$OK
         }
         Set obj = ##class(InterClaw.V2.ChatStore).Put(user, id, input)
         If '$IsObject(obj) {

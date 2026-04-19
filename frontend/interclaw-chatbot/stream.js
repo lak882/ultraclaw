@@ -231,7 +231,12 @@
         }
         break;
       case 'session':
-        cc.sessionId = data.session_id;
+        // Keep an existing chat id rather than overwriting with the backend
+        // session id. The chat id is our persistence key — swapping it here
+        // would orphan the file we already wrote on the first user turn.
+        // Backend session id is informational only at this point; the bridge
+        // is bound by chat_id (set on /api/start).
+        if (!cc.sessionId) cc.sessionId = data.session_id;
         cc.sessionReady = true;
         cc.saveState();
         cc.processQueue();
@@ -494,11 +499,11 @@
         cc.clearResponseTimeout();
         cc.currentAbortController = null;
         cc.hideStopButton();
-        if (data.session_id && data.session_id !== '') {
+        if (data.session_id && data.session_id !== '' && !cc.sessionId) {
           cc.sessionId = data.session_id;
-          cc.sessionReady = true;
-          cc.saveState();
         }
+        cc.sessionReady = true;
+        cc.saveState();
         cc.totalTokensAccum += cc.lastTurnTokens;
         if (cc.lastTurnTokens > 0) cc.updateTokenCounter(cc.totalTokensAccum);
         cc.transformThinkingToUsage();

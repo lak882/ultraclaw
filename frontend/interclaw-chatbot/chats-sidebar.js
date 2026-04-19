@@ -136,24 +136,49 @@
     .catch(function(err) { console.warn('[interclaw] retitle failed:', err); });
   }
 
+  // Client-minted chat id, used when the user sends their first message
+   // before the backend has streamed back a `session` event. Format matches
+  // the backend SafeId filter (alphanumerics + dash). Without this, a chat
+  // closed mid-first-turn had no id to persist under and disappeared.
+  function mintChatId() {
+    var rnd = Math.random().toString(36).slice(2, 10);
+    return 'local-' + Date.now().toString(36) + '-' + rnd;
+  }
+  cc.ensureChatId = function() {
+    if (cc.sessionId) return cc.sessionId;
+    cc.sessionId = mintChatId();
+    cc.chatsStore.activeId = cc.sessionId;
+    return cc.sessionId;
+  };
+
+  function buildPersistPayload(chatId) {
+    var messages = serializeCurrentPane();
+    if (!messages.length) return null;
+    var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
+    var body = { messages: messages };
+    if (!chat || !chat.title || chat.title === 'Untitled') {
+      body.title = deriveTitle(messages);
+    }
+    return { body: body, messages: messages };
+  }
+
   var _persistTimer = null;
   cc.persistChat = function() {
-    if (!cc.sessionId) return;
+    // Ensure we have an id even on the very first turn. Missing a chat id
+    // here is how chats used to vanish when the window was closed before
+    // the server sent its `session` event.
+    var chatId = cc.ensureChatId();
+    if (!chatId) return;
     if (_persistTimer) clearTimeout(_persistTimer);
     _persistTimer = setTimeout(function() {
       _persistTimer = null;
-      var messages = serializeCurrentPane();
-      if (!messages.length) return;
-      var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === cc.sessionId; })[0];
-      var body = { messages: messages };
-      if (!chat || !chat.title || chat.title === 'Untitled') {
-        body.title = deriveTitle(messages);
-      }
-      fetch(chatsUrl('/' + encodeURIComponent(cc.sessionId)), {
+      var payload = buildPersistPayload(chatId);
+      if (!payload) return;
+      fetch(chatsUrl('/' + encodeURIComponent(chatId)), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload.body)
       })
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
@@ -161,10 +186,40 @@
         cc.chatsStore.activeId = data.id;
         upsertChat({ id: data.id, title: data.title || 'Untitled', updatedAt: data.updatedAt || Date.now() });
         cc.renderChatsSidebar();
-        maybeRetitle(data.id, messages);
+        maybeRetitle(data.id, payload.messages);
       })
       .catch(function(err) { console.warn('[interclaw] persistChat failed:', err); });
     }, 500);
+  };
+
+  // Synchronous flush for beforeunload / pagehide: bypasses the 500ms
+  // debounce and ships via sendBeacon so the browser allows the request to
+  // complete after the page starts tearing down. Without this, closing the
+  // tab within ~500ms of sending a prompt loses the user's message.
+  cc.flushPersistChat = function() {
+    var chatId = cc.ensureChatId();
+    if (!chatId) return;
+    if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
+    var payload = buildPersistPayload(chatId);
+    if (!payload) return;
+    var url = chatsUrl('/' + encodeURIComponent(chatId));
+    var json = JSON.stringify(payload.body);
+    // sendBeacon only supports POST, but the backend ChatsPut route is PUT.
+    // Use fetch with keepalive:true, the modern equivalent for PUT-on-unload.
+    try {
+      fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: json,
+        keepalive: true
+      });
+    } catch (e) {
+      // Last resort if keepalive isn't supported — a best-effort beacon
+      // to a no-op route at least keeps the connection alive long enough
+      // for in-flight PUTs to leave the socket. Silent on failure.
+      try { navigator.sendBeacon && navigator.sendBeacon(url); } catch (_) {}
+    }
   };
 
   // Wrap saveState so every DOM change triggers a debounced server PUT.
