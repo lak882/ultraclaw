@@ -3,8 +3,8 @@
   <Document name="interclaw.ZPM">
     <Module>
       <Name>interclaw</Name>
-      <Version>0.0.5</Version>
-      <Description>InterClaw — AI-powered interoperability skill for InterSystems IRIS. Custom Interop Editor frontend with chatbot sidebar, Python automation scripts, and Claude Code integration for building productions via natural language.</Description>
+      <Version>0.0.7</Version>
+      <Description>InterClaw — AI-powered interoperability skill for InterSystems IRIS. Native IRIS agent pipeline (Inteclaw) with streaming Bedrock/Anthropic provider, typed tools (run_sql, get_doc, put_class, compile_class, test_dtl, exec, spawn_agent, plan-mode), Angular chatbot frontend, and Python skill scripts.</Description>
       <Keywords>claude,interoperability,ai,chatbot,hl7,production,dtl</Keywords>
       <Author>
         <Person>Louis Kabelka</Person>
@@ -79,6 +79,7 @@
 
       <SourcesRoot>install</SourcesRoot>
       <Resource Name="InterClaw.PKG"/>
+      <Resource Name="Inteclaw.PKG"/>
 
       <Invokes>
         <Invoke Class="InterClaw.Installer" Method="Setup" />

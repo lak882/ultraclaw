@@ -1,7 +1,7 @@
 /// InterClaw.Reset — Complete cleanup of the InterClaw IPM package.
 /// 
 /// Removes all artifacts created by InterClaw.Installer.Setup() and IPM install:
-///   - InterClaw.Pipeline.Production (stopped)
+///   - Inteclaw.Production / InterClaw.Pipeline.Production (stopped)
 ///   - /api/interclaw/production, /api/interclaw, /ui/interop/interclaw web applications
 ///   - ${cspdir}interclaw/ directory (all deployed files)
 ///   - ${installdir}mgr/interclaw_home/ (Claude CLI home)
@@ -220,47 +220,47 @@ ClassMethod RemoveClasses(dryRun As %Boolean = 0) As %Status
     return sc
 }
 
-/// Stop the InterClaw.Pipeline.Production if it's running.
+/// Stop the active InterClaw production if it's running.
+/// Matches both the new Inteclaw.Production and the legacy InterClaw.Pipeline.Production.
 ClassMethod StopProduction(dryRun As %Boolean = 0)
 {
     try {
         set sc = ##class(Ens.Director).GetProductionStatus(.prodName, .prodState)
-        if $get(prodName) = "InterClaw.Pipeline.Production" && ($get(prodState) '= 2) {
+        set isOurs = (($get(prodName) = "Inteclaw.Production") || ($get(prodName) = "InterClaw.Pipeline.Production"))
+        if isOurs && ($get(prodState) '= 2) {
             if dryRun {
-                write "  [WOULD STOP] Production: InterClaw.Pipeline.Production",!
+                write "  [WOULD STOP] Production: ", prodName,!
             } else {
                 set sc = ##class(Ens.Director).StopProduction(30, 1)
                 if $$$ISERR(sc) {
                     write "  [WARNING] Error stopping production: ", $system.Status.GetErrorText(sc),!
                 } else {
-                    write "  [STOPPED] Production: InterClaw.Pipeline.Production",!
+                    write "  [STOPPED] Production: ", prodName,!
                 }
             }
         } else {
-            write "  [SKIP] InterClaw.Pipeline.Production not running",!
+            write "  [SKIP] No InterClaw production running",!
         }
     } catch ex {
         write "  [WARNING] Could not check production: ", ex.DisplayString(),!
     }
 }
 
-/// Remove AutoStart configuration for InterClaw.Pipeline.Production.
+/// Remove AutoStart configuration for any InterClaw production (new or legacy).
 ClassMethod RemoveAutoStart(dryRun As %Boolean = 0)
 {
     if dryRun {
-        write "  [WOULD REMOVE] AutoStart for InterClaw.Pipeline.Production",!
+        write "  [WOULD REMOVE] AutoStart for Inteclaw.Production / InterClaw.Pipeline.Production",!
         quit
     }
 
     try {
-        // Read AutoStart from the global directly (GetAutoStart() does not exist on all versions)
         set current = $get(^Ens.AutoStart)
-        if current [ "InterClaw.Pipeline.Production" {
-            // Remove InterClaw.Pipeline.Production from comma-separated list
+        if (current [ "Inteclaw.Production") || (current [ "InterClaw.Pipeline.Production") {
             set newList = ""
             for i = 1:1:$length(current, ",") {
                 set item = $zstrip($piece(current, ",", i), "<>W")
-                if item '= "InterClaw.Pipeline.Production" && (item '= "") {
+                if (item '= "Inteclaw.Production") && (item '= "InterClaw.Pipeline.Production") && (item '= "") {
                     set newList = newList _ $select(newList'="":",", 1:"") _ item
                 }
             }
@@ -268,10 +268,10 @@ ClassMethod RemoveAutoStart(dryRun As %Boolean = 0)
             if $$$ISERR(sc) {
                 write "  [WARNING] Could not remove AutoStart: ", $system.Status.GetErrorText(sc),!
             } else {
-                write "  [REMOVED] AutoStart for InterClaw.Pipeline.Production",!
+                write "  [REMOVED] AutoStart entry for InterClaw production",!
             }
         } else {
-            write "  [SKIP] InterClaw.Pipeline.Production not in AutoStart",!
+            write "  [SKIP] No InterClaw production in AutoStart",!
         }
     } catch ex {
         write "  [WARNING] AutoStart removal failed: ", ex.DisplayString(),!

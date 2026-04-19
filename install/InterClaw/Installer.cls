@@ -20,7 +20,7 @@
 ///   8. Creates Ens.Config.Credentials entry for API key storage
 ///   9. Adds InterClaw pages to Management Portal favorites
 ///  10. Configures environment-specific settings (path prefix)
-///  11. Configures AutoStart for InterClaw.Pipeline.Production
+///  11. Configures AutoStart for Inteclaw.Production
 ///  12. Starts the production
 ///  13. Verifies the deployment
 /// 
@@ -166,7 +166,7 @@ ClassMethod Setup() As %Status
         write "WARNING: Could not configure production settings: ", $system.Status.GetErrorText(sc),!
     }
 
-    // Step 11: Configure AutoStart so IRIS starts InterClaw.Pipeline.Production on instance boot
+    // Step 11: Configure AutoStart so IRIS starts Inteclaw.Production on instance boot
     write !,"[Step 11/", totalSteps, "] Configuring AutoStart...",!
     set sc = ..ConfigureAutoStart()
     if $$$ISERR(sc) {
@@ -189,7 +189,7 @@ ClassMethod Setup() As %Status
     write "================================================================",!
     write "  Frontend:   /ui/interop/interclaw/interop-editor/index.html",!
     write "  REST API:   /api/interclaw/api/health",!
-    write "  Production: InterClaw.Pipeline.Production",!
+    write "  Production: Inteclaw.Production",!
     write "================================================================",!
     return $$$OK
 }
@@ -291,12 +291,14 @@ ClassMethod CleanDeployRoot()
     write "  Deploy root: ", root,!
 
     // Whitelist: only these directories should exist in the deploy root
-    set keepDirs = $listbuild("frontend/",".claude/","config/","filedrop/","install/")
-    // Whitelist: only these files should exist in the deploy root
-    set keepFiles = $listbuild("requirements.txt","module.xml")
+    set keepDirs = $listbuild("frontend/",".claude/","config/","filedrop/","install/","src/","poc-examples/","references/","tests/")
+    // Whitelist: only these files should exist in the deploy root. The installer
+    // deliberately preserves any *.md or *.txt file (user notes, change logs,
+    // READMEs) so in-place re-installs do not wipe documentation.
+    set keepFiles = $listbuild("requirements.txt","module.xml","README.md")
 
-    write "  Allowed dirs:  frontend/, .claude/, config/, filedrop/, install/",!
-    write "  Allowed files: requirements.txt, module.xml",!
+    write "  Allowed dirs:  frontend/, .claude/, config/, filedrop/, install/, src/, poc-examples/, references/, tests/",!
+    write "  Allowed files: requirements.txt, module.xml, README.md (plus any *.md, *.txt)",!
     write "  Scanning for items to remove...",!
 
     // Clean unwanted directories
@@ -317,7 +319,10 @@ ClassMethod CleanDeployRoot()
                 else { write "    [!!] Could not remove",! }
             }
         } else {
-            if '$listfind(keepFiles, itemName) {
+            // Preserve docs/notes (*.md, *.txt) so re-installs don't wipe them.
+            set ext = $zconvert($piece(itemName, ".", *), "L")
+            set isDoc = ((ext = "md") || (ext = "txt"))
+            if '$listfind(keepFiles, itemName), 'isDoc {
                 write "  Removing file: ", itemName,!
                 do ##class(%File).Delete(name)
                 set cleaned = cleaned + 1
@@ -661,14 +666,16 @@ ClassMethod CreateRESTWebApp() As %Status
     }
 
     // --- /api/interclaw/production (chat pipeline dispatch) ---
+    // Routes frontend chatbot calls (/api/start, /api/events, /api/approve)
+    // into the Inteclaw native-IRIS pipeline via InterClaw.V2.RESTAdapter.
     set pipelineApp = "/api/interclaw/production"
     write "  Checking ", pipelineApp, "...",!
     if '##class(Security.Applications).Exists(pipelineApp) {
         write "  Creating pipeline web app: ", pipelineApp,!
-        write "    DispatchClass: InterClaw.Pipeline.REST.Dispatch",!
+        write "    DispatchClass: InterClaw.V2.RESTAdapter",!
         kill props
         set props("NameSpace") = namespace
-        set props("DispatchClass") = "InterClaw.Pipeline.REST.Dispatch"
+        set props("DispatchClass") = "InterClaw.V2.RESTAdapter"
         set props("MatchRoles") = ":%All"
         set props("AutheEnabled") = 64
         set props("IsNameSpaceDefault") = 0
@@ -685,10 +692,10 @@ ClassMethod CreateRESTWebApp() As %Status
         set app = ##class(Security.Applications).%OpenId(pipelineApp)
         if app '= "" {
             write "  Updating pipeline dispatch class and namespace...",!
-            set app.DispatchClass = "InterClaw.Pipeline.REST.Dispatch"
+            set app.DispatchClass = "InterClaw.V2.RESTAdapter"
             set app.NameSpace = namespace
             do app.%Save()
-            write "  [OK] Pipeline dispatch class updated",!
+            write "  [OK] Pipeline dispatch class updated to V2 adapter",!
         }
     }
 
@@ -1137,19 +1144,19 @@ ClassMethod ConfigureProductionSettings() As %Status
     return $$$OK
 }
 
-/// Configure AutoStart so IRIS starts InterClaw.Pipeline.Production automatically on instance boot.
+/// Configure AutoStart so IRIS starts Inteclaw.Production automatically on instance boot.
 /// Uses Ens.Director.SetAutoStart which persists across restarts.
 ClassMethod ConfigureAutoStart() As %Status
 {
-    write "  Calling Ens.Director.SetAutoStart(""InterClaw.Pipeline.Production"")...",!
+    write "  Calling Ens.Director.SetAutoStart(""Inteclaw.Production"")...",!
     try {
-        set sc = ##class(Ens.Director).SetAutoStart("InterClaw.Pipeline.Production")
+        set sc = ##class(Ens.Director).SetAutoStart("Inteclaw.Production")
         if $$$ISERR(sc) {
             write "  [!!] Failed to set AutoStart: ", $system.Status.GetErrorText(sc),!
             return sc
         }
         write "  [OK] AutoStart configured",!
-        write "  InterClaw.Pipeline.Production will start automatically on IRIS boot",!
+        write "  Inteclaw.Production will start automatically on IRIS boot",!
     } catch ex {
         write "  [!!] Error calling Ens.Director: ", ex.DisplayString(),!
         return ex.AsStatus()
@@ -1157,10 +1164,11 @@ ClassMethod ConfigureAutoStart() As %Status
     return $$$OK
 }
 
-/// Start the InterClaw.Pipeline.Production interoperability production.
+/// Start the Inteclaw.Production interoperability production.
 /// Handles all production states: stopped, suspended, troubled.
 ClassMethod StartProduction() As %Status
 {
+    set target = "Inteclaw.Production"
     write "  Checking current production state...",!
     try {
         set sc = ##class(Ens.Director).GetProductionStatus(.prodName, .prodState)
@@ -1171,8 +1179,8 @@ ClassMethod StartProduction() As %Status
         write "  Current production: ", $get(prodName, "(none)"),!
         write "  Current state:      ", stateName, " (", $get(prodState, 0), ")",!
 
-        if $get(prodName) = "InterClaw.Pipeline.Production" && ($get(prodState) = 1) {
-            write "  [OK] InterClaw.Pipeline.Production is already running",!
+        if $get(prodName) = target && ($get(prodState) = 1) {
+            write "  [OK] ", target, " is already running",!
             return $$$OK
         }
 
@@ -1188,8 +1196,8 @@ ClassMethod StartProduction() As %Status
             }
         }
 
-        // If InterClaw.Pipeline.Production is suspended or troubled, recover it first
-        if $get(prodName) = "InterClaw.Pipeline.Production" && ($get(prodState) = 3 || ($get(prodState) = 4)) {
+        // If the target production is suspended or troubled, recover it first
+        if $get(prodName) = target && ($get(prodState) = 3 || ($get(prodState) = 4)) {
             write "  Production is ", stateName, " — attempting recovery (timeout 30s)...",!
             set sc = ##class(Ens.Director).RecoverProduction(30)
             if $$$ISERR(sc) {
@@ -1206,13 +1214,13 @@ ClassMethod StartProduction() As %Status
             }
         }
 
-        write "  Starting InterClaw.Pipeline.Production...",!
-        set sc = ##class(Ens.Director).StartProduction("InterClaw.Pipeline.Production")
+        write "  Starting ", target, "...",!
+        set sc = ##class(Ens.Director).StartProduction(target)
         if $$$ISERR(sc) {
             write "  [!!] Failed to start: ", $system.Status.GetErrorText(sc),!
             return sc
         }
-        write "  [OK] InterClaw.Pipeline.Production started successfully",!
+        write "  [OK] ", target, " started successfully",!
     } catch ex {
         write "  [!!] Error in production startup: ", ex.DisplayString(),!
         return ex.AsStatus()
@@ -1338,11 +1346,11 @@ ClassMethod Verify()
         set sc = ##class(Ens.Director).GetProductionStatus(.prodName, .prodState)
         write "    Production: ", $get(prodName, "(none)"),!
         write "    State:      ", $get(prodState, 0),!
-        if $get(prodName) = "InterClaw.Pipeline.Production" && ($get(prodState) = 1) {
-            write "    [OK] InterClaw.Pipeline.Production is running",!
+        if $get(prodName) = "Inteclaw.Production" && ($get(prodState) = 1) {
+            write "    [OK] Inteclaw.Production is running",!
             set passed = passed + 1
         } else {
-            write "    [!!] InterClaw.Pipeline.Production is not running",!
+            write "    [!!] Inteclaw.Production is not running",!
             set ok = 0
         }
     } catch ex {
