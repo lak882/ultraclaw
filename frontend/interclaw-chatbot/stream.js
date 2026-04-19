@@ -472,6 +472,14 @@
         var elapsed;
         if (typeof data.elapsed_ms === 'number' && data.elapsed_ms >= 0) {
           elapsed = (data.elapsed_ms / 1000).toFixed(1);
+          // Also re-anchor the live thinking-bar timer so the ticking
+          // label matches server time from this point forward. On a
+          // fresh send this is a no-op (client and server agree). On a
+          // reattach (openChat of a running chat) this snaps the label
+          // from "0.1s" to the true age of the turn.
+          if (cc.queryStartTime) {
+            cc.queryStartTime = Date.now() - data.elapsed_ms;
+          }
         } else if (cc.queryStartTime) {
           elapsed = ((Date.now() - cc.queryStartTime) / 1000).toFixed(1);
         } else {

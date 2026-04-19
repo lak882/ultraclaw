@@ -290,13 +290,27 @@ html, body {
         var newUrl = window.location.pathname + '#' + displayPath;
         history.replaceState(null, '', newUrl);
 
+        // Detect the iframe's ACTUAL current namespace BEFORE posting up to
+        // the shell. The closure-local `namespace` variable holds the NS the
+        // wrapper was initialized with, which may be stale if the user just
+        // navigated to a different NS inside the iframe (Angular internal
+        // switch, home-page cross-NS link, SMP switcher, etc.).
+        var postedNs = namespace;
+        try {
+          var pathNsMatch = iframeWin.location.pathname.match(/\/csp\/healthshare\/([^\/]+)\//i);
+          var searchNs = new URLSearchParams(iframeWin.location.search).get('$NAMESPACE')
+                      || new URLSearchParams(iframeWin.location.search).get('NAMESPACE');
+          var detectedNs = (pathNsMatch && pathNsMatch[1]) || searchNs;
+          if (detectedNs) postedNs = detectedNs.toUpperCase();
+        } catch (nsDetectErr) { /* fall back to closure namespace */ }
+
         // --- Notify parent shell of active page (when embedded) ---
         if (window._interclawChromeNone && window.parent && window.parent !== window) {
           var isTraces = displayPath.indexOf('MessageViewer') !== -1;
           window.parent.postMessage({
             type: 'interclaw-context',
             tab: isTraces ? 'traces' : 'portal',
-            context: { zenPath: displayPath, namespace: namespace }
+            context: { zenPath: displayPath, namespace: postedNs }
           }, window.location.origin);
         }
       } catch (urlErr) {

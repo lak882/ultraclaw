@@ -198,6 +198,7 @@ ClassMethod Put(user As %String, id As %String, input As %DynamicObject) As %Dyn
         If input.%IsDefined("bridgeId") Do existing.%Set("bridgeId", input.%Get("bridgeId"))
         If input.%IsDefined("status") Do existing.%Set("status", input.%Get("status"))
         If input.%IsDefined("lastSeq") Do existing.%Set("lastSeq", +input.%Get("lastSeq"), "number")
+        If input.%IsDefined("turnStartedAt") Do existing.%Set("turnStartedAt", +input.%Get("turnStartedAt"), "number")
     }
     Do existing.%Set("updatedAt", ..NowMs(), "number")
     Do existing.%Set("id", safeId)

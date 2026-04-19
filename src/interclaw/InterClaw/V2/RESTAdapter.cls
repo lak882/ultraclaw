@@ -154,6 +154,10 @@ ClassMethod Start() As %Status
         Do seed.%Set("bridgeId", bridgeId)
         Do seed.%Set("status", "running")
         Do seed.%Set("lastSeq", 0, "number")
+        // When the turn started, in unix ms. Read by openChat() on reopen
+        // so the live thinking-bar timer can show the true age of the
+        // still-running turn instead of "0s" until the first usage event.
+        Do seed.%Set("turnStartedAt", ##class(InterClaw.V2.ChatStore).NowMs(), "number")
         Do ##class(InterClaw.V2.ChatStore).Put(user, chatId, seed)
         Set ^Inteclaw.ChatEvents(bridgeId, "chatId") = chatId
         Set ^Inteclaw.ChatEvents(bridgeId, "user") = user

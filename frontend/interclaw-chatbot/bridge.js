@@ -122,6 +122,15 @@
     var maxPollRetries = 3;
     cc.showStopButton();
     cc.showTypingIndicator();
+    // Start the live thinking-bar timer. If openChat stashed the server's
+    // turnStartedAt, snap queryStartTime back to it so the label shows
+    // the turn's true age right away. Otherwise start from now and let
+    // the next `usage` event refine via data.elapsed_ms.
+    cc.startTimer();
+    if (cc._resumeTurnStartedAt) {
+      cc.queryStartTime = cc._resumeTurnStartedAt;
+      cc._resumeTurnStartedAt = null;
+    }
     cc.updateStatus('Resuming...');
     try {
       while (cc.bridgePolling) {
@@ -256,6 +265,7 @@
     // bridgeSend's busy-guard) or a raw string (legacy path via
     // sendCommandToBackend). Dispatch by type.
     if (nextMsg && typeof nextMsg === 'object') {
+      console.log('[bridge] processQueue draining payload — this produces a new bubble');
       cc.showTypingIndicator();
       cc.startTimer();
       cc.startResponseTimeout();

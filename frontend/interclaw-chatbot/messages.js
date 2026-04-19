@@ -106,6 +106,14 @@
   };
 
   cc.showTypingIndicator = function() {
+    // Idempotent: if a live streaming bubble is already in the DOM, reuse
+    // it instead of stacking a fresh one. Stacking is how duplicate
+    // "Hide steps" toggles accumulate inside a single turn (one bubble
+    // from sendMessage, another from attachBridge running concurrently).
+    if (cc.currentStreamEl && cc.currentStreamEl.parentNode) {
+      cc.ensureStepsContainer();
+      return;
+    }
     var chatMessages = document.getElementById('chatbot-content');
     cc.currentStreamEl = document.createElement('div');
     cc.currentStreamEl.className = 'chatbot-message';

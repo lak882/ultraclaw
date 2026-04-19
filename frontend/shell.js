@@ -46,12 +46,12 @@
     var base = window.location.pathname.replace(/index\.html.*$/, '').replace(/\/+$/, '/') || '/';
     return {
       portal: {
-        frameSrc: base + 'legacy-ui/index.html?$NAMESPACE=' + namespace + '&chrome=none'
+        frameSrc: base + 'legacy-ui/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=2'
                 + '#/csp/healthshare/' + nsLower + '/EnsPortal.ProductionConfig.zen?$NAMESPACE=' + namespace,
         zenHash: '#/csp/healthshare/' + nsLower + '/EnsPortal.ProductionConfig.zen?$NAMESPACE=' + namespace
       },
       traces: {
-        frameSrc: base + 'legacy-ui/index.html?$NAMESPACE=' + namespace + '&chrome=none'
+        frameSrc: base + 'legacy-ui/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=2'
                 + '#/csp/healthshare/' + nsLower + '/EnsPortal.MessageViewer.zen?$NAMESPACE=' + namespace,
         zenHash: '#/csp/healthshare/' + nsLower + '/EnsPortal.MessageViewer.zen?$NAMESPACE=' + namespace
       },
@@ -248,19 +248,10 @@
     sources = buildSources();
     legacyBase = sources.portal.frameSrc.split('#')[0];
 
-    // (a) Outer URL: rewrite $NAMESPACE= and /csp/healthshare/{ns}/ in the
-    // query + hash so reloads + copy-paste follow the user's selection.
-    try {
-      var loc = window.location;
-      var newSearch = swapNamespaceInUrl(loc.search, namespace);
-      var newHash = swapNamespaceInUrl(loc.hash, namespace);
-      if (loc.search.indexOf('$NAMESPACE') === -1 && loc.search.indexOf('NAMESPACE') === -1) {
-        newSearch = (newSearch ? newSearch + '&' : '?') + '$NAMESPACE=' + namespace;
-      }
-      if (newSearch !== loc.search || newHash !== loc.hash) {
-        history.replaceState(null, '', loc.pathname + newSearch + newHash);
-      }
-    } catch (urlErr) { /* non-critical */ }
+    // Outer URL is driven by syncOuterHashFromIframe — it will pick up the
+    // iframe's new zen hash on load and rewrite the outer hash. We don't
+    // write the NS into the outer ?search because the inner zen hash
+    // carries it natively and duplicating creates drift bugs.
 
     // (b) Portal iframe: swap NS in the current frame URL so the user stays
     // on whatever zen page they were viewing, just pointed at the new NS.
@@ -350,19 +341,9 @@
         }
         try { sessionStorage.setItem('interclaw-namespace', namespace); } catch(e) {}
 
-        // Outer URL: rewrite $NAMESPACE= and /csp/healthshare/{ns}/ so
-        // reloads and shares land on the right NS.
-        try {
-          var loc = window.location;
-          var newSearch = swapNamespaceInUrl(loc.search, namespace);
-          var newHash = swapNamespaceInUrl(loc.hash, namespace);
-          if (loc.search.indexOf('$NAMESPACE') === -1 && loc.search.indexOf('NAMESPACE') === -1) {
-            newSearch = (newSearch ? newSearch + '&' : '?') + '$NAMESPACE=' + namespace;
-          }
-          if (newSearch !== loc.search || newHash !== loc.hash) {
-            history.replaceState(null, '', loc.pathname + newSearch + newHash);
-          }
-        } catch (e) { /* non-critical */ }
+        // Outer URL: let syncOuterHashFromIframe rebuild it from the
+        // iframe's current zen hash (no separate $NAMESPACE= overlay).
+        syncOuterHashFromIframe();
 
         // Rewrite every workspace tab href so switching tabs lands on the
         // new NS instead of the old one.
@@ -426,9 +407,11 @@
     var h = '#/' + outerTab;
     if (innerHash && innerHash.indexOf('#') === 0) innerHash = innerHash.substring(1);
     if (innerHash) h += innerHash;
-    if (h.indexOf('NAMESPACE=') === -1) {
-      h += (h.indexOf('?') !== -1 ? '&' : '?') + 'NAMESPACE=' + namespace;
-    }
+    // Do NOT inject a separate NAMESPACE= param — the iframe's inner zen
+    // hash already carries `$NAMESPACE=` (and the path segment
+    // /csp/healthshare/{ns}/ encodes it too). Duplicating it to the outer
+    // hash just produces stale-vs-current mismatches when the user
+    // switches namespace inside the iframe.
     return h;
   }
 
@@ -441,7 +424,7 @@
       // to `#/portal/…` (the portal iframe stays mounted behind the
       // chat but its hash must not leak into the outer URL).
       if (document.body.classList.contains('ic-chat-mode')) {
-        var chatHash = '#/chat?NAMESPACE=' + namespace;
+        var chatHash = '#/chat';
         if (window.location.hash !== chatHash) {
           history.replaceState(null, '', window.location.pathname + window.location.search + chatHash);
         }
@@ -494,6 +477,123 @@
     syncOuterHashFromIframe();
   };
 
+  // ── Portal iframe URL watcher ──
+  // We used to detect the active namespace by scraping `fr-topbar` and
+  // poking fetch/XHR, but the only thing the shell really needs is the
+  // iframe's CURRENT URL. Mirror that URL straight into the outer hash,
+  // derive the namespace from the mirrored URL. Works for Angular SPA
+  // navigation, zen hash changes, cross-NS links, SMP switcher — all of
+  // them change the iframe's location.
+  var _lastMirroredIframeUrl = null;
+
+  function readPortalIframeUrl() {
+    var frame = document.getElementById('shell-iframe-portal');
+    if (!frame || !frame.contentWindow) return null;
+    try {
+      var iwin = frame.contentWindow;
+      // iwin.location.href points at the actual current page (which may be
+      // the legacy-ui wrapper OR, when window.open forwarded into the iframe,
+      // the wrapped zen page directly).
+      return iwin.location.pathname + iwin.location.search + iwin.location.hash;
+    } catch (e) { return null; /* cross-origin */ }
+  }
+
+  function mirrorPortalUrlToOuter() {
+    if (document.body.classList.contains('ic-chat-mode')) return;
+    if (currentTab !== 'portal' && currentTab !== 'traces') return;
+    var iframePath = readPortalIframeUrl();
+    if (!iframePath) return;
+    if (iframePath === _lastMirroredIframeUrl) return;
+    _lastMirroredIframeUrl = iframePath;
+
+    // Trim the legacy-ui wrapper prefix (we only want the zen/csp part).
+    // The wrapper loads `/path/to/legacy-ui/index.html?chrome=none#/csp/...`
+    // so iwin.location.pathname points at legacy-ui/index.html itself,
+    // and the actual zen path lives in the hash. But the iframe CAN also
+    // navigate to a zen page directly (see window.open override), in which
+    // case the path IS /csp/... and the hash is the zen page's own hash.
+    var outerHash;
+    var hashIdx = iframePath.indexOf('#');
+    var pathPart = hashIdx === -1 ? iframePath : iframePath.substring(0, hashIdx);
+    var hashPart = hashIdx === -1 ? '' : iframePath.substring(hashIdx + 1);
+
+    if (pathPart.indexOf('/legacy-ui/') !== -1 && hashPart) {
+      // Normal wrapper case — the zen URL is in the hash.
+      // Strip pathPrefix so the outer hash is `/csp/healthshare/...`.
+      var displayPath = hashPart;
+      if (displayPath.charAt(0) !== '/') displayPath = '/' + displayPath;
+      // strip pathPrefix if present
+      var pfxMatch = window.location.pathname.match(/^(\/[^/]+)\/ui\/interop\//);
+      var pfx = pfxMatch ? pfxMatch[1] : '';
+      if (pfx && displayPath.indexOf(pfx + '/') === 0) {
+        displayPath = displayPath.substring(pfx.length);
+      }
+      try { displayPath = decodeURIComponent(displayPath); } catch (_) {}
+      outerHash = '#/portal' + displayPath;
+    } else if (pathPart.indexOf('/csp/') !== -1) {
+      // Iframe landed directly on a /csp/ URL (e.g. SMP navigation).
+      var direct = pathPart + (hashPart ? '#' + hashPart : '');
+      var pfxMatch2 = window.location.pathname.match(/^(\/[^/]+)\/ui\/interop\//);
+      var pfx2 = pfxMatch2 ? pfxMatch2[1] : '';
+      if (pfx2 && direct.indexOf(pfx2 + '/') === 0) direct = direct.substring(pfx2.length);
+      try { direct = decodeURIComponent(direct); } catch (_) {}
+      outerHash = '#/portal' + direct;
+    } else {
+      // Unknown iframe state — fall through without rewriting.
+      return;
+    }
+
+    if (window.location.hash !== outerHash) {
+      history.replaceState(null, '', window.location.pathname + window.location.search + outerHash);
+    }
+
+    // Derive namespace from the mirrored URL so the header label follows.
+    var nsMatch = outerHash.match(/\/csp\/healthshare\/([^\/?#]+)/i);
+    var qMatch = outerHash.match(/\$?NAMESPACE=([^&#]+)/i);
+    var detectedNs = (nsMatch && nsMatch[1]) || (qMatch && qMatch[1]);
+    if (detectedNs) {
+      var nsUp = decodeURIComponent(detectedNs).toUpperCase();
+      if (/^[A-Z][A-Z0-9_-]*$/.test(nsUp) && nsUp !== namespace) {
+        namespace = nsUp;
+        nsLower = namespace.toLowerCase();
+        sources = buildSources();
+        legacyBase = sources.portal.frameSrc.split('#')[0];
+        var nsEl = document.getElementById('ic-header-ns-label');
+        if (nsEl) nsEl.textContent = namespace;
+        if (window._cc) {
+          window._cc.currentNamespace = namespace;
+          window._cc._apiNamespace = namespace;
+        }
+        try { sessionStorage.setItem('interclaw-namespace', namespace); } catch(_) {}
+        var tabLinks = document.querySelectorAll('#interclaw-header .ic-header-tab');
+        for (var i = 0; i < tabLinks.length; i++) {
+          var href = tabLinks[i].getAttribute('href');
+          if (href) tabLinks[i].setAttribute('href', swapNamespaceInUrl(href, namespace));
+        }
+      }
+    }
+  }
+
+  // Fire on iframe load AND on every hashchange inside the iframe, plus
+  // a fallback poll for Angular pushState/SMP cases we can't hook directly.
+  function wirePortalUrlMirror() {
+    var frame = document.getElementById('shell-iframe-portal');
+    if (!frame) return;
+    frame.addEventListener('load', function() {
+      mirrorPortalUrlToOuter();
+      try {
+        var iwin = frame.contentWindow;
+        iwin.addEventListener('hashchange', mirrorPortalUrlToOuter);
+        iwin.addEventListener('popstate', mirrorPortalUrlToOuter);
+      } catch (e) { /* cross-origin */ }
+    });
+  }
+
+  // Belt-and-braces poll: catches Angular pushState (no event fires in the
+  // parent) and cross-origin iframe states where we can't hook events.
+  setInterval(mirrorPortalUrlToOuter, 400);
+  wirePortalUrlMirror();
+
   // ── Chat-mode hash sync ──
   // When the user clicks the "Chat" tab the header toggles `body.ic-chat-mode`
   // (expands the chatbot sidebar to full width and hides the workspace). The
@@ -506,7 +606,7 @@
   function writeChatModeHash() {
     var inChatMode = document.body.classList.contains('ic-chat-mode');
     if (inChatMode) {
-      var target = '#/chat?NAMESPACE=' + namespace;
+      var target = '#/chat';
       if (window.location.hash !== target) {
         history.replaceState(null, '', window.location.pathname + window.location.search + target);
       }
@@ -607,6 +707,20 @@
     if (/^#\/chat($|[?&])/.test(h)) {
       document.body.classList.add('ic-chat-mode');
     }
+    // Drop any `$NAMESPACE=` / `NAMESPACE=` query on the outer URL. The
+    // zen hash inside carries it natively — keeping a duplicate on the
+    // top-level search string only produces drift when namespaces change.
+    try {
+      var loc = window.location;
+      if (/[?&]\$?NAMESPACE=/.test(loc.search)) {
+        var cleaned = loc.search
+          .replace(/[?&]\$?NAMESPACE=[^&#]*/g, '')
+          .replace(/^&/, '?')
+          .replace(/^$/, '');
+        if (cleaned === '?' || cleaned === '&') cleaned = '';
+        history.replaceState(null, '', loc.pathname + cleaned + loc.hash);
+      }
+    } catch (bootUrlErr) { /* non-critical */ }
     preloadAllIframes();
     wireIframeHashSync();
     var restored = restoreFromOuterHash();

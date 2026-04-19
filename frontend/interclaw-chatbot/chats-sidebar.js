@@ -684,8 +684,14 @@
         cc.sessionId = chat.id;
         cc.sessionReady = true;
         // If the chat's bridge is still streaming on the server, attach to
-        // it so the live events render into this reopened pane.
+        // it so the live events render into this reopened pane. Pre-seed
+        // the thinking-bar timer from the server's turnStartedAt so the
+        // "Thinking · 42s" label reflects the true age of the still-running
+        // turn instead of "0s" until the first usage event lands.
         if (chat.status === 'running' && chat.bridgeId && cc.attachBridge) {
+          if (+chat.turnStartedAt > 0) {
+            cc._resumeTurnStartedAt = +chat.turnStartedAt;
+          }
           cc.attachBridge(chat.bridgeId, +chat.lastSeq || 0);
         }
       })
