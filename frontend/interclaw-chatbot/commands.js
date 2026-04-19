@@ -240,7 +240,27 @@
         } else if (cc.isGenerating) {
           cc.stopGeneration();
         } else {
+          // Preserve mode-panel visibility across send. sendMessage (or the
+          // layout transitions it triggers) can collapse the panel; remember
+          // the state and re-apply it after send returns so the configuration
+          // options stay open.
+          var modePanel = document.getElementById('chatbot-mode-panel');
+          var modeDivider = document.getElementById('chatbot-mode-panel-divider');
+          var modeLabel = document.getElementById('chatbot-mode-label');
+          var wasOpen = !!(modePanel && modePanel.classList.contains('visible'));
           cc.sendMessage();
+          if (wasOpen) {
+            var restoreModePanel = function() {
+              if (modePanel) modePanel.classList.add('visible');
+              if (modeDivider) modeDivider.classList.add('visible');
+              if (modeLabel) modeLabel.classList.add('active');
+              _modePanelOpen = true;
+            };
+            // Run immediately (covers sync closes) and again on the next tick
+            // (covers any closes queued inside sendMessage's async body).
+            restoreModePanel();
+            setTimeout(restoreModePanel, 0);
+          }
         }
       }
       if (e.key === 'Escape' && cc.isGenerating) {

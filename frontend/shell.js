@@ -59,7 +59,7 @@
         // Cache-bust v: bump when skills-editor/index.html changes so the
         // iframe doesn't serve a stale copy out of the disk cache after a
         // deploy. The browser keyed cache on URL so this is the only knob.
-        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=3'
+        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=4'
       }
     };
   }
@@ -277,6 +277,17 @@
   function syncOuterHashFromIframe() {
     clearTimeout(syncTimer);
     syncTimer = setTimeout(function() {
+      // Chat mode owns the URL — keep it at `#/chat?NAMESPACE=…` and
+      // ignore any iframe hashchanges that would otherwise rewrite it
+      // to `#/portal/…` (the portal iframe stays mounted behind the
+      // chat but its hash must not leak into the outer URL).
+      if (document.body.classList.contains('ic-chat-mode')) {
+        var chatHash = '#/chat?NAMESPACE=' + namespace;
+        if (window.location.hash !== chatHash) {
+          history.replaceState(null, '', window.location.pathname + window.location.search + chatHash);
+        }
+        return;
+      }
       var innerHash = '';
       if (currentTab === 'portal' || currentTab === 'traces') {
         // Re-derive tab from the iframe URL so deep state like VisualTrace
@@ -399,8 +410,10 @@
     var rest = m[2] || '';
 
     if (tabId === 'chat') {
-      activateTab(DEFAULT_TAB);
+      // Flip chat mode ON FIRST so the subsequent syncOuterHashFromIframe
+      // fired by activateTab short-circuits and leaves `#/chat` intact.
       document.body.classList.add('ic-chat-mode');
+      activateTab(DEFAULT_TAB);
       return true;
     }
 
@@ -423,6 +436,14 @@
 
   // ── Boot ──
   function boot() {
+    // Set chat-mode BEFORE iframes start loading so the hash-sync that
+    // fires on the first iframe `load` won't clobber `#/chat` with
+    // `#/portal/…`. We only need a cheap regex here; the full restore
+    // happens below.
+    var h = window.location.hash || '';
+    if (/^#\/chat($|[?&])/.test(h)) {
+      document.body.classList.add('ic-chat-mode');
+    }
     preloadAllIframes();
     wireIframeHashSync();
     var restored = restoreFromOuterHash();

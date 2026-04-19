@@ -25,7 +25,7 @@
   var chatsLink = document.createElement('link');
   chatsLink.rel = 'stylesheet';
   chatsLink.id = 'interclaw-chats-sidebar-styles';
-  chatsLink.href = basePath + 'chats-sidebar.css?v=5';
+  chatsLink.href = basePath + 'chats-sidebar.css?v=6';
   document.head.appendChild(chatsLink);
 
   // ChatGPT-inspired light theme — loaded LAST so it overrides chatbot.css
@@ -67,7 +67,7 @@
   ];
 
   // Cache-busting version — bump this to force-reload all modules
-  var MODULE_VERSION = 25;
+  var MODULE_VERSION = 26;
 
   function loadNext(i) {
     if (i >= modules.length) {
