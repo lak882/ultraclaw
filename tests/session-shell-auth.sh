@@ -209,6 +209,36 @@ else
   fail "shell.js exposes window._interclawShell.openInTab"
 fi
 
+# Chat mode must have its own URL. When the header toggles `ic-chat-mode`
+# on <body>, the shell writes `#/chat` into the outer URL so the expanded
+# chat view is shareable. Outer hash changes (back/forward, manual paste)
+# must toggle chat mode back into sync.
+if echo "$js" | grep -q "writeChatModeHash\|ic-chat-mode" && echo "$js" | grep -q "MutationObserver"; then
+  pass "shell.js observes ic-chat-mode and writes #/chat"
+else
+  fail "shell.js observes ic-chat-mode and writes #/chat"
+fi
+if echo "$js" | grep -qE "hashchange.*function|addEventListener\('hashchange'"; then
+  pass "shell.js listens for hashchange to re-sync chat mode"
+else
+  fail "shell.js listens for hashchange to re-sync chat mode"
+fi
+if echo "$js" | grep -q "#/chat"; then
+  pass "shell.js writes #/chat hash"
+else
+  fail "shell.js writes #/chat hash"
+fi
+
+# Clicking a workspace tab must exit chat mode. Because the shell uses
+# stopImmediatePropagation, the header's chat-mode cleanup doesn't run —
+# the shell has to own the removal itself. Otherwise URL says #/portal
+# but the screen still shows the full-width expanded chat.
+if echo "$js" | grep -A15 "window.addEventListener('click'" | grep -q "classList.remove('ic-chat-mode')"; then
+  pass "shell.js removes ic-chat-mode on workspace tab click"
+else
+  fail "shell.js removes ic-chat-mode on workspace tab click"
+fi
+
 # ── Shell-4 ─────────────────────────────────────────────────────────────
 section "Shell-4: shell.js auth gate"
 

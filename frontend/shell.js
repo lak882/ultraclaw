@@ -146,6 +146,12 @@
     e.preventDefault();
     e.stopImmediatePropagation();
 
+    // Clicking a workspace tab must exit chat mode — the header owns that
+    // class toggle, but stopImmediatePropagation above keeps its handler
+    // from running. We have to do it here or the user stays in expanded
+    // chat view even though the URL says they're on Portal/Traces/Skills.
+    document.body.classList.remove('ic-chat-mode');
+
     if (tabId === 'traces') {
       // Traces reuses the portal iframe — navigate it to MessageViewer and
       // activate 'traces' so the tab lights up.
@@ -247,10 +253,15 @@
   // Outer URL shape: #/<tab>[<inner-hash-without-leading-slash>]?NAMESPACE=<ns>
   //   #/chat?NAMESPACE=INTERCLAW
   //   #/portal/csp/.../EnsPortal.ProductionConfig.zen?$NAMESPACE=INTERCLAW
-  //   #/traces/csp/.../EnsPortal.MessageViewer.zen?$NAMESPACE=INTERCLAW
+  //   #/portal/csp/.../EnsPortal.MessageViewer.zen?$NAMESPACE=INTERCLAW   (Traces)
   //   #/skills?NAMESPACE=INTERCLAW
+  // 'traces' is not a URL-level tab — it's a Zen page inside /portal.
+  // The header highlight still shows "Traces" when the portal iframe is on
+  // MessageViewer/VisualTrace, but the outer URL stays on /portal.
   function buildOuterHash(tabId, innerHash) {
-    var h = '#/' + tabId;
+    // Collapse the traces alias for URL purposes.
+    var outerTab = (tabId === 'traces') ? 'portal' : tabId;
+    var h = '#/' + outerTab;
     if (innerHash && innerHash.indexOf('#') === 0) innerHash = innerHash.substring(1);
     if (innerHash) h += innerHash;
     if (h.indexOf('NAMESPACE=') === -1) {
@@ -310,13 +321,61 @@
     syncOuterHashFromIframe();
   };
 
+  // ── Chat-mode hash sync ──
+  // When the user clicks the "Chat" tab the header toggles `body.ic-chat-mode`
+  // (expands the chatbot sidebar to full width and hides the workspace). The
+  // URL should reflect that so the expanded view is a real, shareable URL:
+  //   #/chat[?NAMESPACE=...]   when expanded
+  //   #/<previous-tab>...      when collapsed
+  // We watch the class list on body and write the appropriate outer hash
+  // instead of having to teach the header about the hash scheme.
+  var lastChatModeHash = null;
+  function writeChatModeHash() {
+    var inChatMode = document.body.classList.contains('ic-chat-mode');
+    if (inChatMode) {
+      var target = '#/chat?NAMESPACE=' + namespace;
+      if (window.location.hash !== target) {
+        history.replaceState(null, '', window.location.pathname + window.location.search + target);
+      }
+      lastChatModeHash = target;
+    } else if (lastChatModeHash !== null) {
+      // We owned the hash while chat mode was on; now re-derive it from the
+      // actual tab state so collapsing returns the user to a URL that
+      // matches what they're looking at.
+      lastChatModeHash = null;
+      syncOuterHashFromIframe();
+    }
+  }
+  new MutationObserver(writeChatModeHash)
+    .observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+  // When the user edits the hash directly (bookmark, paste, back/forward),
+  // re-run the restore logic so `#/chat` re-enters chat mode and `#/portal`
+  // (etc.) leaves it. We guard against our own replaceState by only
+  // reacting when the hash doesn't match what we'd write ourselves.
+  window.addEventListener('hashchange', function() {
+    var h = window.location.hash || '';
+    var wantChat = /^#\/chat($|[?&])/.test(h);
+    var isChat = document.body.classList.contains('ic-chat-mode');
+    if (wantChat && !isChat) {
+      document.body.classList.add('ic-chat-mode');
+    } else if (!wantChat && isChat) {
+      document.body.classList.remove('ic-chat-mode');
+    }
+    // Also re-apply any tab/zen hash after the mode flip.
+    if (!wantChat) {
+      restoreFromOuterHash();
+    }
+  });
+
   // ── Restore iframe hash from outer URL on load ──
   // Accepted forms:
   //   #/chat[?NAMESPACE=...]
-  //   #/portal[/csp/.../EnsPortal....][?$NAMESPACE=...]
-  //   #/traces[/csp/.../EnsPortal.MessageViewer.zen][?$NAMESPACE=...]
+  //   #/portal[/csp/.../EnsPortal....][?$NAMESPACE=...]         — Production, Traces,
+  //                                                                anything in the portal
   //   #/skills[?NAMESPACE=...]
-  //   Legacy bare `#/csp/...` → infer portal or traces.
+  //   Legacy: `#/traces/...` and bare `#/csp/...` still load into the portal
+  //   iframe (the Traces tab is a zen page now, not its own URL segment).
   function restoreFromOuterHash() {
     var h = window.location.hash || '';
     if (!h) return false;

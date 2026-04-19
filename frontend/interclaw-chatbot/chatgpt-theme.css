@@ -503,77 +503,23 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
 }
 
 /* ========================================================================
-   Chatbot panel (right side): force white background + black text, and
-   kill the leftmost grey 1px line that `chatbot.css::before` draws.
+   Chatbot panel (right side): color palette reverted to the pre-session
+   baseline (chatbot.css). We keep only two structural, non-color fixes:
+     1. The resize handle stays visible in full-width chat mode.
+     2. The 1px left-edge gray stripe aligns flush under the 2px blue
+        top border instead of leaving a hairline gap.
    ======================================================================== */
-#chatbot-sidebar {
-  background: #ffffff !important;
-  color: #0d0d0d !important;
-}
-/* Keep the chat-panel resize handle visible in chat mode (the default
-   shared-header rule hides it — restore it so the user can drag the
-   left edge of the chat panel). */
-body.ic-chat-mode #chatbot-sidebar .chatbot-resize-handle {
-  display: block !important;
-}
-/* Keep the 1px gray left-edge stripe. Absolute inside a box with
-   border-top: 2px resolves against the padding-box, so top: 0 sits
-   flush against the blue stripe with no 1-2px gap. */
+/* In chat mode the chats rail already carries its own resize handle on
+   its right edge. The chat panel's left-edge handle would sit directly
+   on top of that boundary, showing two strips side-by-side. Defer to the
+   base rule in interclaw-header.css that hides the chat-panel handle in
+   chat mode. */
 #chatbot-sidebar::before {
-  display: block !important;
   top: 0 !important;
-  background: var(--v0-alpha-400) !important;
-  width: 1px !important;
-}
-#chatbot-sidebar .chatbot-content {
-  background: #ffffff !important;
-}
-/* Assistant-message text + system/error messages — force black. */
-#chatbot-sidebar .chatbot-message {
-  color: #0d0d0d !important;
-}
-#chatbot-sidebar .chatbot-message .msg-content,
-#chatbot-sidebar .chatbot-message .msg-content * {
-  color: #0d0d0d !important;
-}
-/* System messages (centered, muted) keep a slightly softer tone but still dark */
-#chatbot-sidebar .chatbot-message-system {
-  color: var(--v0-gray-900) !important;
-}
-/* Timestamps, thinking/usage bars — muted but readable */
-#chatbot-sidebar .msg-timestamp,
-#chatbot-sidebar .bubble-thinking-bar,
-#chatbot-sidebar .bubble-usage-bar {
-  color: var(--v0-gray-900) !important;
-}
-/* Input area */
-#chatbot-sidebar .chatbot-input-container {
-  background: #ffffff !important;
-}
-#chatbot-sidebar .chatbot-input-wrapper {
-  background: #ffffff !important;
-  border-color: var(--v0-alpha-400) !important;
-}
-#chatbot-sidebar .chatbot-input {
-  color: #0d0d0d !important;
-  background: transparent !important;
-}
-#chatbot-sidebar .chatbot-input::placeholder {
-  color: var(--v0-gray-600) !important;
-}
-/* User messages keep the grey pill but with black text */
-#chatbot-sidebar .chatbot-message-user {
-  color: #0d0d0d !important;
-}
-/* Reasoning steps panel */
-#chatbot-sidebar .reasoning-step-label,
-#chatbot-sidebar .reasoning-toggle {
-  color: #0d0d0d !important;
 }
 
-/* Selection highlight */
-#ic-chats-sidebar ::selection,
-#chatbot-sidebar ::selection {
+/* Selection highlight inside the chats rail only. */
+#ic-chats-sidebar ::selection {
   background: rgba(59, 59, 148, 0.18);
   color: var(--v0-gray-1000);
 }
