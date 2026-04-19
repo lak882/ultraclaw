@@ -206,12 +206,14 @@ ClassMethod DownloadRepo(
 	set tarSize = ##class(%File).GetFileSize(tarFile)
 	write "  Extracting tarball (", tarSize, " bytes)...",!
 
-	// Shell out to tar — standard on every IRIS Linux/container and on Windows 10+
-	set cmd = "tar -xzf '" _ tarFile _ "' -C '" _ extractDir _ "'"
-	set rc = $zf(-1, cmd)
-	if rc '= 0 {
-		return $$$ERROR($$$GeneralError, "tar failed with exit code " _ rc)
+	// Pure-ObjectScript extraction via IPM (installed by step 2).
+	// Cross-platform: no dependency on a shell `tar` binary, so this works
+	// on Windows/Linux/Docker uniformly.
+	if '$$$comClassDefined("%IPM.General.Archive") {
+		return $$$ERROR($$$GeneralError, "%IPM.General.Archive not available — IPM install in step 2 may have failed")
 	}
+	set sc = ##class(%IPM.General.Archive).Extract(tarFile, extractDir)
+	return:$$$ISERR(sc) sc
 
 	// codeload tarballs always extract to a single <repo>-<ref>/ directory
 	set guess = extractDir _ pRepo _ "-" _ pRef _ "/"
