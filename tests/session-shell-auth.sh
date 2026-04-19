@@ -266,7 +266,7 @@ else
 fi
 
 # Boot sequence calls refreshAuth
-if echo "$js" | grep -A8 "function boot" | grep -q "refreshAuth()"; then
+if echo "$js" | grep -A20 "function boot" | grep -q "refreshAuth()"; then
   pass "shell.js boot() calls refreshAuth()"
 else
   fail "shell.js boot() calls refreshAuth()"

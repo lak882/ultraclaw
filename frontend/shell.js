@@ -59,7 +59,7 @@
         // Cache-bust v: bump when skills-editor/index.html changes so the
         // iframe doesn't serve a stale copy out of the disk cache after a
         // deploy. The browser keyed cache on URL so this is the only knob.
-        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=4'
+        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=5'
       }
     };
   }
