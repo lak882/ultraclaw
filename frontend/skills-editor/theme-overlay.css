@@ -33,11 +33,14 @@
 }
 
 /* ========================================================================
-   Page surface
+   Page surface — scope strictly to the skills-editor root so we don't
+   accidentally restyle anything the host shell injects around us (the
+   chatbot sidebar, the header tab strip, etc.).
    ======================================================================== */
-html, body {
+#app-root {
   background: var(--ic-se-bg-100) !important;
   font-family: var(--ic-se-font) !important;
+  color: var(--ic-se-gray-1000) !important;
 }
 
 /* ========================================================================

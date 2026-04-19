@@ -181,10 +181,86 @@
   window.addEventListener('focus', refreshAuth);
   window.addEventListener('interclaw-auth-changed', refreshAuth);
 
+  // ── Hash sync: iframe hash → outer window URL ──
+  // When the active iframe's URL changes (user clicks around inside the
+  // Portal, Traces, or Skills tab), mirror the current hash up to the
+  // outer window so deep-linking and refresh work. Format:
+  //   /index.html#<tab>:<iframe-hash>
+  // We only sync for the active tab so background iframes can navigate
+  // freely without clobbering the shell URL.
+  var syncTimer = null;
+  function syncOuterHashFromIframe() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function() {
+      var frame = document.getElementById('shell-iframe-' + currentTab);
+      if (!frame || !frame.contentWindow) return;
+      try {
+        var innerHash = frame.contentWindow.location.hash || '';
+        // Only write if we actually produce something meaningful.
+        var outerHash = '#' + currentTab + ':' + innerHash.replace(/^#/, '');
+        if (window.location.hash !== outerHash) {
+          history.replaceState(null, '', window.location.pathname + window.location.search + outerHash);
+        }
+      } catch (e) {
+        // Cross-origin — legacy-ui's iframe might be same-origin but a
+        // SMP page it loads could be cross-origin. Ignore and bail.
+      }
+    }, 120);
+  }
+
+  function wireIframeHashSync() {
+    var frames = document.querySelectorAll('.shell-iframe');
+    for (var i = 0; i < frames.length; i++) {
+      (function(frame) {
+        frame.addEventListener('load', function() {
+          if (frame.dataset.tab === currentTab) syncOuterHashFromIframe();
+          // Also listen to hashchange inside the iframe so SPA-style
+          // navigation within the active tab bubbles up.
+          try {
+            frame.contentWindow.addEventListener('hashchange', function() {
+              if (frame.dataset.tab === currentTab) syncOuterHashFromIframe();
+            });
+          } catch (e) {}
+        });
+      })(frames[i]);
+    }
+    // After activateTab, run one sync so the outer URL matches immediately.
+    var origActivate = activateTab;
+    window._interclawShell && (window._interclawShell.activateTab = function(tabId) {
+      origActivate(tabId);
+      syncOuterHashFromIframe();
+    });
+  }
+
+  // ── Restore iframe hash from outer URL on load ──
+  // If the user lands on /index.html#portal:/csp/.../EnsPortal... we should
+  // activate the right tab and push the hash suffix into the iframe.
+  function restoreFromOuterHash() {
+    var h = window.location.hash || '';
+    if (!h || h.indexOf(':') === -1) return;
+    // Format: #tab:inner-hash
+    var colonIdx = h.indexOf(':');
+    var tabId = h.substring(1, colonIdx);
+    var innerHash = h.substring(colonIdx + 1);
+    if (!VALID_TABS[tabId]) return;
+    var frame = document.getElementById('shell-iframe-' + tabId);
+    if (!frame) return;
+    // Swap the hash suffix on the frame's built source.
+    var base = sources[tabId];
+    var baseNoHash = base.split('#')[0];
+    frame.src = baseNoHash + '#' + innerHash;
+    activateTab(tabId);
+  }
+
   // ── Boot ──
   function boot() {
     preloadAllIframes();
-    activateTab(DEFAULT_TAB);
+    wireIframeHashSync();
+    // If the user loaded a deep link (/index.html#portal:/csp/...), restore
+    // the target tab + iframe hash before the default activateTab fires.
+    var hadDeepLink = window.location.hash && window.location.hash.indexOf(':') !== -1;
+    if (hadDeepLink) restoreFromOuterHash();
+    else activateTab(DEFAULT_TAB);
     refreshAuth();
   }
 

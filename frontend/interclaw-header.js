@@ -615,6 +615,21 @@
             window.location.hash = href.substring(hashIdx + 1);
           }
         }
+        return;
+      }
+
+      // Fallback: from the chat page, Portal/Traces/Skills tabs must leave
+      // the chat page entirely. If something upstream already called
+      // preventDefault (overlay z-index race, stopImmediatePropagation from
+      // another listener, etc.) the browser won't navigate, so we force
+      // window.location to the tab's href ourselves.
+      if (_isChatPage && (tabId === 'portal' || tabId === 'traces' || tabId === 'skills')) {
+        var navHref = tab.getAttribute('href');
+        if (navHref) {
+          // Guard: defer to next tick so a concurrent preventDefault cannot
+          // re-hijack the already-in-flight navigation.
+          setTimeout(function() { window.location.href = navHref; }, 0);
+        }
       }
     });
   }

@@ -37,8 +37,11 @@ body.ic-chat-mode #chatbot-sidebar {
 
 /* Collapsed state: hide the rail, release the chat panel back to full width,
    and let the floating reopen pill show. JS (chats-sidebar.js) toggles
-   body.ic-chats-collapsed and persists the flag in localStorage. */
-body.ic-chats-collapsed #ic-chats-sidebar { display: none; }
+   body.ic-chats-collapsed and persists the flag in localStorage.
+   Every rule is scoped to `body.ic-chat-mode` so a stale collapsed flag
+   lingering in localStorage from another page has zero effect outside
+   the chat rail. */
+body.ic-chat-mode.ic-chats-collapsed #ic-chats-sidebar { display: none; }
 body.ic-chat-mode.ic-chats-collapsed #chatbot-sidebar {
   left: 0 !important;
   width: 100% !important;

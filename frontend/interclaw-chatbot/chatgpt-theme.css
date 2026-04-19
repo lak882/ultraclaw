@@ -205,8 +205,20 @@
   color: var(--v0-gray-600) !important;
 }
 #ic-chats-sidebar .ic-chats-search-input:focus {
-  border-color: var(--v0-accent) !important;
-  box-shadow: 0 0 0 3px rgba(59, 59, 148, 0.18) !important;
+  border-color: var(--v0-alpha-500) !important;
+  box-shadow: none !important;
+}
+/* Kill the system focus/outline ring on the search input — the user wants
+   no accent highlight when selected. */
+#ic-chats-sidebar .ic-chats-search-input:focus,
+#ic-chats-sidebar .ic-chats-search-input:focus-visible,
+#ic-chats-sidebar .ic-chats-search-input:focus-within {
+  outline: none !important;
+}
+/* Remove browser-native search input cancel button tint change on focus */
+#ic-chats-sidebar .ic-chats-search-input::selection {
+  background: var(--v0-alpha-400);
+  color: inherit;
 }
 #ic-chats-sidebar .ic-chats-search-input::-webkit-search-cancel-button {
   -webkit-appearance: none;
@@ -384,8 +396,154 @@
   line-height: 1.5 !important;
 }
 
+/* Leading star badge on favorited rows (outside the action menu) */
+#ic-chats-sidebar .ic-chats-item[data-favorite="true"] {
+  padding-left: 22px !important;
+}
+#ic-chats-sidebar .ic-chats-item-star-badge {
+  position: absolute !important;
+  left: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 10px !important;
+  height: 10px !important;
+  color: var(--v0-accent) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: none !important;
+}
+#ic-chats-sidebar .ic-chats-item-star-badge svg {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* More-actions button — visible only on row hover/active */
+#ic-chats-sidebar .ic-chats-item-more {
+  opacity: 0 !important;
+  transition: opacity 0.08s ease-out, background 0.1s ease-out, color 0.1s ease-out !important;
+}
+#ic-chats-sidebar .ic-chats-item:hover .ic-chats-item-more,
+#ic-chats-sidebar .ic-chats-item.active .ic-chats-item-more {
+  opacity: 1 !important;
+}
+
+/* ========================================================================
+   Popup menu (3-dot dropdown)
+   ======================================================================== */
+.ic-chats-popup {
+  position: fixed !important;
+  z-index: 10050 !important;
+  background: #ffffff !important;
+  border: 1px solid var(--v0-alpha-500) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+  padding: 4px !important;
+  font-family: var(--v0-font) !important;
+  font-size: 13px !important;
+  color: var(--v0-gray-1000) !important;
+  min-width: 160px !important;
+  user-select: none !important;
+}
+.ic-chats-popup-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 6px 10px !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  border-radius: 6px !important;
+  color: var(--v0-gray-1000) !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  transition: background 0.08s ease-out !important;
+}
+.ic-chats-popup-item:hover {
+  background: var(--v0-alpha-400) !important;
+}
+.ic-chats-popup-item--danger {
+  color: #b3261e !important;
+}
+.ic-chats-popup-item--danger:hover {
+  background: rgba(179, 38, 30, 0.08) !important;
+}
+.ic-chats-popup-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 14px !important;
+  height: 14px !important;
+  color: inherit !important;
+}
+.ic-chats-popup-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* ========================================================================
+   Chatbot panel (right side): force white background + black text, and
+   kill the leftmost grey 1px line that `chatbot.css::before` draws.
+   ======================================================================== */
+#chatbot-sidebar {
+  background: #ffffff !important;
+  color: #0d0d0d !important;
+}
+/* Remove the 1px light-grey vertical line at the left edge of the panel. */
+#chatbot-sidebar::before {
+  display: none !important;
+}
+#chatbot-sidebar .chatbot-content {
+  background: #ffffff !important;
+}
+/* Assistant-message text + system/error messages — force black. */
+#chatbot-sidebar .chatbot-message {
+  color: #0d0d0d !important;
+}
+#chatbot-sidebar .chatbot-message .msg-content,
+#chatbot-sidebar .chatbot-message .msg-content * {
+  color: #0d0d0d !important;
+}
+/* System messages (centered, muted) keep a slightly softer tone but still dark */
+#chatbot-sidebar .chatbot-message-system {
+  color: var(--v0-gray-900) !important;
+}
+/* Timestamps, thinking/usage bars — muted but readable */
+#chatbot-sidebar .msg-timestamp,
+#chatbot-sidebar .bubble-thinking-bar,
+#chatbot-sidebar .bubble-usage-bar {
+  color: var(--v0-gray-900) !important;
+}
+/* Input area */
+#chatbot-sidebar .chatbot-input-container {
+  background: #ffffff !important;
+}
+#chatbot-sidebar .chatbot-input-wrapper {
+  background: #ffffff !important;
+  border-color: var(--v0-alpha-400) !important;
+}
+#chatbot-sidebar .chatbot-input {
+  color: #0d0d0d !important;
+  background: transparent !important;
+}
+#chatbot-sidebar .chatbot-input::placeholder {
+  color: var(--v0-gray-600) !important;
+}
+/* User messages keep the grey pill but with black text */
+#chatbot-sidebar .chatbot-message-user {
+  color: #0d0d0d !important;
+}
+/* Reasoning steps panel */
+#chatbot-sidebar .reasoning-step-label,
+#chatbot-sidebar .reasoning-toggle {
+  color: #0d0d0d !important;
+}
+
 /* Selection highlight */
-#ic-chats-sidebar ::selection {
+#ic-chats-sidebar ::selection,
+#chatbot-sidebar ::selection {
   background: rgba(59, 59, 148, 0.18);
   color: var(--v0-gray-1000);
 }

@@ -56,9 +56,14 @@ for hook in "ic-chats-sidebar" "ic-chats-new" "ic-chats-list" "ic-chats-collapse
   fi
 done
 if grep -q "data-action=\"favorite\"" "$sidebar_js_path"; then
-  pass "sidebar renders favorite star action"
+  pass "sidebar renders favorite action (via popup menu)"
 else
-  fail "sidebar renders favorite star action"
+  fail "sidebar renders favorite action (via popup menu)"
+fi
+if grep -q "cc.openChatMenu" "$sidebar_js_path"; then
+  pass "sidebar defines openChatMenu (3-dot popup)"
+else
+  fail "sidebar defines openChatMenu (3-dot popup)"
 fi
 if grep -q "chatsSearchQuery" "$sidebar_js_path"; then
   pass "sidebar has live search query state"

@@ -15,6 +15,7 @@
   // Filled star for the active-favorite state, outline for the toggle button
   var ICON_STAR_FILLED = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
   var ICON_STAR_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>';
+  var ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
 
   // ── Chat store (M2/M3: server-backed CRUD) ──────────────────────────────
   // Shape: { chats: [{id,title,updatedAt}], activeId, user }
@@ -255,16 +256,12 @@
 
     function renderRow(c) {
       var active = c.id === cc.chatsStore.activeId ? ' active' : '';
-      var starIcon = c.favorite ? ICON_STAR_FILLED : ICON_STAR_OUTLINE;
-      var starTitle = c.favorite ? 'Unfavorite' : 'Favorite';
       return '<div class="ic-chats-item' + active + '" data-chat-id="' + escapeHtml(c.id) +
                    '" data-favorite="' + (c.favorite ? 'true' : 'false') + '" draggable="true">' +
+                (c.favorite ? '<span class="ic-chats-item-star-badge" aria-hidden="true">' + ICON_STAR_FILLED + '</span>' : '') +
                 '<span class="ic-chats-item-title">' + escapeHtml(c.title || 'Untitled') + '</span>' +
                 '<span class="ic-chats-item-actions">' +
-                  '<button class="ic-chats-item-action ic-chats-item-star' + (c.favorite ? ' is-active' : '') +
-                         '" data-action="favorite" title="' + starTitle + '" aria-label="' + starTitle + '">' + starIcon + '</button>' +
-                  '<button class="ic-chats-item-action" data-action="rename" title="Rename" aria-label="Rename">' + ICON_EDIT + '</button>' +
-                  '<button class="ic-chats-item-action" data-action="delete" title="Delete" aria-label="Delete">' + ICON_DELETE + '</button>' +
+                  '<button class="ic-chats-item-action ic-chats-item-more" data-action="more" title="More" aria-label="More actions">' + ICON_MORE + '</button>' +
                 '</span>' +
               '</div>';
     }
@@ -293,11 +290,8 @@
       if (actionBtn) {
         e.stopPropagation();
         var action = actionBtn.getAttribute('data-action');
-        if (action === 'rename') cc.renameChatInline(id, item);
-        else if (action === 'delete') cc.deleteChat(id);
-        else if (action === 'favorite') {
-          var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === id; })[0];
-          cc.setChatFavorite(id, chat ? !chat.favorite : true);
+        if (action === 'more') {
+          cc.openChatMenu(id, item, actionBtn);
         }
         return;
       }
@@ -361,6 +355,80 @@
       if (!group) return;
       cc.setChatFavorite(id, group === 'favorites');
     });
+  };
+
+  // ── Popup menu for per-row actions (Favorite / Rename / Delete) ────────
+  cc.closeChatMenu = function() {
+    var m = document.getElementById('ic-chats-popup');
+    if (m) m.remove();
+    document.removeEventListener('mousedown', cc._chatMenuOutsideHandler, true);
+    document.removeEventListener('keydown', cc._chatMenuKeyHandler, true);
+  };
+
+  cc.openChatMenu = function(id, itemEl, triggerEl) {
+    cc.closeChatMenu();
+    var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === id; })[0];
+    if (!chat) return;
+    var favLabel = chat.favorite ? 'Unfavorite' : 'Favorite';
+    var favIcon = chat.favorite ? ICON_STAR_FILLED : ICON_STAR_OUTLINE;
+
+    var menu = document.createElement('div');
+    menu.id = 'ic-chats-popup';
+    menu.className = 'ic-chats-popup';
+    menu.innerHTML =
+      '<button class="ic-chats-popup-item" data-action="favorite">' +
+        '<span class="ic-chats-popup-icon">' + favIcon + '</span>' + favLabel +
+      '</button>' +
+      '<button class="ic-chats-popup-item" data-action="rename">' +
+        '<span class="ic-chats-popup-icon">' + ICON_EDIT + '</span>Rename' +
+      '</button>' +
+      '<button class="ic-chats-popup-item ic-chats-popup-item--danger" data-action="delete">' +
+        '<span class="ic-chats-popup-icon">' + ICON_DELETE + '</span>Delete' +
+      '</button>';
+    document.body.appendChild(menu);
+
+    // Position to the RIGHT of the triggering dots so the menu spills into
+    // the chat pane instead of back over the row title. Fall back to a
+    // left-anchored layout only when there isn't enough horizontal room.
+    var trig = triggerEl.getBoundingClientRect();
+    var menuW = 168;
+    var gap = 6;
+    var preferredLeft = Math.round(trig.right + gap);
+    if (preferredLeft + menuW + 8 > window.innerWidth) {
+      // Not enough room on the right — flip to the left of the trigger.
+      preferredLeft = Math.max(8, Math.round(trig.left - menuW - gap));
+    }
+    var preferredTop = Math.round(trig.top);
+    // Keep the menu within the viewport vertically.
+    var menuEstH = 3 * 32 + 12; // approx: 3 items × 32px + padding
+    if (preferredTop + menuEstH + 8 > window.innerHeight) {
+      preferredTop = Math.max(8, window.innerHeight - menuEstH - 8);
+    }
+    menu.style.top = preferredTop + 'px';
+    menu.style.left = preferredLeft + 'px';
+    menu.style.minWidth = menuW + 'px';
+
+    menu.addEventListener('click', function(e) {
+      var btn = e.target.closest('.ic-chats-popup-item');
+      if (!btn) return;
+      e.stopPropagation();
+      var a = btn.getAttribute('data-action');
+      cc.closeChatMenu();
+      if (a === 'favorite') cc.setChatFavorite(id, !chat.favorite);
+      else if (a === 'rename') cc.renameChatInline(id, itemEl);
+      else if (a === 'delete') cc.deleteChat(id);
+    });
+
+    cc._chatMenuOutsideHandler = function(e) {
+      if (!menu.contains(e.target) && e.target !== triggerEl) cc.closeChatMenu();
+    };
+    cc._chatMenuKeyHandler = function(e) {
+      if (e.key === 'Escape') cc.closeChatMenu();
+    };
+    setTimeout(function() {
+      document.addEventListener('mousedown', cc._chatMenuOutsideHandler, true);
+      document.addEventListener('keydown', cc._chatMenuKeyHandler, true);
+    }, 0);
   };
 
   // ── Favorite toggle — optimistic update + server PUT ────────────────────
