@@ -54,7 +54,7 @@
    ======================================================================== */
 #ic-chats-sidebar {
   background: var(--v0-bg-100) !important;
-  border-top: 1px solid var(--v0-accent) !important;
+  border-top: 2px solid var(--v0-accent) !important;
   /* Right-side gray divider is drawn by the ::after rule below so it starts
      below the 2px blue top border instead of butting into it. */
   border-right: none !important;
@@ -66,18 +66,27 @@
   padding: 0 !important;
   position: fixed !important;
 }
-/* Right-edge gray divider. Absolute positioning resolves against the
-   padding-box (already below the 2px blue border-top), so `top: 0` here
-   sits flush against the bottom edge of the blue stripe with no gap. */
-#ic-chats-sidebar::after {
-  content: '' !important;
-  position: absolute !important;
-  top: 0 !important;
+/* No separate gray divider — the chatbot-resize-handle placed on the
+   right edge of the chats rail serves as both the draggable resize affordance
+   and the visible edge treatment. */
+
+/* Flip the resize handle to the RIGHT edge when it lives inside the chats
+   rail (the base .chatbot-resize-handle rule anchors it at left:0 for the
+   chat panel). */
+#ic-chats-sidebar .chatbot-resize-handle,
+#ic-chats-resize-handle {
+  left: auto !important;
   right: 0 !important;
-  bottom: 0 !important;
-  width: 1px !important;
-  background: var(--v0-alpha-400) !important;
-  pointer-events: none !important;
+}
+/* Suppress the expandable pull-bar ::after that the base rule shows on
+   hover and while dragging — the chats-rail handle should stay invisible;
+   only the ew-resize cursor hints that the edge is draggable. */
+#ic-chats-resize-handle::after,
+#ic-chats-resize-handle:hover::after,
+body.chatbot-dragging #ic-chats-resize-handle::after {
+  display: none !important;
+  background: transparent !important;
+  height: 0 !important;
 }
 
 /* Light scrollbar */
@@ -395,27 +404,8 @@
   line-height: 1.5 !important;
 }
 
-/* Leading star badge on favorited rows (outside the action menu) */
-#ic-chats-sidebar .ic-chats-item[data-favorite="true"] {
-  padding-left: 22px !important;
-}
-#ic-chats-sidebar .ic-chats-item-star-badge {
-  position: absolute !important;
-  left: 8px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  width: 10px !important;
-  height: 10px !important;
-  color: var(--v0-accent) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  pointer-events: none !important;
-}
-#ic-chats-sidebar .ic-chats-item-star-badge svg {
-  width: 10px !important;
-  height: 10px !important;
-}
+/* No leading indicator on favorited rows — the star toggle lives only in
+   the 3-dot popup menu. */
 
 /* More-actions button — visible only on row hover/active. No background
    fill on its own hover; we don't want the 3-dot button to tint when the
@@ -519,6 +509,12 @@
 #chatbot-sidebar {
   background: #ffffff !important;
   color: #0d0d0d !important;
+}
+/* Keep the chat-panel resize handle visible in chat mode (the default
+   shared-header rule hides it — restore it so the user can drag the
+   left edge of the chat panel). */
+body.ic-chat-mode #chatbot-sidebar .chatbot-resize-handle {
+  display: block !important;
 }
 /* Keep the 1px gray left-edge stripe. Absolute inside a box with
    border-top: 2px resolves against the padding-box, so top: 0 sits

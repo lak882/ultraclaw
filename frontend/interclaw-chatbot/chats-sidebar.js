@@ -158,8 +158,54 @@
         '<span class="ic-chats-search-icon">' + ICON_SEARCH + '</span>' +
         '<input type="search" id="ic-chats-search-input" class="ic-chats-search-input" placeholder="Search chats" autocomplete="off" spellcheck="false">' +
       '</div>' +
-      '<div class="ic-chats-list" id="ic-chats-list"></div>';
+      '<div class="ic-chats-list" id="ic-chats-list"></div>' +
+      // Same chatbot-resize-handle pattern used on the right chat panel:
+      // a 6px-wide invisible drag strip on the sidebar's right edge. Its
+      // ::after draws the visible pull indicator on hover/drag.
+      '<div class="chatbot-resize-handle" id="ic-chats-resize-handle"></div>';
     document.body.appendChild(sidebar);
+
+    // Wire drag-to-resize for the chats rail.
+    (function wireChatsResize() {
+      var handle = document.getElementById('ic-chats-resize-handle');
+      if (!handle) return;
+      var MIN = 180, MAX = 480;
+      var startX = 0, startW = 0, dragging = false;
+
+      function onDown(e) {
+        e.preventDefault();
+        dragging = true;
+        startX = e.clientX;
+        var cs = getComputedStyle(document.documentElement);
+        startW = parseInt(cs.getPropertyValue('--ic-chats-sidebar-width'), 10) || 240;
+        document.body.classList.add('chatbot-dragging');
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+      }
+      function onMove(e) {
+        if (!dragging) return;
+        var newW = Math.max(MIN, Math.min(MAX, startW + (e.clientX - startX)));
+        document.documentElement.style.setProperty('--ic-chats-sidebar-width', newW + 'px');
+      }
+      function onUp() {
+        if (!dragging) return;
+        dragging = false;
+        document.body.classList.remove('chatbot-dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        try {
+          var w = document.documentElement.style.getPropertyValue('--ic-chats-sidebar-width');
+          if (w) localStorage.setItem('ic-chats-sidebar-width', w);
+        } catch (e) {}
+      }
+      handle.addEventListener('mousedown', onDown);
+
+      // Restore previously dragged width.
+      try {
+        var saved = localStorage.getItem('ic-chats-sidebar-width');
+        if (saved) document.documentElement.style.setProperty('--ic-chats-sidebar-width', saved);
+      } catch (e) {}
+    })();
 
     // ── Event wiring ──────────────────────────────────────────────────────
     document.getElementById('ic-chats-new').addEventListener('click', cc.startNewChat);
@@ -240,7 +286,6 @@
       var active = c.id === cc.chatsStore.activeId ? ' active' : '';
       return '<div class="ic-chats-item' + active + '" data-chat-id="' + escapeHtml(c.id) +
                    '" data-favorite="' + (c.favorite ? 'true' : 'false') + '" draggable="true">' +
-                (c.favorite ? '<span class="ic-chats-item-star-badge" aria-hidden="true">' + ICON_STAR_FILLED + '</span>' : '') +
                 '<span class="ic-chats-item-title">' + escapeHtml(c.title || 'Untitled') + '</span>' +
                 '<span class="ic-chats-item-actions">' +
                   '<button class="ic-chats-item-action ic-chats-item-more" data-action="more" title="More" aria-label="More actions">' + ICON_MORE + '</button>' +

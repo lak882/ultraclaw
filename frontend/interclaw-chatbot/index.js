@@ -33,7 +33,7 @@
   var themeLink = document.createElement('link');
   themeLink.rel = 'stylesheet';
   themeLink.id = 'interclaw-chatgpt-theme';
-  themeLink.href = basePath + 'chatgpt-theme.css?v=18';
+  themeLink.href = basePath + 'chatgpt-theme.css?v=26';
   document.head.appendChild(themeLink);
 
   // Load marked.js for markdown rendering
@@ -67,7 +67,7 @@
   ];
 
   // Cache-busting version — bump this to force-reload all modules
-  var MODULE_VERSION = 23;
+  var MODULE_VERSION = 25;
 
   function loadNext(i) {
     if (i >= modules.length) {
