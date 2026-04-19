@@ -140,7 +140,7 @@
   var cssLink = document.createElement('link');
   cssLink.rel = 'stylesheet';
   cssLink.id = 'interclaw-header-styles';
-  cssLink.href = basePath + 'interclaw-header.css?v=6';
+  cssLink.href = basePath + 'interclaw-header.css?v=7';
   document.head.appendChild(cssLink);
 
   // ── Build header HTML ──
@@ -196,6 +196,9 @@
     +     '<div class="ic-header-model-option" data-value="haiku"><span class="model-name">Claude Haiku 4.5</span><span class="model-desc">Fastest responses for simple tasks</span></div>'
     +   '</div>'
     + '</div>'
+    + '<button class="ic-header-reload-btn" id="ic-header-reload-btn" type="button" title="Reload current view">'
+    +   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>'
+    + '</button>'
     + '<span class="ic-header-sep"></span>'
     + '<div class="ic-header-ns-selector" id="ic-header-ns-selector">'
     +   '<button class="ic-header-ns-btn" id="ic-header-ns-btn" type="button">'
@@ -284,6 +287,52 @@
 
     document.addEventListener('click', function() {
       modelDD.classList.remove('open');
+    });
+  })();
+
+  // ── Reload button: reload the active shell iframe when inside the shell,
+  //    otherwise reload the current page. Spin the icon briefly on click. ──
+  (function() {
+    var reloadBtn = document.getElementById('ic-header-reload-btn');
+    if (!reloadBtn) return;
+    reloadBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      reloadBtn.classList.add('spinning');
+      setTimeout(function() { reloadBtn.classList.remove('spinning'); }, 600);
+
+      // Shell context: reload the currently active iframe.
+      var activeIframe = document.querySelector('.shell-iframe.shell-iframe--active');
+      if (activeIframe) {
+        try {
+          // contentWindow.location.reload() preserves the iframe's current URL
+          // (including any in-iframe navigation the user has done), whereas
+          // reassigning src would reset to the initial src.
+          activeIframe.contentWindow.location.reload();
+          return;
+        } catch (err) {
+          // Cross-origin — fall back to re-assigning src
+          var s = activeIframe.src;
+          activeIframe.src = 'about:blank';
+          setTimeout(function() { activeIframe.src = s; }, 0);
+          return;
+        }
+      }
+
+      // Standalone page (legacy-ui wrapper has its own viewer-frame, chat editor, etc.)
+      // Prefer reloading a known inner iframe so state outside (chatbot) is preserved.
+      var viewerFrame = document.getElementById('viewer-frame');
+      if (viewerFrame) {
+        try { viewerFrame.contentWindow.location.reload(); }
+        catch (err) {
+          var s2 = viewerFrame.src;
+          viewerFrame.src = 'about:blank';
+          setTimeout(function() { viewerFrame.src = s2; }, 0);
+        }
+        return;
+      }
+
+      // Last resort: full page reload.
+      window.location.reload();
     });
   })();
 

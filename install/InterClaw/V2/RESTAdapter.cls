@@ -23,6 +23,7 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 <Route Url="/api/chats/:id"  Method="GET"  Call="ChatsGet"/>
 <Route Url="/api/chats/:id"  Method="PUT"  Call="ChatsPut"/>
 <Route Url="/api/chats/:id"  Method="DELETE" Call="ChatsDelete"/>
+<Route Url="/api/portal-urls" Method="GET"  Call="PortalUrls"/>
 </Routes>
 }
 
@@ -324,6 +325,46 @@ ClassMethod Approve() As %Status
     Set %response.ContentType = "application/json"
     Write "{""ok"":true,""note"":""v2 uses model-driven plan mode; /api/approve is a no-op""}"
     Return $$$OK
+}
+
+/// Resolve project root (CWD) the same way InterClaw.REST.Dispatch does, so
+/// both control-plane and chat endpoints read the same config/ directory.
+ClassMethod GetCWD() As %String
+{
+    Set val = $Get(^InterClaw.Config("CWD"))
+    If val '= "" Return val
+    Return ##class(%File).NormalizeDirectory(##class(%File).SubDirectoryName(##class(%File).SubDirectoryName($System.Util.InstallDirectory(), "csp"), "interclaw"))
+}
+
+/// GET /api/portal-urls — serve the curated Management Portal URL catalog
+/// consumed by the chatbot's /goto fuzzy-match fallback (see goto.js).
+/// The JSON is stored in config/portal-urls.json at the project root and
+/// is shipped as a static asset; reading it here keeps the catalog in one
+/// authoritative place instead of duplicating it inside the class.
+ClassMethod PortalUrls() As %Status
+{
+    Set %response.ContentType = "application/json"
+    Set %response.CharSet = "utf-8"
+    Set json = ..ReadPortalUrlsPy(..GetCWD())
+    If json = "" {
+        Set %response.Status = "404 Not Found"
+        Write "{""error"":""portal-urls.json not found"",""entries"":[]}"
+        Return $$$OK
+    }
+    Write json
+    Return $$$OK
+}
+
+ClassMethod ReadPortalUrlsPy(cwd As %String) As %String [ Language = python ]
+{
+    import os
+    try:
+        with open(os.path.join(cwd, "config", "portal-urls.json"), "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""
+    except Exception:
+        return ""
 }
 
 }
