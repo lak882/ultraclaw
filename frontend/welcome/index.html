@@ -405,7 +405,7 @@
           } else if (action === 'startProduction') {
             btn.textContent = 'Starting...';
             btn.disabled = true;
-            fetch(pathPrefix + '/api/interclaw/production/start', {
+            fetch(pathPrefix + '/api/interclaw/api/production/start', {
               method: 'POST', credentials: 'include',
               headers: { 'Content-Type': 'application/json' },
               body: '{}'

@@ -50,6 +50,7 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 <Route Url="/api/skill-index"         Method="GET"   Call="SkillIndex"/>
 <Route Url="/api/skill-file"          Method="GET"   Call="SkillFile"/>
 <Route Url="/api/diagnostics"         Method="GET"   Call="Diagnostics"/>
+<Route Url="/api/production/start"    Method="POST"  Call="StartProduction"/>
 </Routes>
 }
 
@@ -981,6 +982,56 @@ ClassMethod PyProbe() As %String [ Language = python ]
 ClassMethod ProdStateLabel(state As %Integer) As %String
 {
     Return $case(state, 1:"Running", 2:"Stopped", 3:"Suspended", 4:"Troubled", :"Unknown")
+}
+
+/// POST /api/production/start — start the configured production in the install
+/// namespace. Idempotent: if it's already running, returns ok with a hint.
+/// Called by the welcome page's "Start" action button.
+ClassMethod StartProduction() As %Status
+{
+    Set out = ##class(%DynamicObject).%New()
+    Set installNs = $get(^InterClaw.Config("Namespace"), "")
+    Set targetNs = $select(installNs'="":installNs, 1:$namespace)
+    Set ok = 0, msg = "", prodName = "", prodState = 0
+    Try {
+        New $namespace
+        Set $namespace = targetNs
+        // Discover the configured production; prefer the one already bound to
+        // the namespace via Ens.Director. If none is running, fall back to the
+        // %LastProduction global that Ensemble maintains.
+        Set sc = ##class(Ens.Director).GetProductionStatus(.prodName, .prodState)
+        If $$$ISERR(sc) {
+            Set msg = $system.Status.GetErrorText(sc)
+        } ElseIf prodState = 1 {
+            Set ok = 1, msg = "Production already running: "_prodName
+        } Else {
+            If prodName = "" {
+                Set prodName = $get(^Ens.Configuration("csp","LastProduction"))
+            }
+            If prodName = "" {
+                Set msg = "No production configured in "_targetNs
+            } Else {
+                // Recover suspended/troubled first.
+                If prodState = 3 || (prodState = 4) {
+                    Do ##class(Ens.Director).RecoverProduction(30)
+                }
+                Set sc = ##class(Ens.Director).StartProduction(prodName)
+                If $$$ISERR(sc) {
+                    Set msg = $system.Status.GetErrorText(sc)
+                } Else {
+                    Set ok = 1, msg = "Started "_prodName
+                }
+            }
+        }
+    } Catch ex {
+        Set msg = ex.DisplayString()
+    }
+    Do out.%Set("ok", ok, "boolean")
+    Do out.%Set("namespace", targetNs)
+    Do out.%Set("production", prodName)
+    Do out.%Set("message", msg)
+    Do ..WriteJSON(out.%ToJSON())
+    Return $$$OK
 }
 
 ClassMethod UploadPy(cwd As %String, tmpPath As %String, filename As %String) As %String [ Language = python ]

@@ -27,29 +27,40 @@
     return cc._portalCatalogPromise;
   };
 
-  // Score one catalog entry against the query. 0..~3 range: slug/alias
-  // exact match dominates; title/description contains and keyword hits
-  // add fractional bonuses; trigram similarity catches near-misses.
+  // Score one catalog entry against the query. Exact slug/title/alias
+  // matches return immediately with a very high score so "type a slug,
+  // get that slug" is reliable even when sibling entries share keywords
+  // (e.g. "production" vs "production-list"). Below that floor, title
+  // contains and trigram similarity add fractional weight so loose
+  // queries still rank the right entry on top.
   function scoreEntry(entry, queryLower) {
+    if (entry.slug && entry.slug.toLowerCase() === queryLower) return 10;
+    if (entry.title && entry.title.toLowerCase() === queryLower) return 9;
+    var aliases = entry.aliases || [];
+    for (var ai = 0; ai < aliases.length; ai++) {
+      if (aliases[ai].toLowerCase() === queryLower) return 8;
+    }
+
     var score = 0;
     var fields = [entry.slug, entry.title, entry.description];
-    (entry.aliases || []).forEach(function(a) { fields.push(a); });
+    aliases.forEach(function(a) { fields.push(a); });
     (entry.keywords || []).forEach(function(k) { fields.push(k); });
 
-    if (entry.slug && entry.slug.toLowerCase() === queryLower) score += 2.0;
-    if (entry.title && entry.title.toLowerCase() === queryLower) score += 2.0;
-    (entry.aliases || []).forEach(function(a) {
-      if (a.toLowerCase() === queryLower) score += 1.8;
-    });
     (entry.keywords || []).forEach(function(k) {
       if (k.toLowerCase() === queryLower) score += 1.2;
     });
 
+    // Cap per-field containment/trigram contributions so an entry with
+    // many keyword-heavy aliases can't runaway past a more specific hit.
+    var containsFieldsScored = 0;
     for (var i = 0; i < fields.length; i++) {
       if (!fields[i]) continue;
       var f = fields[i].toLowerCase();
-      if (f === queryLower) continue; // already scored
-      if (f.indexOf(queryLower) !== -1) score += 0.4;
+      if (f === queryLower) continue;
+      if (f.indexOf(queryLower) !== -1 && containsFieldsScored < 2) {
+        score += 0.4;
+        containsFieldsScored++;
+      }
       var sim = trigramSimilarity(queryLower, f);
       if (sim > 0.3) score += sim * 0.6;
     }

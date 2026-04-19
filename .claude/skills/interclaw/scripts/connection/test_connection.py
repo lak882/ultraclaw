@@ -8,7 +8,14 @@ import os
 # Ensure imports work regardless of working directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from iris_api import load_servers, build_base_url, make_request, resolve_password
+from iris_api import (
+    build_base_url,
+    get_local_config,
+    load_servers,
+    make_request,
+    resolve_config_path,
+    resolve_password,
+)
 
 
 def test_server(server_name, servers, namespace=None, cli_password=None):
@@ -81,26 +88,62 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Test IRIS Atelier API connectivity")
-    parser.add_argument("--server", "-s", help="Server name from config/servers.json")
+    parser.add_argument("--server", "-s", help="Server name from servers.json (or set IRIS_SERVER)")
     parser.add_argument("--namespace", "-n", help="Namespace to test (optional)")
     parser.add_argument("--password", "-p", help="Password (overrides config, avoids prompt)")
-    parser.add_argument("--config", "-c", help="Path to servers.json (default: config/servers.json)")
+    parser.add_argument("--config", "-c", help="Path to servers.json (default: standard resolution)")
     parser.add_argument("--list", "-l", action="store_true", help="List available servers and exit")
+    parser.add_argument("--show-config", action="store_true",
+                        help="Print resolved config path and effective server, then exit (no network)")
+    parser.add_argument("--local", dest="local", action="store_true", default=True,
+                        help="Localhost host override when using the default entry (default: on)")
+    parser.add_argument("--no-local", dest="local", action="store_false",
+                        help="Keep the configured host instead of overriding to localhost")
 
     args = parser.parse_args()
-    servers = load_servers(args.config)
+
+    resolved_path = resolve_config_path(args.config)
+
+    if args.show_config:
+        print(f"Config path       : {resolved_path or '(none found)'}")
+        env_path = os.environ.get("INTERCLAW_CONFIG")
+        env_server = os.environ.get("IRIS_SERVER")
+        print(f"INTERCLAW_CONFIG  : {env_path or '(unset)'}")
+        print(f"IRIS_SERVER       : {env_server or '(unset)'}")
+        if resolved_path is None:
+            print("No servers.json found. Copy config/servers.example.json to ~/.interclaw/servers.json.")
+            sys.exit(1)
+        try:
+            cfg, name = get_local_config(args.config, local_only=args.local)
+        except Exception as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
+        print(f"Effective server  : {name}")
+        print(f"Effective base URL: {build_base_url(cfg)}")
+        print(f"Username          : {cfg.get('username', '(unset)')}")
+        print(f"Password in config: {'yes' if cfg.get('password') else 'no'}")
+        return
+
+    try:
+        servers = load_servers(args.config)
+    except FileNotFoundError as e:
+        print(f"ERROR: {e}")
+        print("Copy config/servers.example.json to ~/.interclaw/servers.json and edit.")
+        sys.exit(1)
 
     if args.list:
+        print(f"Config: {resolved_path}")
         print("Available servers:")
         for name in servers:
             url = build_base_url(servers[name])
             print(f"  {name}: {url}")
         return
 
-    if not args.server:
-        parser.error("--server is required (unless using --list)")
+    server_name = args.server or os.environ.get("IRIS_SERVER")
+    if not server_name:
+        parser.error("--server required (set IRIS_SERVER, pass --server, or use --list / --show-config)")
 
-    success = test_server(args.server, servers, args.namespace, args.password)
+    success = test_server(server_name, servers, args.namespace, args.password)
     sys.exit(0 if success else 1)
 
 

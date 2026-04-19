@@ -1,0 +1,25 @@
+{
+    "_comment": "Template for local developer use. Copy to ~/.interclaw/servers.json (preferred) or set INTERCLAW_CONFIG to this file. Do not commit filled-in credentials.",
+    "default": "my-laptop",
+    "intersystems.servers": {
+        "my-laptop": {
+            "webServer": {
+                "scheme": "http",
+                "host": "localhost",
+                "port": 52773,
+                "pathPrefix": ""
+            },
+            "username": "superuser",
+            "password": "SYS"
+        },
+        "remote-dev": {
+            "webServer": {
+                "scheme": "http",
+                "host": "vmdev1.iscinternal.com",
+                "port": 80,
+                "pathPrefix": "/interclaw-dev"
+            },
+            "username": "superuser"
+        }
+    }
+}

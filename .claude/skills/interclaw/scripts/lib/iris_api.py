@@ -49,18 +49,52 @@ def set_audit_context(server, namespace):
     _audit_context = {"server": server, "namespace": namespace}
 
 
-def load_servers(config_path=None):
-    """Load server configs from config/servers.json.
+def _candidate_config_paths(config_path=None):
+    """Yield candidate servers.json paths in priority order.
 
-    Walks up from the script directory to find the project root.
-    Returns the dict under "intersystems.servers".
+    Precedence:
+      1. Explicit config_path argument (--config)
+      2. INTERCLAW_CONFIG environment variable
+      3. Repo-local config/servers.json (walked up from this file)
+      4. User-level ~/.interclaw/servers.json override
+
+    The first existing file wins; callers typically pass through
+    resolve_config_path() to collapse this to a single path.
     """
-    if config_path is None:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.abspath(os.path.join(script_dir, "..", "..", "..", "..", ".."))
-        config_path = os.path.join(project_root, "config", "servers.json")
+    if config_path:
+        yield config_path
+        return
+    env_path = os.environ.get("INTERCLAW_CONFIG")
+    if env_path:
+        yield env_path
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(script_dir, "..", "..", "..", "..", ".."))
+    yield os.path.join(project_root, "config", "servers.json")
+    yield os.path.join(os.path.expanduser("~"), ".interclaw", "servers.json")
 
-    with open(config_path) as f:
+
+def resolve_config_path(config_path=None):
+    """Return the first existing servers.json path in the candidate chain, or None."""
+    for candidate in _candidate_config_paths(config_path):
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def load_servers(config_path=None):
+    """Load server configs from the first existing servers.json in the chain.
+
+    See _candidate_config_paths for the precedence order.
+    Returns the dict under "intersystems.servers". Raises FileNotFoundError
+    if no candidate path exists.
+    """
+    resolved = resolve_config_path(config_path)
+    if resolved is None:
+        chain = list(_candidate_config_paths(config_path))
+        raise FileNotFoundError(
+            "No servers.json found. Looked in: " + ", ".join(chain)
+        )
+    with open(resolved) as f:
         data = json.load(f)
     return data.get("intersystems.servers", {})
 
@@ -409,12 +443,14 @@ def parse_atelier_response(body):
     return result.get("content", result)
 
 
-def get_local_config(config_path=None):
-    """Build a localhost server config from the default entry in servers.json.
+def get_local_config(config_path=None, local_only=True):
+    """Build a server config from the default entry (or IRIS_SERVER) in servers.json.
 
-    Reads the "default" field from servers.json, takes that server's config,
-    and overrides the host to localhost. This allows scripts to run without
-    an explicit --server flag while preserving pathPrefix and credentials.
+    Honors environment override IRIS_SERVER when set. When local_only is True,
+    overrides the host to localhost so scripts connect to the IRIS instance on
+    the same machine while preserving pathPrefix and credentials. Set
+    local_only=False to keep the remote host from the config (useful for
+    laptop-to-remote-server workflows).
 
     Returns:
         Tuple of (server_config, server_name).
@@ -422,24 +458,24 @@ def get_local_config(config_path=None):
     try:
         servers_data = load_servers(config_path)
     except Exception:
-        # No servers.json at all: use bare defaults
         return {
             "webServer": {"scheme": "http", "host": "localhost", "port": 80, "pathPrefix": ""},
             "username": "superuser",
             "password": "SYS",
         }, "localhost"
 
-    # Find the default server name from the raw JSON (load_servers strips it)
-    if config_path is None:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.abspath(os.path.join(script_dir, "..", "..", "..", "..", ".."))
-        config_path = os.path.join(project_root, "config", "servers.json")
-    try:
-        with open(config_path) as f:
-            raw = json.load(f)
-        default_name = raw.get("default", "")
-    except Exception:
-        default_name = ""
+    resolved_path = resolve_config_path(config_path)
+    env_server = os.environ.get("IRIS_SERVER")
+    default_name = ""
+    if env_server and env_server in servers_data:
+        default_name = env_server
+    else:
+        try:
+            with open(resolved_path) as f:
+                raw = json.load(f)
+            default_name = raw.get("default", "")
+        except Exception:
+            default_name = ""
 
     if default_name and default_name in servers_data:
         server_config = servers_data[default_name]
@@ -453,10 +489,10 @@ def get_local_config(config_path=None):
             "password": "SYS",
         }, "localhost"
 
-    # Override host to localhost for local connections
     import copy
     server_config = copy.deepcopy(server_config)
-    server_config["webServer"]["host"] = "localhost"
+    if local_only:
+        server_config["webServer"]["host"] = "localhost"
 
     return server_config, default_name
 
@@ -473,16 +509,16 @@ def get_server_and_creds(args):
     Raises:
         SystemExit: If the server is not found in config.
     """
-    server_name = getattr(args, "server", None)
+    server_name = getattr(args, "server", None) or os.environ.get("IRIS_SERVER")
 
     if server_name is None:
-        # No --server specified: use localhost via IRIS globals
-        server_config, server_name = get_local_config()
+        # No --server and no IRIS_SERVER: use localhost with the default entry
+        server_config, server_name = get_local_config(getattr(args, "config", None))
     else:
-        # Explicit --server: resolve from servers.json (backward compat)
+        # Explicit server name (flag or env): resolve from servers.json, keep host
         servers = load_servers(getattr(args, "config", None))
         if server_name not in servers:
-            print(f"ERROR: Server '{server_name}' not found in config/servers.json")
+            print(f"ERROR: Server '{server_name}' not found in servers.json")
             print(f"Available servers: {', '.join(servers.keys())}")
             sys.exit(1)
         server_config = servers[server_name]
