@@ -42,6 +42,14 @@
       .catch(function(err) { console.warn('[interclaw] chats list failed:', err); });
   };
 
+  // Periodic sidebar refresh. Picks up status changes from chats started
+  // in other tabs/windows (the dot lights up there too), and catches
+  // completion timing that the bridgeSend's finally-refresh might miss.
+  // Cheap: a single GET /api/chats every 5s while the page is open.
+  setInterval(function() {
+    try { cc.refreshChatsList(); } catch (_) {}
+  }, 5000);
+
   // ── Persistence (M3) ────────────────────────────────────────────────────
   // The chat id == cc.sessionId (set by the 'session' event from the
   // backend on the first turn). Before we have a session, we have no id
@@ -172,17 +180,23 @@
     if (!requireUserMessage) return null;
     cc.sessionId = mintChatId();
     cc.chatsStore.activeId = cc.sessionId;
+    writeChatUrl(cc.sessionId);
     return cc.sessionId;
   };
 
   function buildPersistPayload(chatId) {
+    // Messages are now owned by the BP (ChatProcess.OnRequest writes both
+    // user and assistant records on done). The frontend only contributes
+    // metadata: a title on the first turn, and records for retitle.
     var messages = serializeCurrentPane();
     if (!messages.length) return null;
     var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
-    var body = { messages: messages };
+    var body = {};
     if (!chat || !chat.title || chat.title === 'Untitled') {
       body.title = deriveTitle(messages);
     }
+    // No-op payload? Skip the PUT entirely.
+    if (!Object.keys(body).length) return null;
     return { body: body, messages: messages };
   }
 
@@ -351,7 +365,18 @@
     });
 
     cc.renderChatsSidebar();
-    cc.refreshChatsList();
+    cc.refreshChatsList().then(function() {
+      // If the URL has `#/chat/<id>`, auto-open that chat. Runs once on
+      // first sidebar paint so deep-link reloads land on the right chat.
+      var m = (window.location.hash || '').match(/^#\/chat\/([^?]+)/);
+      if (m && m[1]) {
+        var urlChatId = decodeURIComponent(m[1]);
+        // Verify the id exists in the list before opening — silent no-op
+        // on stale links.
+        var exists = (cc.chatsStore.chats || []).some(function(c) { return c.id === urlChatId; });
+        if (exists && cc.openChat) cc.openChat(urlChatId);
+      }
+    });
   }
 
   // ── Grouping by recency ─────────────────────────────────────────────────
@@ -625,6 +650,7 @@
     cc.sessionReady = false;
     clearMessagesPane();
     cc.renderChatsSidebar();
+    writeChatUrl(null);
     try {
       if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('chatbot-state');
     } catch (e) {}
@@ -641,9 +667,22 @@
   // messages, calls cc.navigateLegacyUi(chat.portalUrl) if set. Keep the
   // restore best-effort: if the referenced component no longer exists, fall
   // back to Production Config.
+  // Write `#/chat/<id>` to the outer URL so the current chat is
+  // deep-linkable and shareable. Uses replaceState to avoid polluting
+  // browser back-button history with every chat switch.
+  function writeChatUrl(id) {
+    try {
+      var target = '#/chat' + (id ? '/' + encodeURIComponent(id) : '');
+      if (window.location.hash !== target) {
+        history.replaceState(null, '', window.location.pathname + window.location.search + target);
+      }
+    } catch (_) {}
+  }
+
   cc.openChat = function(id) {
     cc.chatsStore.activeId = id;
     cc.renderChatsSidebar();
+    writeChatUrl(id);
     // If a stream is currently following a different chat, stop following
     // (the server-side bridge keeps running — we just unhook this tab).
     if (cc.bridgePolling && cc.bridgeAbort) {

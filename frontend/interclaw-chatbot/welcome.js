@@ -159,8 +159,14 @@
       try { await cc.commandsReady; } catch (_) {}
     }
     var chatMessages = document.getElementById('chatbot-content');
+    // Idempotent: if a welcome bubble is already in the pane (from an
+    // earlier initSession / openChat / renderChatDoc call), skip.
+    // Otherwise init paths + reopen stack the greeting multiple times.
+    if (chatMessages && chatMessages.querySelector('.chatbot-welcome-msg')) {
+      return;
+    }
     var msgEl = document.createElement('div');
-    msgEl.className = 'chatbot-message';
+    msgEl.className = 'chatbot-message chatbot-welcome-msg';
     msgEl.innerHTML = '<div class="msg-content"></div>';
     var wrap = document.createElement('div');
     wrap.className = 'chatbot-msg-wrap';

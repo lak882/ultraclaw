@@ -34,6 +34,19 @@
       var startData = await startResp.json();
       cc.currentBridgeId = startData.bridge_id;
       console.log('[bridge] started:', cc.currentBridgeId);
+      // Optimistic: flip the active chat's status to running locally so
+      // the sidebar dot lights up instantly, before the refreshChatsList
+      // fetch returns. The server already wrote status:'running' inside
+      // /api/start so the next refresh will confirm.
+      if (cc.sessionId && cc.chatsStore && cc.chatsStore.chats) {
+        for (var ci = 0; ci < cc.chatsStore.chats.length; ci++) {
+          if (cc.chatsStore.chats[ci].id === cc.sessionId) {
+            cc.chatsStore.chats[ci].status = 'running';
+            break;
+          }
+        }
+        if (cc.renderChatsSidebar) cc.renderChatsSidebar();
+      }
       if (cc.refreshChatsList) cc.refreshChatsList();
 
       var after = 0;

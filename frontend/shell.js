@@ -424,9 +424,12 @@
       // to `#/portal/…` (the portal iframe stays mounted behind the
       // chat but its hash must not leak into the outer URL).
       if (document.body.classList.contains('ic-chat-mode')) {
-        var chatHash = '#/chat';
-        if (window.location.hash !== chatHash) {
-          history.replaceState(null, '', window.location.pathname + window.location.search + chatHash);
+        // Preserve any chat id the chatbot appended as `#/chat/<id>` —
+        // don't collapse back to `#/chat` and wipe the deep-link state.
+        var currentHash = window.location.hash || '';
+        var keep = /^#\/chat(?:\/[^?]+)?/.test(currentHash) ? currentHash : '#/chat';
+        if (window.location.hash !== keep) {
+          history.replaceState(null, '', window.location.pathname + window.location.search + keep);
         }
         return;
       }
@@ -606,7 +609,11 @@
   function writeChatModeHash() {
     var inChatMode = document.body.classList.contains('ic-chat-mode');
     if (inChatMode) {
-      var target = '#/chat';
+      // Preserve any chat-id suffix the chatbot set via history.replaceState.
+      // Without this, flipping into chat mode clobbers `#/chat/<id>` back
+      // to `#/chat` and breaks deep-link reload.
+      var curr = window.location.hash || '';
+      var target = /^#\/chat(?:\/[^?]+)?$/.test(curr) ? curr : '#/chat';
       if (window.location.hash !== target) {
         history.replaceState(null, '', window.location.pathname + window.location.search + target);
       }
@@ -628,15 +635,25 @@
   // reacting when the hash doesn't match what we'd write ourselves.
   window.addEventListener('hashchange', function() {
     var h = window.location.hash || '';
-    var wantChat = /^#\/chat($|[?&])/.test(h);
+    var wantChat = /^#\/chat(\/[^?]+)?($|[?&])/.test(h);
     var isChat = document.body.classList.contains('ic-chat-mode');
     if (wantChat && !isChat) {
       document.body.classList.add('ic-chat-mode');
     } else if (!wantChat && isChat) {
       document.body.classList.remove('ic-chat-mode');
     }
-    // Also re-apply any tab/zen hash after the mode flip.
-    if (!wantChat) {
+    // If chat mode + hash carries a chat id, tell the chatbot to open it.
+    // This makes paste/bookmark/back-forward navigate between chats
+    // without a full page reload.
+    if (wantChat) {
+      var m = h.match(/^#\/chat\/([^?]+)/);
+      if (m && window._cc && window._cc.openChat) {
+        var id = decodeURIComponent(m[1]);
+        if (window._cc.sessionId !== id) {
+          try { window._cc.openChat(id); } catch (_) {}
+        }
+      }
+    } else {
       restoreFromOuterHash();
     }
   });

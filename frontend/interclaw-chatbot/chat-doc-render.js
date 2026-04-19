@@ -162,15 +162,13 @@
   }
 
   // Public: build the entire pane from a doc. Clears existing content first.
-  // Always prepends the live welcome bubble so users see the same greeting
-  // whether they're on a fresh chat or a reopened one.
+  // Does NOT render the welcome bubble — when a user opens a specific
+  // chat they want to see that chat, not a greeting. Welcome belongs on
+  // empty panes only and is handled by initSession.
   cc.renderChatDoc = function(doc) {
     var content = document.getElementById('chatbot-content');
     if (!content) return;
     content.innerHTML = '';
-    if (cc.showWelcomeMessage) {
-      try { cc.showWelcomeMessage(); } catch (_) {}
-    }
     if (!doc || !Array.isArray(doc.turns)) return;
     doc.turns.forEach(function(t) {
       var node = renderTurn(t);
