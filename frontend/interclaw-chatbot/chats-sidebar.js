@@ -649,22 +649,36 @@
     if (cc.bridgePolling && cc.bridgeAbort) {
       try { cc.bridgeAbort.abort(); } catch (_) {}
     }
-    fetch(chatsUrl('/' + encodeURIComponent(id)), { credentials: 'same-origin' })
+    // Phase 1 of the doc-based refactor: prefer the canonical ChatDoc
+    // renderer. It's a pure function of the doc so rehydrate and live
+    // render agree by construction. Fall back to the legacy path if the
+    // endpoint is unavailable or the doc is malformed.
+    var docUrl = (cc.chatApiBase || '/api/interclaw/production') + '/api/chatdoc/' + encodeURIComponent(id);
+    fetch(docUrl, { credentials: 'same-origin' })
       .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(chat) {
-        if (!chat || !chat.messages) return;
-        clearMessagesPane();
-        rehydrateMessages(chat.messages);
-        // Adopt the chat id as the active session so /api/start sends
-        // the right session_id AND subsequent saveState PUTs hit the
-        // same file instead of creating a new one.
-        cc.sessionId = chat.id;
-        cc.sessionReady = true;
-        // If the chat's bridge is still streaming on the server, attach to
-        // it so the live events render into this reopened pane.
-        if (chat.status === 'running' && chat.bridgeId && cc.attachBridge) {
-          cc.attachBridge(chat.bridgeId, +chat.lastSeq || 0);
+      .then(function(doc) {
+        if (doc && Array.isArray(doc.turns) && cc.renderChatDoc) {
+          cc.renderChatDoc(doc);
+          cc.sessionId = doc.chatId || id;
+          cc.sessionReady = true;
+          if (doc.status === 'running' && doc.bridgeId && cc.attachBridge) {
+            cc.attachBridge(doc.bridgeId, 0);
+          }
+          return;
         }
+        // Fallback: legacy path.
+        return fetch(chatsUrl('/' + encodeURIComponent(id)), { credentials: 'same-origin' })
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .then(function(chat) {
+            if (!chat || !chat.messages) return;
+            clearMessagesPane();
+            rehydrateMessages(chat.messages);
+            cc.sessionId = chat.id;
+            cc.sessionReady = true;
+            if (chat.status === 'running' && chat.bridgeId && cc.attachBridge) {
+              cc.attachBridge(chat.bridgeId, +chat.lastSeq || 0);
+            }
+          });
       })
       .catch(function(err) { console.warn('[interclaw] openChat failed:', err); });
   };
@@ -686,6 +700,27 @@
 
   // Rebuild message bubbles from the stored {type, html} array. Matches the
   // DOM structure produced by cc.addMessage / cc.saveState.
+  // Rehydrated reasoning-steps come back with whatever expand state was
+  // captured on save. We want them collapsed by default with a working
+  // "Show steps" toggle. Patch both the toggle markup and attach a live
+  // click handler so the list hides/shows in place.
+  function collapseRehydratedSteps(stepsEl) {
+    if (!stepsEl) return;
+    var listEl = stepsEl.querySelector('.reasoning-list');
+    if (listEl) listEl.style.display = 'none';
+    var toggle = stepsEl.querySelector('.reasoning-toggle');
+    if (toggle) {
+      toggle.innerHTML = '<span class="chevron-icon">' + cc.CHEVRON_SVG + '</span> Show steps';
+      toggle.onclick = function(e) {
+        e.stopPropagation();
+        if (!listEl) return;
+        var hidden = listEl.style.display === 'none';
+        listEl.style.display = hidden ? '' : 'none';
+        toggle.innerHTML = '<span class="chevron-icon' + (hidden ? ' open' : '') + '">' + cc.CHEVRON_SVG + '</span> ' + (hidden ? 'Hide steps' : 'Show steps');
+      };
+    }
+  }
+
   function rehydrateMessages(messages) {
     var content = document.getElementById('chatbot-content');
     if (!content) return;
@@ -697,16 +732,14 @@
       else if (m.type === 'error') msg.className += ' chatbot-message-error';
       else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
       msg.innerHTML = m.html || '';
-      // Strip replay noise on reopen. When the user didn't watch the
-      // turn live (window was closed), the serialized bubble HTML carries
-      // the entire tool-step history with raw JSON payloads. The user
-      // wants only the final answer + usage bar. This also trims steps
-      // from turns they DID watch — acceptable: the headers are still
-      // lightweight and the bodies were the noisy part.
+      // Collapse reasoning-steps on reopen so the JSON payloads don't
+      // spam the pane, but keep the toggle visible ("Show steps") so the
+      // user can expand past tool calls if they want. Also drop the live
+      // thinking-bar — that animated label has no meaning post-turn.
       if (m.type === 'assistant') {
         var steps = msg.querySelectorAll('.reasoning-steps');
         for (var si = 0; si < steps.length; si++) {
-          if (steps[si].parentNode) steps[si].parentNode.removeChild(steps[si]);
+          collapseRehydratedSteps(steps[si]);
         }
         var bars = msg.querySelectorAll('.bubble-thinking-bar');
         for (var bi = 0; bi < bars.length; bi++) {

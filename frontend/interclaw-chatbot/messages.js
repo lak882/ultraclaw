@@ -183,13 +183,28 @@
         else if (m.type === 'error') msg.className += ' chatbot-message-error';
         else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
         msg.innerHTML = m.html;
-        // Drop replay noise on restore. See rehydrateMessages in
-        // chats-sidebar.js for rationale — the rule is "final answer +
-        // usage bar only" for any rehydrated assistant turn.
+        // Collapse reasoning-steps on restore (same rule as
+        // chats-sidebar.js rehydrateMessages — keep the Show steps toggle
+        // but hide the noisy bodies). Drop the stale thinking-bar.
         if (m.type === 'assistant') {
           var steps = msg.querySelectorAll('.reasoning-steps');
           for (var si = 0; si < steps.length; si++) {
-            if (steps[si].parentNode) steps[si].parentNode.removeChild(steps[si]);
+            var s = steps[si];
+            var list = s.querySelector('.reasoning-list');
+            if (list) list.style.display = 'none';
+            var toggle = s.querySelector('.reasoning-toggle');
+            if (toggle) {
+              toggle.innerHTML = '<span class="chevron-icon">' + cc.CHEVRON_SVG + '</span> Show steps';
+              (function(l, t) {
+                t.onclick = function(e) {
+                  e.stopPropagation();
+                  if (!l) return;
+                  var hidden = l.style.display === 'none';
+                  l.style.display = hidden ? '' : 'none';
+                  t.innerHTML = '<span class="chevron-icon' + (hidden ? ' open' : '') + '">' + cc.CHEVRON_SVG + '</span> ' + (hidden ? 'Hide steps' : 'Show steps');
+                };
+              })(list, toggle);
+            }
           }
           var bars = msg.querySelectorAll('.bubble-thinking-bar');
           for (var bi = 0; bi < bars.length; bi++) {

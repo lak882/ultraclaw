@@ -212,31 +212,17 @@
           if (ce) ce.innerHTML = '';
           cc.currentStreamText = '';
         }
-        // Deltas only accumulate currentStreamText — the main bubble
-        // isn't rendered until now. Discard delta accumulation that
-        // overlaps the final output (prefix/substring either direction
-        // under whitespace normalization) so animateText doesn't render
-        // the same answer twice.
-        if (cc.currentStreamText) {
-          var norm = function(s) { return (s || '').replace(/\s+/g, ' ').trim(); };
-          var streamed = norm(cc.currentStreamText);
-          var finalTxt = norm(outputText);
-          if (streamed && finalTxt &&
-              (streamed === finalTxt
-               || finalTxt.indexOf(streamed) !== -1
-               || streamed.indexOf(finalTxt) !== -1)) {
-            cc.currentStreamText = '';
-          }
-        }
-        var prevText = cc.currentStreamText;
-        cc.currentStreamText += (cc.currentStreamText ? '\n\n' : '') + outputText;
+        // `output` is the authoritative final answer. Replace the accumulated
+        // delta stream (which is raw unformatted markdown) with it, then run
+        // animateText for the typing reveal on the formatted content. The
+        // `done` handler will later overwrite .msg-content with a clean
+        // renderMarkdown(currentStreamText) render, so even if animateText
+        // races or fails silently, the final bubble is guaranteed populated.
+        cc.currentStreamText = outputText;
         var mc = cc.currentStreamEl.querySelector('.msg-content');
         if (mc) {
-          if (prevText) mc.innerHTML = cc.renderMarkdownWithQuickReplies(prevText);
-          else mc.innerHTML = '';
-          (function(el, prev, added, scroll) {
-            cc.animateText(el, added, scroll, prev);
-          })(mc, prevText, outputText, chatMessages);
+          mc.innerHTML = '';
+          cc.animateText(mc, outputText, chatMessages, '');
         }
         break;
       case 'session':
@@ -539,6 +525,10 @@
         if (cc.currentStreamEl && cc.currentStreamText) {
           clearTimeout(cc.renderTimeout);
           cc.renderTimeout = null;
+          // Cancel any in-flight animateText pass so its deferred innerHTML
+          // write can't race with the renderMarkdown below and re-inject
+          // raw markdown after we've just cleaned it up.
+          cc._animGeneration++;
           var contentEl = cc.currentStreamEl.querySelector('.msg-content');
           var finalText = cc.currentStreamText.replace(/\n?\{"allowedPrompts"[\s\S]*$/, '');
           if (contentEl) contentEl.innerHTML = cc.renderMarkdown(finalText);

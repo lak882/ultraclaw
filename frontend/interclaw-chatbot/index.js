@@ -53,6 +53,7 @@
     'ui-controls.js',
     'attachments.js',
     'markdown.js',
+    'chat-doc-render.js',
     'messages.js',
     'stream.js',
     'bridge.js',
@@ -67,7 +68,7 @@
   ];
 
   // Cache-busting version — bump this to force-reload all modules
-  var MODULE_VERSION = 41;
+  var MODULE_VERSION = 45;
 
   function loadNext(i) {
     if (i >= modules.length) {
