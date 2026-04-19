@@ -58,8 +58,10 @@
   <div id="app-root">
     <div id="shell-viewport">
       <!-- iframes get src assigned lazily on first activation -->
+      <!-- Portal handles both Portal (ProductionConfig) and Traces (MessageViewer)
+           by navigating within the same legacy-ui iframe. Keeps back/forward and
+           live in-place navigation working the way users expect from the portal. -->
       <iframe id="shell-iframe-portal"  class="shell-iframe" data-tab="portal"  title="IRIS Management Portal"></iframe>
-      <iframe id="shell-iframe-traces"  class="shell-iframe" data-tab="traces"  title="Message Traces"></iframe>
       <iframe id="shell-iframe-skills"  class="shell-iframe" data-tab="skills"  title="Skill Editor"></iframe>
 
       <div id="shell-auth-overlay" role="dialog" aria-labelledby="shell-auth-title" aria-hidden="true">
@@ -80,6 +82,6 @@
   <script src="interclaw-chatbot.js?v=22"></script>
 
   <!-- Shell controller: tab switching, hash routing, iframe postMessage bridge -->
-  <script src="shell.js?v=6"></script>
+  <script src="shell.js?v=7"></script>
 </body>
 </html>

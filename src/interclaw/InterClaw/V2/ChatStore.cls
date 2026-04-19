@@ -88,6 +88,7 @@ ClassMethod Read(user As %String, id As %String) As %DynamicObject
     If '##class(%File).Exists(path) Return ""
 
     Set stream = ##class(%Stream.FileCharacter).%New()
+    Set stream.TranslateTable = "UTF8"
     Set stream.Filename = path
     Set raw = ""
     While 'stream.AtEnd { Set raw = raw _ stream.Read(32000) }
@@ -113,6 +114,7 @@ ClassMethod List(user As %String) As %DynamicArray
         If id = "" Continue
 
         Set stream = ##class(%Stream.FileCharacter).%New()
+        Set stream.TranslateTable = "UTF8"
         Set stream.Filename = path
         Set raw = ""
         While 'stream.AtEnd { Set raw = raw _ stream.Read(32000) }
@@ -190,6 +192,7 @@ ClassMethod Put(user As %String, id As %String, input As %DynamicObject) As %Dyn
     // Write atomically: write to .tmp then rename over the final path.
     Set tmp = path _ ".tmp"
     Set stream = ##class(%Stream.FileCharacter).%New()
+    Set stream.TranslateTable = "UTF8"
     Set stream.Filename = tmp
     Do stream.Write(existing.%ToJSON())
     Do stream.%Save()

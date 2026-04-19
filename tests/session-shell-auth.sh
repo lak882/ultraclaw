@@ -49,14 +49,20 @@ else
   fail "index.html served 200 (got $code)"
 fi
 
-# Three iframes with data-tab markers
-for tab in portal traces skills; do
+# Two iframes now: portal (hosts both Portal and Traces views) + skills.
+# Traces is a navigation state inside the portal iframe, not its own frame.
+for tab in portal skills; do
   if echo "$index_html" | grep -q "data-tab=\"$tab\""; then
     pass "shell has iframe for tab '$tab'"
   else
     fail "shell has iframe for tab '$tab'"
   fi
 done
+if echo "$index_html" | grep -q 'data-tab="traces"'; then
+  fail "shell no longer has a separate traces iframe (Traces reuses Portal)"
+else
+  pass "shell no longer has a separate traces iframe (Traces reuses Portal)"
+fi
 
 # Auth overlay markup must be present
 for needle in 'id="shell-auth-overlay"' 'id="shell-auth-title"' 'Please log in' '/login &lt;username&gt;'; do
@@ -129,13 +135,14 @@ else
 fi
 
 for needle in \
-  "VALID_TABS" \
+  "TAB_TO_FRAME" \
   "activateTab" \
   "shell-iframe--active" \
   "buildSources" \
   "preloadAllIframes" \
   "_interclawShell" \
   "openInTab" \
+  "navigatePortalIframe" \
   "interclaw-shell-tab-change" ; do
   if echo "$js" | grep -q -- "$needle"; then
     pass "shell.js contains '$needle'"
@@ -144,9 +151,17 @@ for needle in \
   fi
 done
 
+# Traces must reuse the portal iframe, not have its own frame id.
+if echo "$js" | grep -q "traces:.*shell-iframe-portal\|traces.*'shell-iframe-portal'"; then
+  pass "shell.js routes 'traces' tab to the portal iframe"
+else
+  fail "shell.js routes 'traces' tab to the portal iframe"
+fi
+
 # Hash-shortcut removal: per user request, #tab=... URL state is gone.
-# Assert we no longer touch the hash for tab state.
-if echo "$js" | grep -q "setHash\|hashchange\|tab=.*\\\\w"; then
+# (The newer `#/portal/...` hash routing is fine; we only want to catch the
+# old `setHash('tab=...')` pattern.)
+if echo "$js" | grep -qE "setHash|tab=\\\\w"; then
   fail "shell.js no longer uses #tab=... shortcut"
 else
   pass "shell.js no longer uses #tab=... shortcut"
@@ -171,7 +186,9 @@ fi
 # Header click interception must attach at window capture to beat any
 # descendant handler regardless of render timing. A plain addEventListener
 # on `#interclaw-header` or similar is the old, race-prone pattern.
-if echo "$js" | grep -q "window.addEventListener('click'" && echo "$js" | grep -A20 "window.addEventListener('click'" | grep -E -q "^\s*\}, true\)"; then
+# Look for the `}, true);` terminator anywhere in the file — it is unique
+# to the capture-phase click listener.
+if echo "$js" | grep -q "window.addEventListener('click'" && echo "$js" | grep -qE "^\s*\}, true\);"; then
   pass "shell.js installs click interception at window capture"
 else
   fail "shell.js installs click interception at window capture"
