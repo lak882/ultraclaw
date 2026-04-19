@@ -62,6 +62,7 @@
       msg.textContent = text;
       wrap.appendChild(msg);
     }
+    wrap._ccRecord = { type: 'user', text: text, files: fileNames.slice() };
     content.appendChild(wrap);
     content.scrollTop = content.scrollHeight;
     cc.saveState();
@@ -77,7 +78,9 @@
       var assistantMsg = document.createElement('div');
       assistantMsg.className = 'chatbot-message';
       assistantMsg.innerHTML = '<div class="msg-content">' + cc.renderMarkdown(text) + '</div>';
-      content.appendChild(cc.wrapMessage(assistantMsg, false));
+      var aw = cc.wrapMessage(assistantMsg, false);
+      aw._ccRecord = { type: 'assistant', text: text, steps: [], usage: null };
+      content.appendChild(aw);
       content.scrollTop = content.scrollHeight;
       cc.saveState();
       return;
@@ -97,8 +100,11 @@
       msg.textContent = text;
     }
     if (type === 'user' || type === 'assistant') {
-      content.appendChild(cc.wrapMessage(msg, type === 'user'));
+      var wrapEl = cc.wrapMessage(msg, type === 'user');
+      wrapEl._ccRecord = { type: type, text: text };
+      content.appendChild(wrapEl);
     } else {
+      msg._ccRecord = { type: type, text: text };
       content.appendChild(msg);
     }
     content.scrollTop = content.scrollHeight;
@@ -107,9 +113,7 @@
 
   cc.showTypingIndicator = function() {
     // Idempotent: if a live streaming bubble is already in the DOM, reuse
-    // it instead of stacking a fresh one. Stacking is how duplicate
-    // "Hide steps" toggles accumulate inside a single turn (one bubble
-    // from sendMessage, another from attachBridge running concurrently).
+    // it instead of stacking a fresh one.
     if (cc.currentStreamEl && cc.currentStreamEl.parentNode) {
       cc.ensureStepsContainer();
       return;
@@ -126,6 +130,11 @@
     cc.currentThinkingEl = null;
     cc.currentThinkingText = '';
     cc._hiddenToolCount = 0;
+    // Attach a fresh turn-record to the bubble. Subsequent event handlers
+    // (tool_use, tool_result, output, usage) write to it. On save we read
+    // the record instead of serializing innerHTML, which keeps transient
+    // UI (thinking-bar timer, animated labels) out of persistence.
+    if (cc.attachTurnRecord) cc.attachTurnRecord(cc.currentStreamEl);
     cc.ensureStepsContainer();
     chatMessages.scrollTop = chatMessages.scrollHeight;
   };
@@ -153,35 +162,6 @@
     }
   };
 
-  // Strip purely transient streaming affordances before serializing:
-  //   .bubble-thinking-bar  — the live "Making Connections · 3s" status
-  //                           (gets replaced by .bubble-usage-bar on `done`)
-  //   empty .reasoning-steps — a toggle wrapper created by the typing
-  //                            indicator but never populated (artifact of
-  //                            mid-turn re-render races)
-  // .bubble-usage-bar STAYS: once the turn has completed, the usage bar
-  // contains static tokens/cost/elapsed text that should persist across
-  // reloads and chat-reopens. It's already a sibling of .msg-content and
-  // re-renders fine from saved HTML.
-  // Populated .reasoning-steps stay: they carry the tool-call history the
-  // user expects to see after a reload. The delegated click handler in
-  // init.js keeps their toggle working after rehydrate.
-  function cleanBubbleHtml(msgEl) {
-    var clone = msgEl.cloneNode(true);
-    var bars = clone.querySelectorAll('.bubble-thinking-bar');
-    for (var i = 0; i < bars.length; i++) {
-      if (bars[i].parentNode) bars[i].parentNode.removeChild(bars[i]);
-    }
-    var steps = clone.querySelectorAll('.reasoning-steps');
-    for (var j = 0; j < steps.length; j++) {
-      var list = steps[j].querySelector('.reasoning-list');
-      if (!list || !list.querySelector('.reasoning-step')) {
-        if (steps[j].parentNode) steps[j].parentNode.removeChild(steps[j]);
-      }
-    }
-    return clone.innerHTML;
-  }
-
   cc.saveState = function() {
     var state = {
       sessionId: cc.sessionId,
@@ -190,6 +170,14 @@
     var children = document.getElementById('chatbot-content').children;
     for (var i = 0; i < children.length; i++) {
       var el = children[i];
+      // Prefer the typed turn-record attached at DOM-creation time. No
+      // HTML scraping, so live UI (thinking bar, timers) never leaks.
+      if (el._ccRecord) {
+        state.messages.push(el._ccRecord);
+        continue;
+      }
+      // Best-effort fallback for any non-record nodes that slip in
+      // (welcome bubbles, etc.) — capture type + text only.
       var msgEl = el.classList.contains('chatbot-msg-wrap') ? el.querySelector('.chatbot-message') : el;
       if (!msgEl) continue;
       var type = 'assistant';
@@ -197,7 +185,7 @@
       else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
       else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
       else if (msgEl.classList.contains('chatbot-message-tool')) type = 'tool';
-      state.messages.push({ type: type, html: cleanBubbleHtml(msgEl) });
+      state.messages.push({ type: type, text: (msgEl.textContent || '').trim() });
     }
     sessionStorage.setItem('chatbot-state', JSON.stringify(state));
   };
@@ -213,16 +201,25 @@
       var content = document.getElementById('chatbot-content');
 
       state.messages.forEach(function(m) {
+        if (!m) return;
+        // New-shape record: route through the canonical renderer so live
+        // and restored DOM are identical.
+        var isRecord = (m.html == null);
+        if (isRecord && cc.renderTurnRecord) {
+          var node = cc.renderTurnRecord(m);
+          if (node) content.appendChild(node);
+          return;
+        }
+        // Legacy {type, html} fallback for sessions saved before the
+        // structured-record switch. Strip transient status bars; keep
+        // populated reasoning-steps.
         var msg = document.createElement('div');
         msg.className = 'chatbot-message';
         if (m.type === 'user') msg.className += ' chatbot-message-user';
         else if (m.type === 'system') msg.className += ' chatbot-message-system';
         else if (m.type === 'error') msg.className += ' chatbot-message-error';
         else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
-        msg.innerHTML = m.html;
-        // Legacy sessions may carry a live thinking-bar with an animated
-        // label; drop those. Keep the .bubble-usage-bar — it's the static
-        // post-turn tokens/cost/elapsed summary the user expects to see.
+        msg.innerHTML = m.html || '';
         var bars = msg.querySelectorAll('.bubble-thinking-bar');
         for (var bk = 0; bk < bars.length; bk++) {
           if (bars[bk].parentNode) bars[bk].parentNode.removeChild(bars[bk]);

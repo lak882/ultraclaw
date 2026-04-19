@@ -47,29 +47,14 @@
   // backend on the first turn). Before we have a session, we have no id
   // yet, so the very first prompt can't be persisted — the backend's
   // session_id arrives mid-stream and the next saveState catches it.
-  // Strip purely transient streaming affordances before serializing:
-  // only the live thinking-bar (which has an animated label), plus any
-  // empty reasoning-steps wrapper created by the typing indicator but
-  // never populated (mid-turn race artifact). The usage-bar STAYS — it
-  // holds the static post-turn tokens/cost/elapsed summary that the user
-  // expects to still see after reload or chat-reopen. Populated
-  // reasoning-steps also stay for the same reason.
-  function cleanBubbleHtml(msgEl) {
-    var clone = msgEl.cloneNode(true);
-    var bars = clone.querySelectorAll('.bubble-thinking-bar');
-    for (var i = 0; i < bars.length; i++) {
-      if (bars[i].parentNode) bars[i].parentNode.removeChild(bars[i]);
-    }
-    var steps = clone.querySelectorAll('.reasoning-steps');
-    for (var j = 0; j < steps.length; j++) {
-      var list = steps[j].querySelector('.reasoning-list');
-      if (!list || !list.querySelector('.reasoning-step')) {
-        if (steps[j].parentNode) steps[j].parentNode.removeChild(steps[j]);
-      }
-    }
-    return clone.innerHTML;
-  }
-
+  // Persisted-record serializer. Reads the typed `_ccRecord` attached to
+  // each pane child by the live event handlers and returns an array of
+  // records. No innerHTML scraping — so transient UI (thinking bar,
+  // timers, animated labels) never leaks into persistence.
+  //
+  // For legacy compatibility with older callers that still need an HTML
+  // blob, the record carries everything needed to re-render identically
+  // via cc.renderTurnRecord().
   function serializeCurrentPane() {
     var out = [];
     var content = document.getElementById('chatbot-content');
@@ -77,15 +62,23 @@
     var children = content.children;
     for (var i = 0; i < children.length; i++) {
       var el = children[i];
+      // Prefer the record attached at create-time. Falls back to a
+      // legacy-shape {type, html} snapshot only when a DOM node was
+      // produced outside the record-aware paths (e.g. welcome bubbles).
+      var rec = el._ccRecord || (el.querySelector && el.querySelector('[data-cc-record]') && el.querySelector('[data-cc-record]')._ccRecord);
+      if (rec) {
+        out.push(rec);
+        continue;
+      }
       var msgEl = el.classList && el.classList.contains('chatbot-msg-wrap')
         ? el.querySelector('.chatbot-message') : el;
       if (!msgEl || !msgEl.classList) continue;
-      var type = 'assistant';
-      if (msgEl.classList.contains('chatbot-message-user')) type = 'user';
-      else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
-      else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
-      else if (msgEl.classList.contains('chatbot-message-tool')) type = 'tool';
-      out.push({ type: type, html: cleanBubbleHtml(msgEl) });
+      var legacyType = 'assistant';
+      if (msgEl.classList.contains('chatbot-message-user')) legacyType = 'user';
+      else if (msgEl.classList.contains('chatbot-message-system')) legacyType = 'system';
+      else if (msgEl.classList.contains('chatbot-message-error')) legacyType = 'error';
+      else if (msgEl.classList.contains('chatbot-message-tool')) legacyType = 'tool';
+      out.push({ type: legacyType, text: (msgEl.textContent || '').trim() });
     }
     return out;
   }
@@ -719,6 +712,19 @@
     var content = document.getElementById('chatbot-content');
     if (!content) return;
     messages.forEach(function(m) {
+      if (!m) return;
+      // New-shape record (has .steps/.text — no .html): render through
+      // the canonical renderer so live and rehydrated DOM are identical.
+      var isRecord = (m.html == null) && (m.type === 'user' || m.type === 'assistant' || m.type === 'system' || m.type === 'error' || m.type === 'tool');
+      if (isRecord && cc.renderTurnRecord) {
+        var node = cc.renderTurnRecord(m);
+        if (node) content.appendChild(node);
+        return;
+      }
+      // Legacy {type,html} fallback for chats saved before the
+      // structured-record switch. Strip the transient thinking-bar that
+      // old saves captured along with the bubble; leave usage bar + any
+      // populated reasoning-steps intact.
       var msg = document.createElement('div');
       msg.className = 'chatbot-message';
       if (m.type === 'user') msg.className += ' chatbot-message-user';
@@ -726,9 +732,6 @@
       else if (m.type === 'error') msg.className += ' chatbot-message-error';
       else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
       msg.innerHTML = m.html || '';
-      // Legacy chat files may carry a live thinking-bar with an animated
-      // label; drop that. Keep the .bubble-usage-bar — it's the static
-      // post-turn summary the user expects to see on reopen.
       var bars = msg.querySelectorAll('.bubble-thinking-bar');
       for (var bi = 0; bi < bars.length; bi++) {
         if (bars[bi].parentNode) bars[bi].parentNode.removeChild(bars[bi]);

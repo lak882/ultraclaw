@@ -143,13 +143,15 @@
         if (reclassText && cc.currentStreamEl) {
           cc.stepCounter++;
           var stepId = 'think-' + cc.stepCounter;
-          cc.addReasoningStep({
+          var thinkStep = {
             id: stepId,
             type: 'thinking',
             title: 'Thinking',
             content: reclassText,
             status: 'success'
-          });
+          };
+          cc.addReasoningStep(thinkStep);
+          if (cc.recordAddStep) cc.recordAddStep(cc.currentStreamEl, Object.assign({}, thinkStep));
           // Clear the main bubble.
           var contentEl2 = cc.currentStreamEl.querySelector('.msg-content');
           if (contentEl2) contentEl2.innerHTML = '';
@@ -166,13 +168,15 @@
           cc.stepCounter++;
           cc._currentThinkingStepId = 'think-' + cc.stepCounter;
           cc._currentThinkingStepText = '';
-          cc.addReasoningStep({
+          var liveThink = {
             id: cc._currentThinkingStepId,
             type: 'thinking',
             title: 'Thinking',
             content: '',
             status: 'running'
-          });
+          };
+          cc.addReasoningStep(liveThink);
+          if (cc.recordAddStep) cc.recordAddStep(cc.currentStreamEl, Object.assign({}, liveThink));
         }
         cc._currentThinkingStepText += data.text;
         cc.updateReasoningStep(cc._currentThinkingStepId, {
@@ -220,6 +224,7 @@
         // Count+Examples table followed by a Count+"Key application classes"
         // table) — neither was a prefix of the other, so both rendered.
         cc.currentStreamText = outputText;
+        if (cc.recordSetText) cc.recordSetText(cc.currentStreamEl, outputText);
         var mc = cc.currentStreamEl.querySelector('.msg-content');
         if (mc) {
           mc.innerHTML = '';
@@ -324,6 +329,7 @@
           resultCount: 0
         };
         cc.addReasoningStep(toolStep);
+        if (cc.recordAddStep) cc.recordAddStep(cc.currentStreamEl, Object.assign({}, toolStep));
         chatMessages.scrollTop = chatMessages.scrollHeight;
         break;
       case 'tool_result':
@@ -351,12 +357,13 @@
           var combined = priorContent
             ? priorContent + '\n\n--- Result ---\n' + resultText.split('\n').slice(0, 20).join('\n')
             : resultText.split('\n').slice(0, 20).join('\n');
-          cc.updateReasoningStep(lastToolStep.id, {
+          var stepUpdates = {
             status: 'success',
             content: combined,
             rawOutput: data.text || '',
             resultCount: resultCount
-          });
+          };
+          cc.updateReasoningStep(lastToolStep.id, stepUpdates);
         }
         chatMessages.scrollTop = chatMessages.scrollHeight;
         break;
@@ -518,6 +525,19 @@
         var inK = (totalIn / 1000).toFixed(1);
         var outK = (cc.lastOutputTokens / 1000).toFixed(1);
         cc.lastUsageText = durStr + ' \u00b7 $' + costUsd + ' \u00b7 ' + inK + 'k tokens in \u00b7 ' + outK + 'k tokens out';
+        // Persist a structured usage snapshot on the turn record so the
+        // post-turn summary survives reload without serializing the live
+        // bubble HTML.
+        if (cc.recordSetUsage) {
+          cc.recordSetUsage(cc.currentStreamEl, {
+            inputTokens: cc.lastInputTokens,
+            outputTokens: cc.lastOutputTokens,
+            cacheReadTokens: cc.lastCacheReadTokens || 0,
+            cacheWriteTokens: cc.lastCacheWriteTokens || 0,
+            elapsedMs: elSec * 1000,
+            costUsd: +costUsd
+          });
+        }
         break;
       case 'done':
         cc.stopTimer();
@@ -532,10 +552,7 @@
         if (cc.lastTurnTokens > 0) cc.updateTokenCounter(cc.totalTokensAccum);
         // Transform the live thinking-bar into the post-turn usage-bar
         // BEFORE saveState so the persisted HTML includes the usage summary.
-        // Otherwise the user sees tokens/cost/elapsed live but loses them
-        // on reload or chat-reopen.
         cc.transformThinkingToUsage();
-        cc.saveState();
         cc.removeTypingIndicator();
         for (var di = 0; di < cc.currentSteps.length; di++) {
           if (cc.currentSteps[di].status === 'running') {
@@ -549,8 +566,18 @@
           var contentEl = cc.currentStreamEl.querySelector('.msg-content');
           var finalText = cc.currentStreamText.replace(/\n?\{"allowedPrompts"[\s\S]*$/, '');
           if (contentEl) contentEl.innerHTML = cc.renderMarkdown(finalText);
+          // Mirror the final text into the turn record. The `output` event
+          // sets this too, but a turn that ends via deltas-only (no
+          // terminal `output`) wouldn't have updated the record otherwise,
+          // leaving saveState with an empty text field and the re-rendered
+          // bubble showing just tool steps + usage bar.
+          if (cc.recordSetText) cc.recordSetText(cc.currentStreamEl, finalText);
           chatMessages.scrollTop = chatMessages.scrollHeight;
         }
+        // saveState was called above before we had a chance to flush the
+        // final text into the record. Call it again now so the record on
+        // disk has the complete text + steps + usage.
+        cc.saveState();
         // Detect navigation directives in assistant response or tool results.
         // Context-aware: Angular interop-editor uses /goto (auto-navigate),
         // legacy-ui uses OPEN: lines (clickable link).

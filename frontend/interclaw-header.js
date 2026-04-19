@@ -309,20 +309,32 @@
       reloadBtn.classList.add('spinning');
       setTimeout(function() { reloadBtn.classList.remove('spinning'); }, 600);
 
-      // Shell context: reload the currently active iframe.
+      // Shell context: reload the currently active iframe — preserve its
+      // CURRENT URL (not its initial src). Assigning `.src` to its initial
+      // value is what caused reload to bounce back to the InterClaw wrapper
+      // default page; re-reading `contentWindow.location.href` and
+      // reassigning that keeps the user on whatever zen page they navigated
+      // to inside the iframe.
       var activeIframe = document.querySelector('.shell-iframe.shell-iframe--active');
       if (activeIframe) {
         try {
-          // contentWindow.location.reload() preserves the iframe's current URL
-          // (including any in-iframe navigation the user has done), whereas
-          // reassigning src would reset to the initial src.
           activeIframe.contentWindow.location.reload();
           return;
         } catch (err) {
-          // Cross-origin — fall back to re-assigning src
-          var s = activeIframe.src;
+          try {
+            var current = activeIframe.contentWindow.location.href;
+            if (current) {
+              activeIframe.src = 'about:blank';
+              setTimeout(function() { activeIframe.src = current; }, 0);
+              return;
+            }
+          } catch (_) { /* truly cross-origin */ }
+          // Last resort: re-read the DOM attribute (still a URL, not the
+          // initial src closure) — this is the URL the browser currently
+          // resolved the iframe to.
+          var live = activeIframe.getAttribute('src');
           activeIframe.src = 'about:blank';
-          setTimeout(function() { activeIframe.src = s; }, 0);
+          setTimeout(function() { activeIframe.src = live; }, 0);
           return;
         }
       }

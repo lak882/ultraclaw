@@ -746,6 +746,18 @@ body.ic-chat-mode #chatbot-sidebar {
   cursor: default !important;
 }
 
+/* Reload button in the shared header: icon near-black, matches arrow toggle. */
+#interclaw-header .ic-header-reload-btn,
+#interclaw-header .ic-header-reload-btn svg,
+#interclaw-header .ic-header-reload-btn svg path,
+#interclaw-header .ic-header-reload-btn svg polyline {
+  color: var(--cgpt-sidebar-body) !important;
+  stroke: currentColor !important;
+}
+#interclaw-header .ic-header-reload-btn:hover {
+  background: var(--cgpt-hover-tint) !important;
+}
+
 /* Quick-reply pills in the welcome message — override chatbot.css:20 which
    forces every button inside #chatbot-sidebar to `font-size: inherit`.
    The base `.quick-reply-btn` rule sets 14px but loses to that more-

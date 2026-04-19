@@ -152,6 +152,9 @@
     var step = cc.currentSteps.find(function(s) { return s.id === stepId; });
     if (!step) return;
     Object.assign(step, updates);
+    // Mirror into the active bubble's turn-record so persistence picks up
+    // status/content/rawOutput changes without touching every call site.
+    if (cc.recordUpdateStep) cc.recordUpdateStep(cc.currentStreamEl, stepId, updates);
 
     var stepEl = document.getElementById('reasoning-step-' + stepId);
     if (!stepEl) return;
