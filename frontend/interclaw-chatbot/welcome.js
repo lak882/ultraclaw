@@ -164,6 +164,14 @@
     msgEl.innerHTML = '<div class="msg-content"></div>';
     var wrap = document.createElement('div');
     wrap.className = 'chatbot-msg-wrap';
+    // Ephemeral: the welcome bubble is rebuilt on every page load and
+    // carries interactive quick-reply buttons that don't survive a JSON
+    // round-trip. Tag both the wrap and the bubble so serialize skips
+    // them — otherwise the persisted record would be textContent and
+    // the rehydrated view would flatten "List Classes Create Production…"
+    // into one unreadable line.
+    wrap._ccEphemeral = true;
+    msgEl._ccEphemeral = true;
     wrap.appendChild(msgEl);
     chatMessages.appendChild(wrap);
     var msgContent = msgEl.querySelector('.msg-content');

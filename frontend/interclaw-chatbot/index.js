@@ -53,7 +53,6 @@
     'ui-controls.js',
     'attachments.js',
     'markdown.js',
-    'turn-record.js',
     'messages.js',
     'stream.js',
     'bridge.js',
@@ -68,7 +67,7 @@
   ];
 
   // Cache-busting version — bump this to force-reload all modules
-  var MODULE_VERSION = 34;
+  var MODULE_VERSION = 37;
 
   function loadNext(i) {
     if (i >= modules.length) {

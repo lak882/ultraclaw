@@ -62,7 +62,6 @@
       msg.textContent = text;
       wrap.appendChild(msg);
     }
-    wrap._ccRecord = { type: 'user', text: text, files: fileNames.slice() };
     content.appendChild(wrap);
     content.scrollTop = content.scrollHeight;
     cc.saveState();
@@ -170,6 +169,10 @@
     var children = document.getElementById('chatbot-content').children;
     for (var i = 0; i < children.length; i++) {
       var el = children[i];
+      // Skip ephemeral DOM (welcome bubble with its quick-reply buttons,
+      // transient placeholders). These get rebuilt on every page load
+      // and don't survive a JSON round-trip anyway.
+      if (el._ccEphemeral) continue;
       // Prefer the typed turn-record attached at DOM-creation time. No
       // HTML scraping, so live UI (thinking bar, timers) never leaks.
       if (el._ccRecord) {

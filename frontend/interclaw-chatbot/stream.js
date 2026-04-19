@@ -568,11 +568,11 @@
           if (contentEl) contentEl.innerHTML = cc.renderMarkdown(finalText);
           // Mirror the final text into the turn record. The `output` event
           // sets this too, but a turn that ends via deltas-only (no
-          // terminal `output`) wouldn't have updated the record otherwise,
-          // leaving saveState with an empty text field and the re-rendered
-          // bubble showing just tool steps + usage bar.
+          // terminal `output`) wouldn't have updated the record otherwise.
           if (cc.recordSetText) cc.recordSetText(cc.currentStreamEl, finalText);
           chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else if (cc.currentStreamEl && cc.currentSteps && cc.currentSteps.length > 0) {
+          console.warn('[stream] turn ended with tool steps but no answer text — backend may have dropped the output event');
         }
         // saveState was called above before we had a chance to flush the
         // final text into the record. Call it again now so the record on

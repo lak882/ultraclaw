@@ -62,9 +62,11 @@
     var children = content.children;
     for (var i = 0; i < children.length; i++) {
       var el = children[i];
+      // Ephemeral bubbles (welcome, transient placeholders) don't persist.
+      if (el._ccEphemeral) continue;
       // Prefer the record attached at create-time. Falls back to a
       // legacy-shape {type, html} snapshot only when a DOM node was
-      // produced outside the record-aware paths (e.g. welcome bubbles).
+      // produced outside the record-aware paths.
       var rec = el._ccRecord || (el.querySelector && el.querySelector('[data-cc-record]') && el.querySelector('[data-cc-record]')._ccRecord);
       if (rec) {
         out.push(rec);
