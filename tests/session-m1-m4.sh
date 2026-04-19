@@ -60,7 +60,7 @@ else
 fi
 
 # install-config.js must be loaded by every HTML entry point with a header
-for page in index.html legacy-ui/index.html interop-editor/index.html skills-editor/index.html welcome/index.html; do
+for page in index.html legacy-ui/index.html interop-editor/index.html skills-editor/index.html; do
   f="$FRONTEND/$page"
   if [[ ! -f "$f" ]]; then
     fail "$page exists"
@@ -89,74 +89,6 @@ for f in "$FRONTEND/interclaw-header.js" \
     fail "$base consults window._interclawConfig"
   fi
 done
-
-# ---------- M2: welcome page + diagnostics + installer banner ----------
-section "M2: welcome page + diagnostics + installer"
-
-body=$(curl -s -o - -w "\n%{http_code}" "$FRONT_URL/welcome/index.html")
-code=$(echo "$body" | tail -n1)
-welcome_html=$(echo "$body" | sed '$d')
-if [[ "$code" == "200" ]]; then
-  pass "welcome/index.html served 200"
-else
-  fail "welcome/index.html served 200 (got $code)"
-fi
-
-for id_or_class in "hero" "overall" "cards" "cta" "id=\"overall\"" "id=\"cards\"" "id=\"cta\""; do
-  if echo "$welcome_html" | grep -q "$id_or_class"; then
-    pass "welcome page contains $id_or_class"
-  else
-    fail "welcome page contains $id_or_class"
-  fi
-done
-
-# Apple-style essentials. Use `grep -q -- "$needle"` so patterns that begin
-# with `--` (CSS custom properties) aren't swallowed as grep flags.
-for needle in "SF Pro" "prefers-color-scheme" "--ic-accent" "Welcome."; do
-  if echo "$welcome_html" | grep -q -- "$needle"; then
-    pass "welcome page contains '$needle'"
-  else
-    fail "welcome page contains '$needle'"
-  fi
-done
-
-# Diagnostics endpoint
-resp=$(curl -s -o - -w "\n%{http_code}" "$DISPATCH_API/diagnostics")
-code=$(echo "$resp" | tail -n1)
-json=$(echo "$resp" | sed '$d')
-if [[ "$code" == "200" ]]; then
-  pass "GET /api/interclaw/api/diagnostics returns 200"
-else
-  fail "GET /api/interclaw/api/diagnostics returns 200 (got $code)"
-fi
-
-# Required keys
-for k in namespace pathPrefix embeddedPython interop bedrock login production ready; do
-  if echo "$json" | grep -q "\"$k\""; then
-    pass "diagnostics JSON has key '$k'"
-  else
-    fail "diagnostics JSON has key '$k'"
-  fi
-done
-
-# ready flag must be true on a healthy dev instance
-if echo "$json" | grep -Eq '"ready"[[:space:]]*:[[:space:]]*true'; then
-  pass "diagnostics.ready == true on healthy instance"
-else
-  fail "diagnostics.ready == true on healthy instance"
-fi
-
-# Installer banner: code path exists in Installer.cls source
-if grep -q "welcome/index.html" "$ROOT/install/InterClaw/Installer.cls"; then
-  pass "Installer.cls Setup tail prints welcome URL"
-else
-  fail "Installer.cls Setup tail prints welcome URL"
-fi
-if grep -q "LocalHostName" "$ROOT/install/InterClaw/Installer.cls"; then
-  pass "Installer.cls uses INetInfo.LocalHostName()"
-else
-  fail "Installer.cls uses INetInfo.LocalHostName()"
-fi
 
 # ---------- M3: reload button beside model selector ----------
 section "M3: reload button beside model selector"

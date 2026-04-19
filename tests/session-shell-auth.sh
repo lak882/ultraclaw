@@ -338,6 +338,39 @@ else
   fail "skills-editor/index.html served 200 (got $skills_code)"
 fi
 
+# ── Header-1: interclaw-header is shell-aware ───────────────────────────
+section "Header-1: interclaw-header delegates to shell"
+
+hdr_js=$(curl -s "$FRONT_URL/interclaw-header.js")
+if [[ -n "$hdr_js" ]]; then
+  pass "interclaw-header.js served non-empty"
+else
+  fail "interclaw-header.js served non-empty"
+fi
+
+# When rendered inside the shell, Portal/Traces/Skills clicks should delegate
+# to _interclawShell.activateTab instead of letting the <a href> navigate.
+# This is the real fix for "Skills tab navigates away" — without it, the
+# only defense is shell.js's own click interception, which leaves a timing
+# race on the table.
+if echo "$hdr_js" | grep -q "_interclawShell" && echo "$hdr_js" | grep -q "shell.activateTab"; then
+  pass "interclaw-header calls _interclawShell.activateTab for workspace tabs"
+else
+  fail "interclaw-header calls _interclawShell.activateTab for workspace tabs"
+fi
+
+# All four HTML entry points must reference header v>=15 so the shell-aware
+# click handler actually ships.
+for page in index.html interop-editor/index.html legacy-ui/index.html skills-editor/index.html; do
+  f="$ROOT/frontend/$page"
+  if [[ ! -f "$f" ]]; then fail "$page exists"; continue; fi
+  if grep -Eq "interclaw-header\.js\?v=(1[5-9]|[2-9][0-9])|v=[1-9][0-9]{2,}" "$f"; then
+    pass "$page references interclaw-header v>=15"
+  else
+    fail "$page references interclaw-header v>=15"
+  fi
+done
+
 # ── Goto-1: /goto routes into shell iframes ─────────────────────────────
 section "Goto-1: goto.js is shell-aware"
 

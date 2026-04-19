@@ -1,0 +1,254 @@
+/* theme-overlay.css — Skills Editor visual alignment with the chats sidebar.
+   Pulls the same v0.app-inspired palette used in
+   frontend/interclaw-chatbot/chatgpt-theme.css so the two rails read as one
+   design system.
+
+   Scoped to #sidebar (skills tree) + #toolbar on the skills editor page only.
+   Uses the InterClaw brand `--fr-styles-color-primary` (dark blue #3b3b94)
+   as the accent — same as the 2px top border.
+
+   To roll back: remove the <link> tag injected at the end of index.html
+   and delete this file.
+*/
+
+:root {
+  /* Pull in the shared v0 tokens here so both rails match. */
+  --ic-se-bg-100:       #ffffff;
+  --ic-se-bg-200:       #fbfbfb;
+  --ic-se-alpha-400:    rgba(0, 0, 0, 0.078);
+  --ic-se-alpha-500:    rgba(0, 0, 0, 0.12);
+  --ic-se-gray-100:     #ececec;
+  --ic-se-gray-300:     #dfdfdf;
+  --ic-se-gray-600:     #8e8e8e;
+  --ic-se-gray-900:     #5d5d5d;
+  --ic-se-gray-1000:    #1a1a1a;
+  --ic-se-accent:       var(--fr-styles-color-primary, #3b3b94);
+
+  --ic-se-radius-sm:    4px;
+  --ic-se-radius-md:    6px;
+
+  --ic-se-font: "GeistSans", "Geist Sans", "Noto Sans", "Noto Sans Arabic",
+                ui-sans-serif, -apple-system, system-ui,
+                "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+/* ========================================================================
+   Page surface
+   ======================================================================== */
+html, body {
+  background: var(--ic-se-bg-100) !important;
+  font-family: var(--ic-se-font) !important;
+}
+
+/* ========================================================================
+   Toolbar
+   ======================================================================== */
+#toolbar {
+  border-top: 2px solid var(--ic-se-accent) !important;
+  border-bottom: 1px solid var(--ic-se-alpha-400) !important;
+  background: var(--ic-se-bg-100) !important;
+}
+.brand {
+  color: var(--ic-se-accent) !important;
+  font-family: var(--ic-se-font) !important;
+  font-weight: 600 !important;
+}
+.breadcrumb {
+  color: var(--ic-se-gray-900) !important;
+  font-family: var(--ic-se-font) !important;
+}
+.breadcrumb .current {
+  color: var(--ic-se-gray-1000) !important;
+}
+.breadcrumb .sep {
+  color: var(--ic-se-gray-600) !important;
+}
+
+/* ========================================================================
+   Sidebar — aligns with the chats rail: pure white, thin gray-300 right
+   border, 6px hover radius on rows.
+   ======================================================================== */
+#sidebar {
+  background: var(--ic-se-bg-100) !important;
+}
+#sidebar::after {
+  background: var(--ic-se-alpha-400) !important;
+}
+
+/* Search input: match the chats-sidebar search row */
+#sidebar-search {
+  padding: 8px 10px !important;
+}
+#sidebar-search input {
+  width: 100% !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  border: 1px solid var(--ic-se-alpha-400) !important;
+  background: var(--ic-se-bg-100) !important;
+  color: var(--ic-se-gray-1000) !important;
+  font-family: var(--ic-se-font) !important;
+  font-size: 13px !important;
+  border-radius: var(--ic-se-radius-md) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+#sidebar-search input::placeholder {
+  color: var(--ic-se-gray-600) !important;
+}
+#sidebar-search input:focus {
+  border-color: var(--ic-se-accent) !important;
+  box-shadow: 0 0 0 3px rgba(59, 59, 148, 0.18) !important;
+}
+
+/* Sidebar scrollbar */
+#sidebar-content::-webkit-scrollbar { width: 6px; }
+#sidebar-content::-webkit-scrollbar-thumb {
+  background: var(--ic-se-gray-300) !important;
+  border-radius: 999px !important;
+}
+#sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: var(--ic-se-gray-600) !important;
+}
+
+/* ========================================================================
+   Section / group headers — 500-weight 13px, not uppercase, gray-900.
+   ======================================================================== */
+.section-header {
+  padding: 8px 10px 4px 10px !important;
+  transition: color 0.1s ease-out !important;
+}
+.section-header:hover {
+  background: transparent !important;
+}
+.section-label {
+  color: var(--ic-se-gray-900) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  margin-left: 6px !important;
+}
+.section-count {
+  color: var(--ic-se-gray-600) !important;
+  font-size: 11px !important;
+}
+.section-chevron,
+.section-icon {
+  color: var(--ic-se-gray-900) !important;
+}
+
+.group-header {
+  padding: 4px 12px 4px 20px !important;
+  border-radius: var(--ic-se-radius-md) !important;
+  margin: 1px 6px !important;
+  transition: background 0.08s ease-out !important;
+}
+.group-header:hover {
+  background: var(--ic-se-alpha-400) !important;
+}
+.group-label {
+  color: var(--ic-se-gray-900) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-left: 6px !important;
+}
+.group-count {
+  color: var(--ic-se-gray-600) !important;
+  font-size: 11px !important;
+}
+.group-chevron {
+  color: var(--ic-se-gray-900) !important;
+}
+
+/* ========================================================================
+   File items — 32px rows, 6px radius, alpha-400 hover, accent-tinted active.
+   (depth-based left-padding is still set by JS; we only touch visual.)
+   ======================================================================== */
+.file-item {
+  min-height: 32px !important;
+  margin: 1px 6px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+  padding-right: 10px !important;
+  border-radius: var(--ic-se-radius-md) !important;
+  transition: background 0.08s ease-out, color 0.08s ease-out !important;
+  gap: 8px !important;
+}
+.file-item:hover {
+  background: var(--ic-se-alpha-400) !important;
+}
+.file-item.active {
+  background: rgba(59, 59, 148, 0.10) !important;
+  color: var(--ic-se-accent) !important;
+}
+.file-item.active .file-name {
+  color: var(--ic-se-accent) !important;
+  font-weight: 500 !important;
+}
+.file-item.active .file-icon {
+  color: var(--ic-se-accent) !important;
+}
+.file-name {
+  color: var(--ic-se-gray-1000) !important;
+  font-size: 13px !important;
+}
+.file-icon {
+  color: var(--ic-se-gray-900) !important;
+}
+.file-item:hover .file-icon {
+  color: var(--ic-se-gray-1000) !important;
+}
+
+/* Override / state badges — keep semantic colors but use alpha-matched fills */
+.override-badge {
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  border-radius: var(--ic-se-radius-sm) !important;
+  line-height: 16px !important;
+  padding: 0 6px !important;
+}
+
+/* Search-empty / fallback */
+.search-empty {
+  color: var(--ic-se-gray-600) !important;
+  font-size: 13px !important;
+}
+
+/* ========================================================================
+   Resize handle — subtle accent on active drag
+   ======================================================================== */
+#resize-handle:hover::after {
+  background: var(--ic-se-gray-600) !important;
+}
+#resize-handle.active::after {
+  background: var(--ic-se-accent) !important;
+}
+
+/* ========================================================================
+   View toggle on toolbar (Preview / Raw)
+   ======================================================================== */
+.view-toggle {
+  background: var(--ic-se-gray-100) !important;
+  border-radius: var(--ic-se-radius-md) !important;
+}
+.view-toggle button {
+  color: var(--ic-se-gray-900) !important;
+  border-radius: var(--ic-se-radius-sm) !important;
+  font-family: var(--ic-se-font) !important;
+}
+.view-toggle button.active {
+  background: var(--ic-se-bg-100) !important;
+  color: var(--ic-se-gray-1000) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+}
+.view-toggle button:hover:not(.active) {
+  color: var(--ic-se-gray-1000) !important;
+}
+
+/* Selection inside the skills editor */
+::selection {
+  background: rgba(59, 59, 148, 0.18);
+  color: var(--ic-se-gray-1000);
+}

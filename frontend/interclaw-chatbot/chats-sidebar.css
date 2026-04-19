@@ -35,9 +35,15 @@ body.ic-chat-mode #chatbot-sidebar {
   width: calc(100% - var(--ic-chats-sidebar-width)) !important;
 }
 
-/* Sidebar is not collapsible — `ic-chats-collapsed` rules kept as no-ops
-   in case any old localStorage value slips through. JS clears that flag on
-   load, and the collapse/reopen buttons are no longer rendered. */
+/* Collapsed state: hide the rail, release the chat panel back to full width,
+   and let the floating reopen pill show. JS (chats-sidebar.js) toggles
+   body.ic-chats-collapsed and persists the flag in localStorage. */
+body.ic-chats-collapsed #ic-chats-sidebar { display: none; }
+body.ic-chat-mode.ic-chats-collapsed #chatbot-sidebar {
+  left: 0 !important;
+  width: 100% !important;
+}
+body.ic-chat-mode.ic-chats-collapsed #ic-chats-reopen { display: flex; }
 
 /* ── Header row ── */
 .ic-chats-header {
@@ -207,6 +213,25 @@ body.ic-chat-mode #chatbot-sidebar {
   line-height: 1.5;
 }
 
-/* Re-open pill removed — sidebar is always visible. Hard-hide any element
-   with that id in case an older cached script injected it. */
-#ic-chats-reopen { display: none !important; }
+/* Floating re-open pill — shown only when the rail is collapsed.
+   Position flush to the top-left under the header. */
+#ic-chats-reopen {
+  position: fixed;
+  top: calc(var(--ic-header-total, 44px) + 8px);
+  left: 8px;
+  z-index: 9998;
+  width: 30px;
+  height: 30px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid rgba(13, 13, 13, 0.12);
+  border-radius: 6px;
+  color: #5d5d5d;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: background 0.1s, color 0.1s;
+}
+#ic-chats-reopen:hover { background: #f2f2f2; color: #0d0d0d; }
+#ic-chats-reopen svg { width: 16px; height: 16px; }

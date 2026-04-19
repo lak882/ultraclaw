@@ -47,23 +47,23 @@ else
 fi
 
 # Required DOM hooks
-# Sidebar is always visible — collapse/reopen buttons intentionally removed.
-for hook in "ic-chats-sidebar" "ic-chats-new" "ic-chats-list"; do
+# Collapse/reopen are back; plus search input and star-toggle action.
+for hook in "ic-chats-sidebar" "ic-chats-new" "ic-chats-list" "ic-chats-collapse" "ic-chats-reopen" "ic-chats-search-input"; do
   if grep -q "$hook" "$sidebar_js_path"; then
     pass "sidebar defines #$hook"
   else
     fail "sidebar defines #$hook"
   fi
 done
-if ! grep -q "ic-chats-collapse-btn" "$sidebar_js_path"; then
-  pass "sidebar no longer renders collapse button"
+if grep -q "data-action=\"favorite\"" "$sidebar_js_path"; then
+  pass "sidebar renders favorite star action"
 else
-  fail "sidebar no longer renders collapse button"
+  fail "sidebar renders favorite star action"
 fi
-if ! grep -q "reopenBtn.id = 'ic-chats-reopen'" "$sidebar_js_path"; then
-  pass "sidebar no longer injects reopen button"
+if grep -q "chatsSearchQuery" "$sidebar_js_path"; then
+  pass "sidebar has live search query state"
 else
-  fail "sidebar no longer injects reopen button"
+  fail "sidebar has live search query state"
 fi
 
 # Core action functions exist

@@ -11,6 +11,10 @@
   var ICON_EXPAND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>';
   var ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
   var ICON_DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
+  var ICON_SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>';
+  // Filled star for the active-favorite state, outline for the toggle button
+  var ICON_STAR_FILLED = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+  var ICON_STAR_OUTLINE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>';
 
   // ── Chat store (M2/M3: server-backed CRUD) ──────────────────────────────
   // Shape: { chats: [{id,title,updatedAt}], activeId, user }
@@ -18,6 +22,7 @@
   // on demand via GET /api/chats/:id. M3: PUT /api/chats/:id persists
   // on every turn (debounced) and on rename; DELETE /api/chats/:id removes.
   cc.chatsStore = cc.chatsStore || { chats: [], activeId: null, user: null };
+  cc.chatsSearchQuery = cc.chatsSearchQuery || '';
 
   function chatsUrl(suffix) {
     return (cc.chatApiBase || '/api/interclaw/production') + '/api/chats' + (suffix || '');
@@ -143,18 +148,59 @@
     sidebar.innerHTML =
       '<div class="ic-chats-header">' +
         '<span class="ic-chats-brand">Chats</span>' +
+        '<button class="ic-chats-collapse-btn" id="ic-chats-collapse" title="Hide chats" aria-label="Hide chats">' + ICON_COLLAPSE + '</button>' +
       '</div>' +
-      '<button class="ic-chats-new" id="ic-chats-new">' + ICON_NEW_CHAT + '<span>New chat</span></button>' +
+      '<a class="ic-chats-new" id="ic-chats-new" role="button" tabindex="0">' +
+        '<span class="ic-chats-new-icon">' + ICON_NEW_CHAT + '</span>' +
+        '<span class="ic-chats-new-label">New chat</span>' +
+      '</a>' +
+      '<div class="ic-chats-search">' +
+        '<span class="ic-chats-search-icon">' + ICON_SEARCH + '</span>' +
+        '<input type="search" id="ic-chats-search-input" class="ic-chats-search-input" placeholder="Search chats" autocomplete="off" spellcheck="false">' +
+      '</div>' +
       '<div class="ic-chats-list" id="ic-chats-list"></div>';
     document.body.appendChild(sidebar);
 
-    document.getElementById('ic-chats-new').addEventListener('click', cc.startNewChat);
+    // Floating reopen pill sits outside the sidebar so it stays visible
+    // when the rail is hidden.
+    var reopenBtn = document.createElement('button');
+    reopenBtn.id = 'ic-chats-reopen';
+    reopenBtn.title = 'Show chats';
+    reopenBtn.setAttribute('aria-label', 'Show chats');
+    reopenBtn.innerHTML = ICON_EXPAND;
+    document.body.appendChild(reopenBtn);
 
-    // Sidebar is no longer collapsible — clear any stale flag from a prior
-    // session so the rail always renders.
-    try {
-      localStorage.removeItem('ic-chats-collapsed');
+    // ── Event wiring ──────────────────────────────────────────────────────
+    document.getElementById('ic-chats-new').addEventListener('click', cc.startNewChat);
+    document.getElementById('ic-chats-collapse').addEventListener('click', function() {
+      document.body.classList.add('ic-chats-collapsed');
+      try { localStorage.setItem('ic-chats-collapsed', '1'); } catch (e) {}
+    });
+    reopenBtn.addEventListener('click', function() {
       document.body.classList.remove('ic-chats-collapsed');
+      try { localStorage.removeItem('ic-chats-collapsed'); } catch (e) {}
+    });
+
+    // Live search: filter in-place on input; Esc clears.
+    var searchInput = document.getElementById('ic-chats-search-input');
+    searchInput.addEventListener('input', function() {
+      cc.chatsSearchQuery = searchInput.value || '';
+      cc.renderChatsSidebar();
+    });
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        searchInput.value = '';
+        cc.chatsSearchQuery = '';
+        cc.renderChatsSidebar();
+        searchInput.blur();
+      }
+    });
+
+    // Restore collapsed state from the previous session.
+    try {
+      if (localStorage.getItem('ic-chats-collapsed') === '1') {
+        document.body.classList.add('ic-chats-collapsed');
+      }
     } catch (e) {}
 
     cc.renderChatsSidebar();
@@ -183,27 +229,62 @@
       return (b.updatedAt || 0) - (a.updatedAt || 0);
     });
 
+    // Apply the live search filter (case-insensitive substring match on title).
+    var q = (cc.chatsSearchQuery || '').trim().toLowerCase();
+    if (q) {
+      chats = chats.filter(function(c) {
+        return (c.title || '').toLowerCase().indexOf(q) !== -1;
+      });
+    }
+
     if (!chats.length) {
-      list.innerHTML = '<div class="ic-chats-empty">No chats yet. Start a new one to see it here.</div>';
+      list.innerHTML = '<div class="ic-chats-empty">' +
+        (q ? 'No chats match "' + escapeHtml(q) + '".'
+           : 'No chats yet. Start a new one to see it here.') + '</div>';
       return;
     }
 
-    // Single "Recents" header for the whole list (no date grouping).
-    var html = '<div class="ic-chats-group-label">Recents</div>';
+    // Split into Favorites and Recents. Drag between sections or click the
+    // star on a row to toggle the flag.
+    var favorites = [];
+    var recents = [];
     for (var i = 0; i < chats.length; i++) {
-      var c = chats[i];
+      if (chats[i].favorite) favorites.push(chats[i]);
+      else recents.push(chats[i]);
+    }
+
+    function renderRow(c) {
       var active = c.id === cc.chatsStore.activeId ? ' active' : '';
-      html += '<div class="ic-chats-item' + active + '" data-chat-id="' + escapeHtml(c.id) + '">' +
+      var starIcon = c.favorite ? ICON_STAR_FILLED : ICON_STAR_OUTLINE;
+      var starTitle = c.favorite ? 'Unfavorite' : 'Favorite';
+      return '<div class="ic-chats-item' + active + '" data-chat-id="' + escapeHtml(c.id) +
+                   '" data-favorite="' + (c.favorite ? 'true' : 'false') + '" draggable="true">' +
                 '<span class="ic-chats-item-title">' + escapeHtml(c.title || 'Untitled') + '</span>' +
                 '<span class="ic-chats-item-actions">' +
-                  '<button class="ic-chats-item-action" data-action="rename" title="Rename">' + ICON_EDIT + '</button>' +
-                  '<button class="ic-chats-item-action" data-action="delete" title="Delete">' + ICON_DELETE + '</button>' +
+                  '<button class="ic-chats-item-action ic-chats-item-star' + (c.favorite ? ' is-active' : '') +
+                         '" data-action="favorite" title="' + starTitle + '" aria-label="' + starTitle + '">' + starIcon + '</button>' +
+                  '<button class="ic-chats-item-action" data-action="rename" title="Rename" aria-label="Rename">' + ICON_EDIT + '</button>' +
+                  '<button class="ic-chats-item-action" data-action="delete" title="Delete" aria-label="Delete">' + ICON_DELETE + '</button>' +
                 '</span>' +
               '</div>';
     }
+
+    // Always render both group headers so drag-to-favorite has a drop target
+    // even when one of the groups is empty.
+    var html = '';
+    html += '<div class="ic-chats-group-label" data-group="favorites">Favorites</div>';
+    if (favorites.length) {
+      for (var j = 0; j < favorites.length; j++) html += renderRow(favorites[j]);
+    } else {
+      html += '<div class="ic-chats-group-empty">Star a chat or drag it here.</div>';
+    }
+    html += '<div class="ic-chats-group-label" data-group="recents">Recents</div>';
+    if (recents.length) {
+      for (var k = 0; k < recents.length; k++) html += renderRow(recents[k]);
+    }
     list.innerHTML = html;
 
-    // Event delegation
+    // Click delegation
     list.onclick = function(e) {
       var actionBtn = e.target.closest('.ic-chats-item-action');
       var item = e.target.closest('.ic-chats-item');
@@ -214,10 +295,89 @@
         var action = actionBtn.getAttribute('data-action');
         if (action === 'rename') cc.renameChatInline(id, item);
         else if (action === 'delete') cc.deleteChat(id);
+        else if (action === 'favorite') {
+          var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === id; })[0];
+          cc.setChatFavorite(id, chat ? !chat.favorite : true);
+        }
         return;
       }
       cc.openChat(id);
     };
+
+    // Drag-and-drop wiring for favorite toggling.
+    // Drop an item onto (or anywhere inside) a section header / below the
+    // other section's items to toggle its favorite flag.
+    var sidebar = document.getElementById('ic-chats-sidebar');
+    var draggedId = null;
+
+    list.querySelectorAll('.ic-chats-item').forEach(function(el) {
+      el.addEventListener('dragstart', function(e) {
+        draggedId = el.getAttribute('data-chat-id');
+        el.classList.add('ic-dragging');
+        if (sidebar) sidebar.classList.add('ic-dragging');
+        try {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', draggedId || '');
+        } catch (_) {}
+      });
+      el.addEventListener('dragend', function() {
+        el.classList.remove('ic-dragging');
+        if (sidebar) sidebar.classList.remove('ic-dragging');
+        list.querySelectorAll('.ic-chats-group-label.ic-drop-target').forEach(function(l) {
+          l.classList.remove('ic-drop-target');
+        });
+        draggedId = null;
+      });
+    });
+
+    // Use the whole list as the drop surface; highlight whichever group
+    // label is nearest on move, and resolve to that group on drop.
+    function groupFromPoint(y) {
+      var labels = list.querySelectorAll('.ic-chats-group-label');
+      var active = null;
+      for (var i2 = 0; i2 < labels.length; i2++) {
+        if (labels[i2].getBoundingClientRect().top <= y) active = labels[i2];
+      }
+      return active;
+    }
+
+    list.addEventListener('dragover', function(e) {
+      if (!draggedId) return;
+      e.preventDefault();
+      try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
+      var target = groupFromPoint(e.clientY);
+      list.querySelectorAll('.ic-chats-group-label').forEach(function(l) {
+        l.classList.toggle('ic-drop-target', l === target);
+      });
+    });
+
+    list.addEventListener('drop', function(e) {
+      if (!draggedId) return;
+      e.preventDefault();
+      var target = groupFromPoint(e.clientY);
+      var group = target ? target.getAttribute('data-group') : null;
+      var id = draggedId;
+      draggedId = null;
+      if (!group) return;
+      cc.setChatFavorite(id, group === 'favorites');
+    });
+  };
+
+  // ── Favorite toggle — optimistic update + server PUT ────────────────────
+  cc.setChatFavorite = function(id, favorite) {
+    var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === id; })[0];
+    if (!chat) return;
+    if (!!chat.favorite === !!favorite) return;   // no-op drag onto same group
+    chat.favorite = !!favorite;
+    cc.renderChatsSidebar();
+    fetch(chatsUrl('/' + encodeURIComponent(id)), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ favorite: !!favorite })
+    })
+    .then(function(r) { if (!r.ok) console.warn('[interclaw] favorite PUT failed:', r.status); })
+    .catch(function(err) { console.warn('[interclaw] favorite toggle failed:', err); });
   };
 
   // ── Actions ─────────────────────────────────────────────────────────────

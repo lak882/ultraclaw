@@ -555,6 +555,19 @@
       var tabId = tab.dataset.tab;
       var inChatMode = document.body.classList.contains('ic-chat-mode');
 
+      // Shell-aware path: when this header is rendered inside the InterClaw
+      // shell (index.html top-level), Portal/Traces/Skills tabs must swap
+      // the active iframe in place rather than navigate the whole window.
+      // The shell exposes window._interclawShell.activateTab for exactly
+      // this. We only handle the three workspace tabs here; 'chat' still
+      // falls through to the chat-mode toggle below.
+      var shell = window._interclawShell;
+      if (shell && tabId !== 'chat' && (tabId === 'portal' || tabId === 'traces' || tabId === 'skills')) {
+        e.preventDefault();
+        shell.activateTab(tabId);
+        return;
+      }
+
       if (tabId === 'chat') {
         // On the dedicated chat page, chat tab is a no-op
         if (_isChatPage) { e.preventDefault(); return; }

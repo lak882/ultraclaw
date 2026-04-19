@@ -1,179 +1,317 @@
-/* chatgpt-theme.css — Claude.ai-style left chats sidebar (white).
+/* chatgpt-theme.css — v0.app-inspired left chats sidebar (WHITE, Geist font,
+   2px blue top border, alpha-400 hovers, 32-row items, drag-to-favorite).
+
    Scoped strictly to #ic-chats-sidebar and its children. Does NOT touch
    the chatbot panel (#chatbot-sidebar) or anything inside it.
 
-   Ported from the Claude.ai sidebar DOM: bg-bg-100 surface, text-text-200
-   hover, text-text-400 icons, border-border-300 outlines, rounded-lg (8px)
-   item radius, 32px (h-8) items, truncate with fade mask on item hover.
-
-   To roll back: remove the <link> injection in index.js and delete this file.
+   Tokens ported from the v0 CSS you pasted (light mode):
+     --v0-background-100:   #ffffff
+     --v0-background-200:   oklch(98.5% 0 0)  ≈ #fbfbfb
+     --v0-background-300:   #ffffff
+     --v0-alpha-400:        oklch(0% 0 0/.078) ≈ rgba(0,0,0,0.078)
+     --v0-gray-100:         oklch(96.1% 0 0)   ≈ #ececec
+     --v0-gray-200:         oklch(94%   0 0)   ≈ #e4e4e4
+     --v0-gray-300:         oklch(92.5% 0 0)   ≈ #dfdfdf
+     --v0-gray-400:         oklch(93.7% 0 0)
+     --v0-gray-600:         oklch(73.2% 0 0)   ≈ #8e8e8e
+     --v0-gray-900:         oklch(51%   0 0)   ≈ #5d5d5d
+     --v0-gray-1000:        oklch(20.5% 0 0)   ≈ #1a1a1a
+     --v0-blue-600:         oklch(73% .1467 248) ≈ #4c9aff (keeping our 2px header #007aff)
 */
 
 :root {
-  /* White sidebar with cool-gray hovers — pure white base */
-  --cl-bg-100:        #ffffff;   /* sidebar base */
-  --cl-bg-200:        #f7f7f8;   /* subtle block background */
-  --cl-bg-300:        #ececed;   /* hover / active surface */
-  --cl-bg-000:        #ffffff;   /* pure white for contenteditable/rename field */
+  --v0-bg-100:       #ffffff;
+  --v0-bg-200:       #fbfbfb;
+  --v0-bg-300:       #ffffff;
 
-  --cl-text-100:      #1a1915;   /* primary text */
-  --cl-text-200:      #2b2a26;   /* body on hover */
-  --cl-text-300:      #3f3e39;   /* dim body */
-  --cl-text-400:      #6b6a63;   /* icon default */
-  --cl-text-500:      #8e8d85;   /* section headings, muted labels */
+  --v0-alpha-400:    rgba(0, 0, 0, 0.078);
+  --v0-alpha-500:    rgba(0, 0, 0, 0.12);
 
-  --cl-border-200:    rgba(26, 25, 21, 0.08);
-  --cl-border-300:    rgba(26, 25, 21, 0.12);
-  --cl-border-400:    rgba(26, 25, 21, 0.18);
+  --v0-gray-100:     #ececec;
+  --v0-gray-200:     #e4e4e4;
+  --v0-gray-300:     #dfdfdf;
+  --v0-gray-400:     #cfcfcf;
+  --v0-gray-600:     #8e8e8e;
+  --v0-gray-900:     #5d5d5d;
+  --v0-gray-1000:    #1a1a1a;
 
-  /* Brand blue (kept consistent with the 2px chat-panel header) */
-  --cl-accent:        #007aff;
+  --v0-accent:       var(--fr-styles-color-primary, #3b3b94);   /* InterClaw brand dark-blue (hsl 238,49%,39%) */
 
-  /* Tailwind-ish radii that Claude uses */
-  --cl-radius-md:     0.5rem;    /* rounded-lg */
-  --cl-radius-sm:     0.375rem;  /* rounded-md */
+  --v0-radius-sm:    4px;       /* rounded-sm */
+  --v0-radius-md:    6px;       /* rounded-md */
+  --v0-radius-lg:    8px;       /* rounded-lg (items) */
 
-  --cl-font: "Anthropic Sans", ui-sans-serif, -apple-system, system-ui,
-             "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
+  /* Geist if available, otherwise generic sans stack */
+  --v0-font: "GeistSans", "Geist Sans", ui-sans-serif, -apple-system,
+             system-ui, "Segoe UI", Helvetica, Arial, sans-serif,
              "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 
-  --cl-sidebar-width: 260px;
+  --ic-chats-sidebar-width: 240px;   /* v0 rail width */
 }
-
-/* Expand rail width to 260px (Claude's default) while we're restyling. */
-:root { --ic-chats-sidebar-width: var(--cl-sidebar-width); }
 
 /* ========================================================================
    Shell
    ======================================================================== */
 #ic-chats-sidebar {
-  background: var(--cl-bg-100) !important;
-  border-top: 2px solid var(--cl-accent) !important;
-  border-right: 1px solid var(--cl-border-200) !important;
-  color: var(--cl-text-100) !important;
-  font-family: var(--cl-font) !important;
+  background: var(--v0-bg-100) !important;
+  border-top: 2px solid var(--v0-accent) !important;
+  border-right: 1px solid var(--v0-alpha-400) !important;
+  color: var(--v0-gray-1000) !important;
+  font-family: var(--v0-font) !important;
   font-size: 14px !important;
+  font-feature-settings: "zero" !important;
+  -webkit-font-smoothing: antialiased !important;
   padding: 0 !important;
 }
 
-/* Scrollbar — thin, low-contrast */
+/* Light scrollbar */
 #ic-chats-sidebar *::-webkit-scrollbar { width: 6px; height: 6px; }
 #ic-chats-sidebar *::-webkit-scrollbar-track { background: transparent; }
 #ic-chats-sidebar *::-webkit-scrollbar-thumb {
-  background: var(--cl-border-300) !important;
+  background: var(--v0-gray-300) !important;
   border-radius: 999px !important;
 }
 #ic-chats-sidebar *::-webkit-scrollbar-thumb:hover {
-  background: var(--cl-border-400) !important;
+  background: var(--v0-gray-400) !important;
 }
 
 /* ========================================================================
-   Header row — the "Chats" title line
-   Claude puts a subtle monogram / pin toggle here. We just keep the brand
-   label, muted, left-aligned.
+   Header row — left-aligned "Chats" brand, right-aligned collapse toggle.
    ======================================================================== */
 #ic-chats-sidebar .ic-chats-header {
-  padding: 10px 12px 4px 14px !important;
-  min-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 10px 4px 14px !important;
+  min-height: 36px !important;
 }
 #ic-chats-sidebar .ic-chats-brand {
-  color: var(--cl-text-500) !important;
-  font-size: 12px !important;
+  color: var(--v0-gray-900) !important;
+  font-size: 13px !important;
   font-weight: 500 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
 }
+#ic-chats-sidebar .ic-chats-collapse-btn {
+  background: transparent !important;
+  border: none !important;
+  color: var(--v0-gray-900) !important;
+  border-radius: var(--v0-radius-sm) !important;
+  padding: 5px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: background 0.1s ease-out, color 0.1s ease-out !important;
+}
+#ic-chats-sidebar .ic-chats-collapse-btn:hover {
+  background: var(--v0-alpha-400) !important;
+  color: var(--v0-gray-1000) !important;
+}
+#ic-chats-sidebar .ic-chats-collapse-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+}
 
 /* ========================================================================
-   "New chat" button — Claude's top-level nav item style:
-   h-8, rounded-lg, px-4, -translate-x-2 so the icon appears flush left
-   while the text hugs the content edge.
+   "New chat" — ChatGPT-style nav row: transparent, icon + label, hover
+   tints with alpha-400. No pill border, no shadow.
    ======================================================================== */
 #ic-chats-sidebar .ic-chats-new {
   margin: 2px 8px 4px 8px !important;
-  padding: 6px 16px !important;
+  padding: 6px 10px !important;
   background: transparent !important;
-  border: 1px solid transparent !important;
-  color: var(--cl-text-100) !important;
+  border: none !important;
+  color: var(--v0-gray-1000) !important;
+  font-family: var(--v0-font) !important;
   font-size: 14px !important;
   font-weight: 400 !important;
-  border-radius: var(--cl-radius-md) !important;
-  transition: background 0.075s ease-out !important;
+  border-radius: var(--v0-radius-md) !important;
+  box-shadow: none !important;
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important;
+  gap: 10px !important;
   min-height: 32px !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  user-select: none !important;
+  transition: background 0.08s ease-out !important;
 }
 #ic-chats-sidebar .ic-chats-new:hover {
-  background: var(--cl-bg-300) !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
+  background: var(--v0-alpha-400) !important;
 }
-#ic-chats-sidebar .ic-chats-new svg {
-  color: var(--cl-text-400) !important;
-  opacity: 1 !important;
+#ic-chats-sidebar .ic-chats-new-icon {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--v0-gray-900) !important;
   width: 16px !important;
   height: 16px !important;
   flex-shrink: 0 !important;
-  transition: color 0.1s ease-out, transform 0.1s ease-out !important;
 }
-#ic-chats-sidebar .ic-chats-new:hover svg {
-  color: var(--cl-text-100) !important;
+#ic-chats-sidebar .ic-chats-new-icon svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+#ic-chats-sidebar .ic-chats-new:hover .ic-chats-new-icon {
+  color: var(--v0-gray-1000) !important;
+}
+#ic-chats-sidebar .ic-chats-new-label {
+  font-size: 14px !important;
+  line-height: 1 !important;
+}
+
+/* ========================================================================
+   Search row — input with leading magnifying-glass icon.
+   ======================================================================== */
+#ic-chats-sidebar .ic-chats-search {
+  position: relative !important;
+  margin: 2px 8px 8px 8px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+#ic-chats-sidebar .ic-chats-search-icon {
+  position: absolute !important;
+  left: 10px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: var(--v0-gray-900) !important;
+  pointer-events: none !important;
+  display: flex !important;
+  align-items: center !important;
+}
+#ic-chats-sidebar .ic-chats-search-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+#ic-chats-sidebar .ic-chats-search-input {
+  width: 100% !important;
+  height: 32px !important;
+  padding: 0 10px 0 32px !important;
+  border: 1px solid var(--v0-alpha-400) !important;
+  background: var(--v0-bg-100) !important;
+  color: var(--v0-gray-1000) !important;
+  font-family: var(--v0-font) !important;
+  font-size: 13px !important;
+  border-radius: var(--v0-radius-md) !important;
+  outline: none !important;
+  transition: border-color 0.1s ease-out, box-shadow 0.1s ease-out !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+#ic-chats-sidebar .ic-chats-search-input::placeholder {
+  color: var(--v0-gray-600) !important;
+}
+#ic-chats-sidebar .ic-chats-search-input:focus {
+  border-color: var(--v0-accent) !important;
+  box-shadow: 0 0 0 3px rgba(59, 59, 148, 0.18) !important;
+}
+#ic-chats-sidebar .ic-chats-search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  background: var(--v0-gray-600);
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'><path d='M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z'/></svg>") no-repeat center / contain;
+  cursor: pointer;
+}
+
+/* ========================================================================
+   Empty-favorites placeholder (drop zone hint)
+   ======================================================================== */
+#ic-chats-sidebar .ic-chats-group-empty {
+  color: var(--v0-gray-600) !important;
+  font-size: 12px !important;
+  padding: 6px 12px 10px 12px !important;
+  font-style: normal !important;
+}
+
+/* Star button — inactive is outline, active is filled accent blue */
+#ic-chats-sidebar .ic-chats-item-star svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+#ic-chats-sidebar .ic-chats-item-star.is-active {
+  color: var(--v0-accent) !important;
+}
+/* When a row is already favorited, keep the star visible at rest so the
+   user sees it's starred even without hovering. */
+#ic-chats-sidebar .ic-chats-item[data-favorite="true"] .ic-chats-item-star.is-active {
+  opacity: 1 !important;
 }
 
 /* ========================================================================
    Chat list
    ======================================================================== */
 #ic-chats-sidebar .ic-chats-list {
-  padding: 12px 8px 16px 8px !important;
+  padding: 4px 8px 16px 8px !important;
 }
 
-/* Section labels ("Today", "Yesterday", "April 2025")
-   Claude's markup: `text-text-500 pb-2 mt-1 text-xs pl-2 pr-2` */
+/* Section headers — v0's h2 style: text-[0.8125rem], 500-weight, gray-900 */
 #ic-chats-sidebar .ic-chats-group-label {
-  padding: 12px 10px 6px 10px !important;
-  margin: 4px 0 0 0 !important;
-  font-size: 12px !important;
+  padding: 10px 10px 6px 10px !important;
+  margin: 6px 0 2px 0 !important;
+  font-size: 13px !important;
   font-weight: 500 !important;
-  color: var(--cl-text-500) !important;
+  color: var(--v0-gray-900) !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
   user-select: none !important;
+  line-height: 1.2 !important;
 }
-/* First group label gets no extra top margin so it hugs the "New chat" row */
 #ic-chats-sidebar .ic-chats-group-label:first-child {
   margin-top: 0 !important;
   padding-top: 6px !important;
 }
 
-/* Items — Claude renders each row at h-8, rounded-lg, px-4, 14px text.
-   The title is truncated and gets a fade-mask on hover. */
+/* Drop zone highlighting under the group header while dragging */
+#ic-chats-sidebar.ic-dragging .ic-chats-group-label {
+  transition: color 0.1s ease-out;
+}
+#ic-chats-sidebar .ic-chats-group-label.ic-drop-target {
+  color: var(--v0-accent) !important;
+}
+
+/* Items — h-8, rounded-md, px-2, gray-900 default text, alpha-400 hover */
 #ic-chats-sidebar .ic-chats-item {
   position: relative !important;
-  color: var(--cl-text-100) !important;
-  padding: 6px 12px !important;
+  color: var(--v0-gray-900) !important;
+  padding: 6px 10px !important;
   margin: 1px 0 !important;
-  border-radius: var(--cl-radius-md) !important;
+  border-radius: var(--v0-radius-md) !important;
   font-size: 14px !important;
+  font-weight: 400 !important;
   line-height: 1.35 !important;
   min-height: 32px !important;
-  transition: background 0.075s ease-out !important;
+  transition: background 0.08s ease-out, color 0.08s ease-out !important;
   display: flex !important;
   align-items: center !important;
+  cursor: grab !important;
 }
+#ic-chats-sidebar .ic-chats-item:active { cursor: grabbing !important; }
 #ic-chats-sidebar .ic-chats-item:hover {
-  background: var(--cl-bg-300) !important;
+  background: var(--v0-alpha-400) !important;
+  color: var(--v0-gray-1000) !important;
 }
 #ic-chats-sidebar .ic-chats-item.active {
-  background: var(--cl-bg-300) !important;
+  background: var(--v0-alpha-500) !important;
+  color: var(--v0-gray-1000) !important;
   font-weight: 500 !important;
 }
 
-/* Title: truncate + fade-mask on hover, mimicking Claude's
-   group-hover:[mask-image:linear-gradient(...)] trick so the action
-   buttons appear to float over a soft text edge. */
+/* Drag visuals */
+#ic-chats-sidebar .ic-chats-item.ic-dragging {
+  opacity: 0.5 !important;
+  cursor: grabbing !important;
+}
+
+/* (Favorite indicator moved to the explicit star action button;
+   no leading pseudo-star needed.) */
+
+/* Title — truncate + fade-mask on hover (v0's signature trick) */
 #ic-chats-sidebar .ic-chats-item-title {
-  color: var(--cl-text-100) !important;
+  color: inherit !important;
   font-size: 14px !important;
   font-weight: inherit !important;
   padding-right: 4px !important;
@@ -181,6 +319,8 @@
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   transition: -webkit-mask-image 0.1s ease-out, mask-image 0.1s ease-out !important;
+  flex: 1 !important;
+  min-width: 0 !important;
 }
 #ic-chats-sidebar .ic-chats-item:hover .ic-chats-item-title,
 #ic-chats-sidebar .ic-chats-item.active .ic-chats-item-title {
@@ -190,11 +330,11 @@
   mask-size: 100% 100% !important;
 }
 #ic-chats-sidebar .ic-chats-item-title[contenteditable="true"] {
-  background: var(--cl-bg-000) !important;
-  color: var(--cl-text-100) !important;
-  border: 1px solid var(--cl-border-400) !important;
-  border-radius: var(--cl-radius-sm) !important;
-  outline: 2px solid var(--cl-accent) !important;
+  background: var(--v0-bg-100) !important;
+  color: var(--v0-gray-1000) !important;
+  border: 1px solid var(--v0-gray-300) !important;
+  border-radius: var(--v0-radius-sm) !important;
+  outline: 2px solid var(--v0-accent) !important;
   outline-offset: -1px !important;
   -webkit-mask-image: none !important;
   mask-image: none !important;
@@ -203,10 +343,11 @@
   padding: 2px 6px !important;
 }
 
-/* Action buttons (rename, delete) — icon-only, mono color, rounded-md */
+/* Action buttons — v0's item-action pattern: absolute right-2, size-5,
+   icon-only, revealed on item hover */
 #ic-chats-sidebar .ic-chats-item-actions {
   position: absolute !important;
-  right: 8px !important;
+  right: 6px !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   gap: 2px !important;
@@ -214,35 +355,37 @@
   background: transparent !important;
 }
 #ic-chats-sidebar .ic-chats-item-action {
-  color: var(--cl-text-400) !important;
+  color: var(--v0-gray-900) !important;
   background: transparent !important;
   border: none !important;
-  border-radius: var(--cl-radius-sm) !important;
-  padding: 4px !important;
+  border-radius: var(--v0-radius-sm) !important;
+  padding: 3px !important;
+  width: 20px !important;
+  height: 20px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   transition: background 0.1s ease-out, color 0.1s ease-out !important;
 }
 #ic-chats-sidebar .ic-chats-item-action:hover {
-  background: rgba(26, 25, 21, 0.12) !important;
-  color: var(--cl-text-100) !important;
+  background: var(--v0-alpha-500) !important;
+  color: var(--v0-gray-1000) !important;
 }
 #ic-chats-sidebar .ic-chats-item-action svg {
-  width: 14px !important;
-  height: 14px !important;
+  width: 13px !important;
+  height: 13px !important;
 }
 
 #ic-chats-sidebar .ic-chats-empty {
-  color: var(--cl-text-500) !important;
+  color: var(--v0-gray-900) !important;
   font-size: 13px !important;
   padding: 24px 14px !important;
   text-align: center !important;
   line-height: 1.5 !important;
 }
 
-/* Selection highlight inside the sidebar */
+/* Selection highlight */
 #ic-chats-sidebar ::selection {
-  background: rgba(0, 122, 255, 0.18);
-  color: var(--cl-text-100);
+  background: rgba(59, 59, 148, 0.18);
+  color: var(--v0-gray-1000);
 }

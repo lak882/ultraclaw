@@ -25,7 +25,7 @@
   var chatsLink = document.createElement('link');
   chatsLink.rel = 'stylesheet';
   chatsLink.id = 'interclaw-chats-sidebar-styles';
-  chatsLink.href = basePath + 'chats-sidebar.css?v=2';
+  chatsLink.href = basePath + 'chats-sidebar.css?v=3';
   document.head.appendChild(chatsLink);
 
   // ChatGPT-inspired light theme — loaded LAST so it overrides chatbot.css
@@ -33,7 +33,7 @@
   var themeLink = document.createElement('link');
   themeLink.rel = 'stylesheet';
   themeLink.id = 'interclaw-chatgpt-theme';
-  themeLink.href = basePath + 'chatgpt-theme.css?v=7';
+  themeLink.href = basePath + 'chatgpt-theme.css?v=10';
   document.head.appendChild(themeLink);
 
   // Load marked.js for markdown rendering
@@ -67,7 +67,7 @@
   ];
 
   // Cache-busting version — bump this to force-reload all modules
-  var MODULE_VERSION = 16;
+  var MODULE_VERSION = 19;
 
   function loadNext(i) {
     if (i >= modules.length) {

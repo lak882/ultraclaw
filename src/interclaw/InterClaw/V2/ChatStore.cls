@@ -124,7 +124,8 @@ ClassMethod List(user As %String) As %DynamicArray
         Set title = obj.%Get("title")
         If title = "" Set title = "Untitled"
         Set updatedAt = +obj.%Get("updatedAt")
-        Set items(updatedAt, id) = $ListBuild(id, title, updatedAt)
+        Set favorite = ''obj.%Get("favorite")
+        Set items(updatedAt, id) = $ListBuild(id, title, updatedAt, favorite)
     }
     Do rs.Close()
 
@@ -143,6 +144,7 @@ ClassMethod List(user As %String) As %DynamicArray
             Do row.%Set("id", $ListGet(entry, 1))
             Do row.%Set("title", $ListGet(entry, 2))
             Do row.%Set("updatedAt", $ListGet(entry, 3), "number")
+            Do row.%Set("favorite", ''$ListGet(entry, 4), "boolean")
             Do arr.%Push(row)
         }
     }
@@ -175,6 +177,9 @@ ClassMethod Put(user As %String, id As %String, input As %DynamicObject) As %Dyn
         }
         If input.%IsDefined("messages") {
             Do existing.%Set("messages", input.%Get("messages"))
+        }
+        If input.%IsDefined("favorite") {
+            Do existing.%Set("favorite", ''input.%Get("favorite"), "boolean")
         }
         If input.%IsDefined("model") Do existing.%Set("model", input.%Get("model"))
         If input.%IsDefined("namespace") Do existing.%Set("namespace", input.%Get("namespace"))

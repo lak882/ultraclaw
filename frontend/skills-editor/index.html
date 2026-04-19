@@ -587,6 +587,11 @@ html, body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>
+
+<!-- Shared skills-editor theme overlay (matches chats sidebar v0 palette).
+     Load LAST so it wins on cascade specificity. Cache-bust by bumping ?v=. -->
+<link rel="stylesheet" href="theme-overlay.css?v=1" id="skills-editor-theme">
+
 </head>
 <body data-no-auth-gate>
 <script>
@@ -597,7 +602,7 @@ html, body {
 <script>
   if (!window._interclawChromeNone) {
     var _s = document.createElement('script');
-    _s.src = '../interclaw-header.js?v=14';
+    _s.src = '../interclaw-header.js?v=15';
     document.head.appendChild(_s);
   } else {
     // Shift app-root to fill the shell's viewport (no sidebar gap).
