@@ -35,14 +35,18 @@
   else if (path.indexOf('rule-editor') !== -1) currentEditor = 'copilot';
   else currentEditor = 'copilot'; // interop-editor = copilot
 
-  // Check for chat fullscreen mode. Two sources of truth — URL wins for
-  // deep links, localStorage survives reloads so clicking "Chat" once and
-  // hitting F5 keeps us on chat instead of falling back to the editor.
+  // Detect chat fullscreen mode from the URL. The shell keeps the active
+  // tab in the outer hash (`#/chat`, `#/portal/…`, `#/skills`), so reload
+  // preserves the current view automatically — no separate persistence
+  // needed. `?view=chat` is the pre-shell query-string form; keep it for
+  // legacy deep links. An earlier version of this code used a localStorage
+  // flag; dropped because it overrode the URL and made reloading on
+  // Portal bounce back to chat.
   var params = new URLSearchParams(loc.search);
   var viewMode = params.get('view');
-  var _persistedChat = false;
-  try { _persistedChat = localStorage.getItem('ic-chat-mode') === '1'; } catch (e) {}
-  var inChatOnLoad = (viewMode === 'chat') || _persistedChat;
+  var _hashChat = /^#\/chat(\b|\?|$)/.test(loc.hash || '');
+  try { localStorage.removeItem('ic-chat-mode'); } catch (e) {}
+  var inChatOnLoad = (viewMode === 'chat') || _hashChat;
   var currentTab = inChatOnLoad ? 'chat' : currentEditor;
 
   // ── Namespace: URL param > install-config global > fallback INTERCLAW ──
@@ -550,17 +554,12 @@
     document.body.classList.add('ic-chat-mode');
   }
 
-  // Keep localStorage in lockstep with the body class so future reloads
-  // land in the same place. Wrap the class mutations in this helper rather
-  // than scattering setItem/removeItem across the handlers.
+  // Single place to toggle chat mode on the body. The URL hash (owned by
+  // the shell) is the persistence layer — when chat mode changes, the
+  // shell's hash-sync writes `#/chat` or `#/portal/…` and reload restores
+  // it from there. No localStorage write here.
   function setChatMode(on) {
-    if (on) {
-      document.body.classList.add('ic-chat-mode');
-      try { localStorage.setItem('ic-chat-mode', '1'); } catch (e) {}
-    } else {
-      document.body.classList.remove('ic-chat-mode');
-      try { localStorage.removeItem('ic-chat-mode'); } catch (e) {}
-    }
+    document.body.classList.toggle('ic-chat-mode', !!on);
   }
 
   // Chat tab toggles chat mode on the current page instead of navigating.

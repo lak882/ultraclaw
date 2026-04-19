@@ -48,13 +48,15 @@
   // yet, so the very first prompt can't be persisted — the backend's
   // session_id arrives mid-stream and the next saveState catches it.
   // Strip purely transient streaming affordances before serializing:
-  // the live thinking-bar and usage-bar, plus any empty reasoning-steps
-  // wrapper created by the typing indicator but never populated (mid-turn
-  // race artifact). Populated reasoning-steps stay — those are the tool
-  // call history the user expects to see after a reload.
+  // only the live thinking-bar (which has an animated label), plus any
+  // empty reasoning-steps wrapper created by the typing indicator but
+  // never populated (mid-turn race artifact). The usage-bar STAYS — it
+  // holds the static post-turn tokens/cost/elapsed summary that the user
+  // expects to still see after reload or chat-reopen. Populated
+  // reasoning-steps also stay for the same reason.
   function cleanBubbleHtml(msgEl) {
     var clone = msgEl.cloneNode(true);
-    var bars = clone.querySelectorAll('.bubble-thinking-bar, .bubble-usage-bar');
+    var bars = clone.querySelectorAll('.bubble-thinking-bar');
     for (var i = 0; i < bars.length; i++) {
       if (bars[i].parentNode) bars[i].parentNode.removeChild(bars[i]);
     }
@@ -718,10 +720,10 @@
       else if (m.type === 'error') msg.className += ' chatbot-message-error';
       else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
       msg.innerHTML = m.html || '';
-      // Defense in depth: legacy chat files may carry live status bars.
-      // Keep populated reasoning-steps (tool-call history); drop the bars
-      // and any empty steps wrapper.
-      var bars = msg.querySelectorAll('.bubble-thinking-bar, .bubble-usage-bar');
+      // Legacy chat files may carry a live thinking-bar with an animated
+      // label; drop that. Keep the .bubble-usage-bar — it's the static
+      // post-turn summary the user expects to see on reopen.
+      var bars = msg.querySelectorAll('.bubble-thinking-bar');
       for (var bi = 0; bi < bars.length; bi++) {
         if (bars[bi].parentNode) bars[bi].parentNode.removeChild(bars[bi]);
       }

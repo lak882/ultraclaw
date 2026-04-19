@@ -59,7 +59,7 @@
         // Cache-bust v: bump when skills-editor/index.html changes so the
         // iframe doesn't serve a stale copy out of the disk cache after a
         // deploy. The browser keyed cache on URL so this is the only knob.
-        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=8'
+        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=9'
       }
     };
   }
@@ -217,6 +217,78 @@
     }
   };
 
+  // ── Namespace change: update outer URL + reload Portal/Skills iframes ──
+  // When the user picks a different namespace in the header dropdown (or
+  // Angular internally switches namespaces), three things need to happen:
+  //   (a) The outer URL should reflect the new namespace so reloading the
+  //       tab or sharing the URL lands in the right place.
+  //   (b) The Portal iframe must reload against the new namespace, ideally
+  //       keeping whatever zen page the user was on (just swapping the NS
+  //       in the path + query, not jumping back to ProductionConfig).
+  //   (c) The Skills iframe must reload so its file tree reflects the new
+  //       namespace.
+  //
+  // Without this, interclaw-header.js only updated the label and tab hrefs —
+  // the user picked a new NS and nothing below the header actually changed.
+  function swapNamespaceInUrl(url, newNs) {
+    if (!url) return url;
+    var lower = newNs.toLowerCase();
+    url = url.replace(/(\$NAMESPACE=)[^&#]*/g, '$1' + newNs);
+    url = url.replace(/(\bNAMESPACE=)[^&#]*/g, '$1' + newNs);
+    url = url.replace(/(\/csp\/healthshare\/)[^\/?#]+/g, '$1' + lower);
+    return url;
+  }
+
+  window.addEventListener('interclaw-namespace-change', function(e) {
+    if (!e.detail || !e.detail.namespace) return;
+    var newNs = e.detail.namespace.toUpperCase();
+    if (newNs === namespace) return;
+    namespace = newNs;
+    nsLower = namespace.toLowerCase();
+    sources = buildSources();
+    legacyBase = sources.portal.frameSrc.split('#')[0];
+
+    // (a) Outer URL: rewrite $NAMESPACE= and /csp/healthshare/{ns}/ in the
+    // query + hash so reloads + copy-paste follow the user's selection.
+    try {
+      var loc = window.location;
+      var newSearch = swapNamespaceInUrl(loc.search, namespace);
+      var newHash = swapNamespaceInUrl(loc.hash, namespace);
+      if (loc.search.indexOf('$NAMESPACE') === -1 && loc.search.indexOf('NAMESPACE') === -1) {
+        newSearch = (newSearch ? newSearch + '&' : '?') + '$NAMESPACE=' + namespace;
+      }
+      if (newSearch !== loc.search || newHash !== loc.hash) {
+        history.replaceState(null, '', loc.pathname + newSearch + newHash);
+      }
+    } catch (urlErr) { /* non-critical */ }
+
+    // (b) Portal iframe: swap NS in the current frame URL so the user stays
+    // on whatever zen page they were viewing, just pointed at the new NS.
+    // Fall back to the default ProductionConfig / MessageViewer URL if the
+    // current src is empty or cross-origin.
+    var portalFrame = document.getElementById('shell-iframe-portal');
+    if (portalFrame) {
+      var currentSrc = portalFrame.src || '';
+      var newSrc = currentSrc ? swapNamespaceInUrl(currentSrc, namespace) : '';
+      if (!newSrc || newSrc === currentSrc) {
+        newSrc = (currentTab === 'traces') ? sources.traces.frameSrc : sources.portal.frameSrc;
+      }
+      // Force an actual reload — assigning the same-origin src with a changed
+      // query triggers reload, but belt-and-braces the case where only a hash
+      // differs (browsers skip reload on hash-only changes).
+      if (newSrc === currentSrc) {
+        portalFrame.src = 'about:blank';
+        setTimeout(function() { portalFrame.src = newSrc; }, 0);
+      } else {
+        portalFrame.src = newSrc;
+      }
+    }
+
+    // (c) Skills iframe: reload against the new namespace.
+    var skillsFrame = document.getElementById('shell-iframe-skills');
+    if (skillsFrame) skillsFrame.src = sources.skills.frameSrc;
+  });
+
   // ── postMessage bridge: iframes → shell → chatbot ──
   window.addEventListener('message', function(ev) {
     var data = ev.data;
@@ -247,6 +319,61 @@
       if (currentTab === 'portal' || currentTab === 'traces') {
         if (currentTab !== data.tab) syncHeaderTabs(data.tab);
         currentTab = data.tab;
+      }
+    }
+
+    // Reverse namespace sync: the portal iframe tells us which NS it's
+    // currently on (Angular may have internally switched). If that differs
+    // from what the shell + header think, update the header label and the
+    // outer URL — but do NOT reload the iframe (it's already on the new NS;
+    // reloading would loop).
+    if (data.context && data.context.namespace) {
+      var iframeNs = String(data.context.namespace).toUpperCase();
+      if (iframeNs && iframeNs !== namespace && /^[A-Z][A-Z0-9_-]*$/.test(iframeNs)) {
+        namespace = iframeNs;
+        nsLower = namespace.toLowerCase();
+        sources = buildSources();
+        legacyBase = sources.portal.frameSrc.split('#')[0];
+
+        // Header label + tab hrefs (interclaw-header.js:724 listens for this).
+        window.dispatchEvent(new CustomEvent('interclaw-namespace-silent', {
+          detail: { namespace: namespace }
+        }));
+
+        // Update header label directly since we're skipping the main
+        // namespace-change listener (which would trigger a reload loop).
+        var nsEl = document.getElementById('ic-header-ns-label');
+        if (nsEl) nsEl.textContent = namespace;
+        if (window._cc) {
+          window._cc.currentNamespace = namespace;
+          window._cc._apiNamespace = namespace;
+        }
+        try { sessionStorage.setItem('interclaw-namespace', namespace); } catch(e) {}
+
+        // Outer URL: rewrite $NAMESPACE= and /csp/healthshare/{ns}/ so
+        // reloads and shares land on the right NS.
+        try {
+          var loc = window.location;
+          var newSearch = swapNamespaceInUrl(loc.search, namespace);
+          var newHash = swapNamespaceInUrl(loc.hash, namespace);
+          if (loc.search.indexOf('$NAMESPACE') === -1 && loc.search.indexOf('NAMESPACE') === -1) {
+            newSearch = (newSearch ? newSearch + '&' : '?') + '$NAMESPACE=' + namespace;
+          }
+          if (newSearch !== loc.search || newHash !== loc.hash) {
+            history.replaceState(null, '', loc.pathname + newSearch + newHash);
+          }
+        } catch (e) { /* non-critical */ }
+
+        // Rewrite every workspace tab href so switching tabs lands on the
+        // new NS instead of the old one.
+        var tabLinks = document.querySelectorAll('#interclaw-header .ic-header-tab');
+        for (var i = 0; i < tabLinks.length; i++) {
+          var href = tabLinks[i].getAttribute('href');
+          if (href) {
+            href = swapNamespaceInUrl(href, namespace);
+            tabLinks[i].setAttribute('href', href);
+          }
+        }
       }
     }
   });
@@ -445,7 +572,11 @@
       // Flip chat mode ON FIRST so the subsequent syncOuterHashFromIframe
       // fired by activateTab short-circuits and leaves `#/chat` intact.
       document.body.classList.add('ic-chat-mode');
+      // Preload the default workspace iframe behind the chat pane so
+      // switching off chat is instant, but DO NOT let activateTab switch
+      // the header highlight to 'portal' — the Chat tab should stay lit.
       activateTab(DEFAULT_TAB);
+      syncHeaderTabs('chat');
       return true;
     }
 

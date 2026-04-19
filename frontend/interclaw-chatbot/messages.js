@@ -147,16 +147,20 @@
 
   // Strip purely transient streaming affordances before serializing:
   //   .bubble-thinking-bar  — the live "Making Connections · 3s" status
-  //   .bubble-usage-bar     — the live usage counter that replaces it
+  //                           (gets replaced by .bubble-usage-bar on `done`)
   //   empty .reasoning-steps — a toggle wrapper created by the typing
   //                            indicator but never populated (artifact of
   //                            mid-turn re-render races)
+  // .bubble-usage-bar STAYS: once the turn has completed, the usage bar
+  // contains static tokens/cost/elapsed text that should persist across
+  // reloads and chat-reopens. It's already a sibling of .msg-content and
+  // re-renders fine from saved HTML.
   // Populated .reasoning-steps stay: they carry the tool-call history the
   // user expects to see after a reload. The delegated click handler in
   // init.js keeps their toggle working after rehydrate.
   function cleanBubbleHtml(msgEl) {
     var clone = msgEl.cloneNode(true);
-    var bars = clone.querySelectorAll('.bubble-thinking-bar, .bubble-usage-bar');
+    var bars = clone.querySelectorAll('.bubble-thinking-bar');
     for (var i = 0; i < bars.length; i++) {
       if (bars[i].parentNode) bars[i].parentNode.removeChild(bars[i]);
     }
@@ -208,10 +212,10 @@
         else if (m.type === 'error') msg.className += ' chatbot-message-error';
         else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
         msg.innerHTML = m.html;
-        // Legacy sessions may carry live status bars. Keep tool-call
-        // history (populated reasoning-steps); drop the bars and any empty
-        // steps wrapper.
-        var bars = msg.querySelectorAll('.bubble-thinking-bar, .bubble-usage-bar');
+        // Legacy sessions may carry a live thinking-bar with an animated
+        // label; drop those. Keep the .bubble-usage-bar — it's the static
+        // post-turn tokens/cost/elapsed summary the user expects to see.
+        var bars = msg.querySelectorAll('.bubble-thinking-bar');
         for (var bk = 0; bk < bars.length; bk++) {
           if (bars[bk].parentNode) bars[bk].parentNode.removeChild(bars[bk]);
         }

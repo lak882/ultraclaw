@@ -44,7 +44,7 @@
              "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 
   /* ChatGPT light-mode tokens — identical to chatgpt-theme.css */
-  --cgpt-sidebar-surface:    #f9f9f9;
+  --cgpt-sidebar-surface:    #ffffff;
   --cgpt-sidebar-body:       #0d0d0d;
   --cgpt-sidebar-body-muted: #5d5d5d;
   --cgpt-sidebar-title:      rgba(13, 13, 13, 0.5);

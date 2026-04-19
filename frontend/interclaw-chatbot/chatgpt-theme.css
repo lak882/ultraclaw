@@ -536,7 +536,7 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
    Rollback: delete this block.
    ======================================================================== */
 :root {
-  --cgpt-sidebar-surface:        #f9f9f9;
+  --cgpt-sidebar-surface:        #ffffff;
   --cgpt-sidebar-body:           #0d0d0d;
   --cgpt-sidebar-body-muted:     #5d5d5d;
   --cgpt-sidebar-title:          rgba(13, 13, 13, 0.5);
@@ -588,11 +588,11 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
   opacity: 1 !important;
 }
 
-/* Search input: same grey as the rail so it reads as an inset field,
-   not a floating control. Focus does not add an accent ring. */
+/* Search input: white like the rail; border alone separates it. Focus
+   does not add an accent ring. */
 #ic-chats-sidebar .ic-chats-search-input {
-  background: var(--cgpt-sidebar-surface) !important;
-  border-color: rgba(13, 13, 13, 0.10) !important;
+  background: #ffffff !important;
+  border-color: rgba(13, 13, 13, 0.12) !important;
   color: var(--cgpt-sidebar-body) !important;
 }
 #ic-chats-sidebar .ic-chats-search-input::placeholder {

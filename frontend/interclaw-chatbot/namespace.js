@@ -189,6 +189,15 @@
     var newNamespace = cc.detectNamespace();
     if (newNamespace && newNamespace !== cc.currentNamespace) {
       cc.currentNamespace = newNamespace;
+      // Notify the header + shell so the top-right label + tab hrefs
+      // follow Angular's client-side namespace switches. The header's
+      // own listener at interclaw-header.js:724 rewrites #ic-header-ns-label
+      // and patches $NAMESPACE= in every tab link.
+      try {
+        window.dispatchEvent(new CustomEvent('interclaw-namespace-change', {
+          detail: { namespace: newNamespace }
+        }));
+      } catch (e) { /* no-op */ }
     }
     parseEditorContext();
   }

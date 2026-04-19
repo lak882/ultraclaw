@@ -520,10 +520,14 @@
           cc.sessionId = data.session_id;
         }
         cc.sessionReady = true;
-        cc.saveState();
         cc.totalTokensAccum += cc.lastTurnTokens;
         if (cc.lastTurnTokens > 0) cc.updateTokenCounter(cc.totalTokensAccum);
+        // Transform the live thinking-bar into the post-turn usage-bar
+        // BEFORE saveState so the persisted HTML includes the usage summary.
+        // Otherwise the user sees tokens/cost/elapsed live but loses them
+        // on reload or chat-reopen.
         cc.transformThinkingToUsage();
+        cc.saveState();
         cc.removeTypingIndicator();
         for (var di = 0; di < cc.currentSteps.length; di++) {
           if (cc.currentSteps[di].status === 'running') {
