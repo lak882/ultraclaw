@@ -47,6 +47,27 @@
   // backend on the first turn). Before we have a session, we have no id
   // yet, so the very first prompt can't be persisted — the backend's
   // session_id arrives mid-stream and the next saveState catches it.
+  // Strip purely transient streaming affordances before serializing:
+  // the live thinking-bar and usage-bar, plus any empty reasoning-steps
+  // wrapper created by the typing indicator but never populated (mid-turn
+  // race artifact). Populated reasoning-steps stay — those are the tool
+  // call history the user expects to see after a reload.
+  function cleanBubbleHtml(msgEl) {
+    var clone = msgEl.cloneNode(true);
+    var bars = clone.querySelectorAll('.bubble-thinking-bar, .bubble-usage-bar');
+    for (var i = 0; i < bars.length; i++) {
+      if (bars[i].parentNode) bars[i].parentNode.removeChild(bars[i]);
+    }
+    var steps = clone.querySelectorAll('.reasoning-steps');
+    for (var j = 0; j < steps.length; j++) {
+      var list = steps[j].querySelector('.reasoning-list');
+      if (!list || !list.querySelector('.reasoning-step')) {
+        if (steps[j].parentNode) steps[j].parentNode.removeChild(steps[j]);
+      }
+    }
+    return clone.innerHTML;
+  }
+
   function serializeCurrentPane() {
     var out = [];
     var content = document.getElementById('chatbot-content');
@@ -62,7 +83,7 @@
       else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
       else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
       else if (msgEl.classList.contains('chatbot-message-tool')) type = 'tool';
-      out.push({ type: type, html: msgEl.innerHTML });
+      out.push({ type: type, html: cleanBubbleHtml(msgEl) });
     }
     return out;
   }
@@ -697,6 +718,20 @@
       else if (m.type === 'error') msg.className += ' chatbot-message-error';
       else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
       msg.innerHTML = m.html || '';
+      // Defense in depth: legacy chat files may carry live status bars.
+      // Keep populated reasoning-steps (tool-call history); drop the bars
+      // and any empty steps wrapper.
+      var bars = msg.querySelectorAll('.bubble-thinking-bar, .bubble-usage-bar');
+      for (var bi = 0; bi < bars.length; bi++) {
+        if (bars[bi].parentNode) bars[bi].parentNode.removeChild(bars[bi]);
+      }
+      var emptySteps = msg.querySelectorAll('.reasoning-steps');
+      for (var esi = 0; esi < emptySteps.length; esi++) {
+        var list = emptySteps[esi].querySelector('.reasoning-list');
+        if (!list || !list.querySelector('.reasoning-step')) {
+          if (emptySteps[esi].parentNode) emptySteps[esi].parentNode.removeChild(emptySteps[esi]);
+        }
+      }
       if (m.type === 'user' || m.type === 'assistant') {
         var wrap = document.createElement('div');
         wrap.className = 'chatbot-msg-wrap' + (m.type === 'user' ? ' chatbot-msg-wrap--user' : '');

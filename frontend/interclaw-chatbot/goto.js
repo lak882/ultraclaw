@@ -153,6 +153,28 @@
   //   2. Legacy-ui context (we ARE the legacy-ui page, with #viewer-frame):
   //      swap our own iframe.
   //   3. No frame context: navigate the whole browser.
+  // openInPortalTab — single entry point used by every inline chat link.
+  // Routes a legacy-ui URL into the Portal (or Traces) iframe AND makes sure
+  // the user leaves chat mode so the iframe is actually visible. Returns
+  // false so the inline onclick handler can use `return cc.openInPortalTab(...)`
+  // to cancel the anchor's default navigation.
+  cc.openInPortalTab = function(legacyUrl) {
+    // Exit chat mode if we're in it — otherwise the portal iframe is hidden
+    // behind the full-width chat pane and nothing the user can see changes.
+    if (document.body.classList.contains('ic-chat-mode')) {
+      document.body.classList.remove('ic-chat-mode');
+      // Nudge the shell URL back to the right tab hash so reloads land on
+      // the portal instead of reopening chat.
+      try {
+        var shell = (window.top && window.top._interclawShell) || window._interclawShell;
+        var tabId = (legacyUrl && legacyUrl.indexOf('MessageViewer') !== -1) ? 'traces' : 'portal';
+        if (shell && typeof shell.activateTab === 'function') shell.activateTab(tabId);
+      } catch (e) { /* non-shell context — harmless */ }
+    }
+    cc.navigateLegacyUi(legacyUrl);
+    return false;
+  };
+
   cc.navigateLegacyUi = function(legacyUrl) {
     var hashIdx = legacyUrl.indexOf('#');
     if (hashIdx === -1) return false;

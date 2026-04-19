@@ -59,7 +59,7 @@
         // Cache-bust v: bump when skills-editor/index.html changes so the
         // iframe doesn't serve a stale copy out of the disk cache after a
         // deploy. The browser keyed cache on URL so this is the only knob.
-        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=7'
+        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=8'
       }
     };
   }
@@ -193,7 +193,28 @@
       activateTab(tabId);
       return true;
     },
-    currentTab: function() { return currentTab; }
+    currentTab: function() { return currentTab; },
+
+    // Refresh only the currently-active editor iframe. Used by the chatbot
+    // /reload handler so a reload directive no longer blows away the shell
+    // chrome (sidebar, header, chat pane) — it just re-fetches whatever
+    // the user is looking at inside the iframe. Falls back to a plain
+    // `src` reset if the cross-origin hash nudge isn't available.
+    reloadActiveFrame: function() {
+      var frameId = TAB_TO_FRAME[currentTab] || TAB_TO_FRAME[DEFAULT_TAB];
+      var frame = document.getElementById(frameId);
+      if (!frame) return false;
+      try {
+        if (frame.contentWindow && frame.contentWindow.location) {
+          frame.contentWindow.location.reload();
+          return true;
+        }
+      } catch (e) { /* cross-origin or unavailable — fall through */ }
+      var src = frame.src;
+      frame.src = 'about:blank';
+      setTimeout(function() { frame.src = src; }, 0);
+      return true;
+    }
   };
 
   // ── postMessage bridge: iframes → shell → chatbot ──

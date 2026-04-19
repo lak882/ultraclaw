@@ -26,13 +26,16 @@
   };
 
   cc.linkifyComponents = function(html) {
-    var isChatMode = document.body.classList.contains('ic-chat-mode');
     return html.replace(/(?<![\/\w"=])(\b[A-Z][A-Za-z0-9]*(?:\.[A-Z][A-Za-z0-9]*){2,})\b(?!\.cls)(?![^<]*>)/g, function(m, cls) {
       var link = cc.buildPortalLink(cls);
       if (link) {
-        var target = isChatMode ? ' target="_blank"' : '';
-        var onclick = isChatMode ? '' : ' onclick="var f=document.getElementById(\'viewer-frame\');if(f){f.src=this.href;return false;}"';
-        return '<a href="' + link.url + '"' + target + onclick + ' class="chatbot-link" title="' + link.label + '">' + cls + ' &#x2197;</a>';
+        // Route every click through the same handler: open in the Portal
+        // (or Traces) iframe, and exit chat mode so the newly-navigated
+        // iframe is visible. Works from chat mode OR inside the legacy-ui
+        // wrapper's own #viewer-frame — navigateLegacyUi picks the right
+        // surface.
+        var onclick = ' onclick="return window._cc&&window._cc.openInPortalTab(this.href);"';
+        return '<a href="' + link.url + '"' + onclick + ' class="chatbot-link" title="' + link.label + '">' + cls + ' &#x2197;</a>';
       }
       return cls;
     });
@@ -80,9 +83,10 @@
     };
     chatbotRenderer.link = function(href, title, text) {
       if (typeof href === 'object') { text = href.text; title = href.title; href = href.href; }
-      // Legacy-ui links: render as clickable links that navigate the viewer-frame iframe
+      // Legacy-ui links: open inside the Portal iframe (exit chat mode if
+      // currently in it).
       if (href && href.indexOf('/legacy-ui/') !== -1 && href.indexOf('#') !== -1) {
-        return '<a href="' + href + '" class="chatbot-link" onclick="if(window._cc&&window._cc.navigateLegacyUi(this.href))return false;">' + text + ' &#x2197;</a>';
+        return '<a href="' + href + '" class="chatbot-link" onclick="return window._cc&&window._cc.openInPortalTab(this.href);">' + text + ' &#x2197;</a>';
       }
       // All other links: render as plain text (nav links are separate UI elements)
       return text;

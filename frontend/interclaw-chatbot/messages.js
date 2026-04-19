@@ -145,6 +145,31 @@
     }
   };
 
+  // Strip purely transient streaming affordances before serializing:
+  //   .bubble-thinking-bar  — the live "Making Connections · 3s" status
+  //   .bubble-usage-bar     — the live usage counter that replaces it
+  //   empty .reasoning-steps — a toggle wrapper created by the typing
+  //                            indicator but never populated (artifact of
+  //                            mid-turn re-render races)
+  // Populated .reasoning-steps stay: they carry the tool-call history the
+  // user expects to see after a reload. The delegated click handler in
+  // init.js keeps their toggle working after rehydrate.
+  function cleanBubbleHtml(msgEl) {
+    var clone = msgEl.cloneNode(true);
+    var bars = clone.querySelectorAll('.bubble-thinking-bar, .bubble-usage-bar');
+    for (var i = 0; i < bars.length; i++) {
+      if (bars[i].parentNode) bars[i].parentNode.removeChild(bars[i]);
+    }
+    var steps = clone.querySelectorAll('.reasoning-steps');
+    for (var j = 0; j < steps.length; j++) {
+      var list = steps[j].querySelector('.reasoning-list');
+      if (!list || !list.querySelector('.reasoning-step')) {
+        if (steps[j].parentNode) steps[j].parentNode.removeChild(steps[j]);
+      }
+    }
+    return clone.innerHTML;
+  }
+
   cc.saveState = function() {
     var state = {
       sessionId: cc.sessionId,
@@ -160,7 +185,7 @@
       else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
       else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
       else if (msgEl.classList.contains('chatbot-message-tool')) type = 'tool';
-      state.messages.push({ type: type, html: msgEl.innerHTML });
+      state.messages.push({ type: type, html: cleanBubbleHtml(msgEl) });
     }
     sessionStorage.setItem('chatbot-state', JSON.stringify(state));
   };
@@ -183,6 +208,20 @@
         else if (m.type === 'error') msg.className += ' chatbot-message-error';
         else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
         msg.innerHTML = m.html;
+        // Legacy sessions may carry live status bars. Keep tool-call
+        // history (populated reasoning-steps); drop the bars and any empty
+        // steps wrapper.
+        var bars = msg.querySelectorAll('.bubble-thinking-bar, .bubble-usage-bar');
+        for (var bk = 0; bk < bars.length; bk++) {
+          if (bars[bk].parentNode) bars[bk].parentNode.removeChild(bars[bk]);
+        }
+        var emptySteps = msg.querySelectorAll('.reasoning-steps');
+        for (var esk = 0; esk < emptySteps.length; esk++) {
+          var list = emptySteps[esk].querySelector('.reasoning-list');
+          if (!list || !list.querySelector('.reasoning-step')) {
+            if (emptySteps[esk].parentNode) emptySteps[esk].parentNode.removeChild(emptySteps[esk]);
+          }
+        }
         if (m.type === 'user' || m.type === 'assistant') {
           var wrap = document.createElement('div');
           wrap.className = 'chatbot-msg-wrap' + (m.type === 'user' ? ' chatbot-msg-wrap--user' : '');

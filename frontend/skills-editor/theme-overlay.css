@@ -1,86 +1,111 @@
-/* theme-overlay.css — Skills Editor visual alignment with the chats sidebar.
-   Pulls the same v0.app-inspired palette used in
-   frontend/interclaw-chatbot/chatgpt-theme.css so the two rails read as one
-   design system.
+/* theme-overlay.css — Skills Editor aligned to the SAME token set the chats
+   rail uses. Previously this file defined a parallel `--ic-se-*` palette;
+   the user now wants the two rails to share one source of truth. Every
+   token below mirrors what the chatbot's chatgpt-theme.css publishes.
 
-   Scoped to #sidebar (skills tree) + #toolbar on the skills editor page only.
-   Uses the InterClaw brand `--fr-styles-color-primary` (dark blue #3b3b94)
-   as the accent — same as the 2px top border.
-
-   To roll back: remove the <link> tag injected at the end of index.html
-   and delete this file.
+   Rollback: remove the <link> tag injected at the end of index.html and
+   delete this file.
 */
 
 :root {
-  /* Pull in the shared v0 tokens here so both rails match. */
-  --ic-se-bg-100:       #ffffff;
-  --ic-se-bg-200:       #fbfbfb;
-  --ic-se-alpha-400:    rgba(0, 0, 0, 0.078);
-  --ic-se-alpha-500:    rgba(0, 0, 0, 0.12);
-  --ic-se-gray-100:     #ececec;
-  --ic-se-gray-300:     #dfdfdf;
-  --ic-se-gray-600:     #8e8e8e;
-  --ic-se-gray-900:     #5d5d5d;
-  --ic-se-gray-1000:    #1a1a1a;
-  --ic-se-accent:       var(--fr-styles-color-primary, #3b3b94);
+  /* InterClaw brand tokens (kept for the 2px toolbar border + .brand) */
+  --fr-styles-color-primary-hsl: 238, 49%, 39%;
+  --fr-styles-color-primary: hsl(238, 49%, 39%);
+  --fr-styles-color-primary-contrast: hsl(0, 0%, 100%);
+  --fr-styles-color-white: hsl(0, 0%, 100%);
+  --fr-styles-color-near-white: hsl(0, 0%, 98%);
+  --fr-styles-color-very-light-grey: hsl(0, 0%, 95%);
+  --fr-styles-color-light-grey: hsl(0, 0%, 88%);
+  --fr-styles-font-size-sm: 0.875rem;
+  --fr-header-height-toolbar: 40px;
+  --fr-header-border-top-toolbar: 2px;
 
-  --ic-se-radius-sm:    4px;
-  --ic-se-radius-md:    6px;
+  /* v0.app palette — identical to chatgpt-theme.css */
+  --v0-bg-100:       #ffffff;
+  --v0-bg-200:       #fbfbfb;
+  --v0-bg-300:       #ffffff;
+  --v0-alpha-400:    rgba(0, 0, 0, 0.078);
+  --v0-alpha-500:    rgba(0, 0, 0, 0.12);
+  --v0-gray-100:     #ececec;
+  --v0-gray-200:     #e4e4e4;
+  --v0-gray-300:     #dfdfdf;
+  --v0-gray-400:     #cfcfcf;
+  --v0-gray-600:     #8e8e8e;
+  --v0-gray-900:     #5d5d5d;
+  --v0-gray-1000:    #1a1a1a;
+  --v0-accent:       var(--fr-styles-color-primary, #3b3b94);
 
-  --ic-se-font: "GeistSans", "Geist Sans", "Noto Sans", "Noto Sans Arabic",
-                ui-sans-serif, -apple-system, system-ui,
-                "Segoe UI", Helvetica, Arial, sans-serif;
+  --v0-radius-sm:    4px;
+  --v0-radius-md:    6px;
+  --v0-radius-lg:    8px;
+
+  --v0-font: "GeistSans", "Geist Sans", ui-sans-serif, -apple-system,
+             system-ui, "Segoe UI", Helvetica, Arial, sans-serif,
+             "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+
+  /* ChatGPT light-mode tokens — identical to chatgpt-theme.css */
+  --cgpt-sidebar-surface:    #f9f9f9;
+  --cgpt-sidebar-body:       #0d0d0d;
+  --cgpt-sidebar-body-muted: #5d5d5d;
+  --cgpt-sidebar-title:      rgba(13, 13, 13, 0.5);
+  --cgpt-sidebar-icon:       #5d5d5d;
+  --cgpt-hover-tint:         rgba(13, 13, 13, 0.05);
+  --cgpt-active-tint:        rgba(13, 13, 13, 0.09);
+  --cgpt-border-faint:       rgba(13, 13, 13, 0.06);
 }
 
 /* ========================================================================
-   Page surface — scope strictly to the skills-editor root so we don't
-   accidentally restyle anything the host shell injects around us (the
-   chatbot sidebar, the header tab strip, etc.).
+   Page surface
    ======================================================================== */
 #app-root {
-  background: var(--ic-se-bg-100) !important;
-  font-family: var(--ic-se-font) !important;
-  color: var(--ic-se-gray-1000) !important;
+  background: var(--v0-bg-100) !important;
+  font-family: var(--v0-font) !important;
+  color: var(--cgpt-sidebar-body) !important;
+  font-size: 14px !important;
+  font-feature-settings: "zero" !important;
+  -webkit-font-smoothing: antialiased !important;
 }
 
 /* ========================================================================
-   Toolbar
+   Toolbar — keeps the 2px brand-blue top border as a signature; every other
+   surface is neutralized.
    ======================================================================== */
 #toolbar {
-  border-top: 2px solid var(--ic-se-accent) !important;
-  border-bottom: 1px solid var(--ic-se-alpha-400) !important;
-  background: var(--ic-se-bg-100) !important;
+  border-top: 2px solid var(--v0-accent) !important;
+  border-bottom: 1px solid var(--cgpt-border-faint) !important;
+  background: var(--v0-bg-100) !important;
 }
 .brand {
-  color: var(--ic-se-accent) !important;
-  font-family: var(--ic-se-font) !important;
+  color: var(--v0-accent) !important;
+  font-family: var(--v0-font) !important;
   font-weight: 600 !important;
 }
 .breadcrumb {
-  color: var(--ic-se-gray-900) !important;
-  font-family: var(--ic-se-font) !important;
+  color: var(--cgpt-sidebar-body-muted) !important;
+  font-family: var(--v0-font) !important;
 }
 .breadcrumb .current {
-  color: var(--ic-se-gray-1000) !important;
+  color: var(--cgpt-sidebar-body) !important;
 }
 .breadcrumb .sep {
-  color: var(--ic-se-gray-600) !important;
+  color: var(--v0-gray-600) !important;
 }
 
 /* ========================================================================
-   Sidebar — aligns with the chats rail: pure white, thin gray-300 right
-   border, 6px hover radius on rows.
+   Sidebar — same off-white grey as the chats rail
    ======================================================================== */
-/* Rail surface: same off-white grey as the chats rail (#f9f9f9). */
 #sidebar {
-  background: #f9f9f9 !important;
+  background: var(--cgpt-sidebar-surface) !important;
+  color: var(--cgpt-sidebar-body) !important;
+  font-family: var(--v0-font) !important;
+  font-size: 14px !important;
+  -webkit-font-smoothing: antialiased !important;
 }
 #sidebar::after {
-  background: rgba(13, 13, 13, 0.06) !important;
+  background: var(--cgpt-border-faint) !important;
 }
 
-/* Search input: matches the chats-sidebar search row — inset field on the
-   grey surface, no accent-colored focus ring. */
+/* Search input: inset field on the grey surface, no accent focus ring */
 #sidebar-search {
   padding: 8px 10px !important;
 }
@@ -89,16 +114,16 @@
   height: 32px !important;
   padding: 0 10px !important;
   border: 1px solid rgba(13, 13, 13, 0.10) !important;
-  background: #f9f9f9 !important;
-  color: #0d0d0d !important;
-  font-family: var(--ic-se-font) !important;
+  background: var(--cgpt-sidebar-surface) !important;
+  color: var(--cgpt-sidebar-body) !important;
+  font-family: var(--v0-font) !important;
   font-size: 13px !important;
-  border-radius: var(--ic-se-radius-md) !important;
+  border-radius: var(--v0-radius-md) !important;
   box-shadow: none !important;
   outline: none !important;
 }
 #sidebar-search input::placeholder {
-  color: var(--ic-se-gray-600) !important;
+  color: var(--v0-gray-600) !important;
 }
 #sidebar-search input:focus {
   border-color: rgba(13, 13, 13, 0.25) !important;
@@ -108,15 +133,15 @@
 /* Sidebar scrollbar */
 #sidebar-content::-webkit-scrollbar { width: 6px; }
 #sidebar-content::-webkit-scrollbar-thumb {
-  background: var(--ic-se-gray-300) !important;
+  background: var(--v0-gray-300) !important;
   border-radius: 999px !important;
 }
 #sidebar-content::-webkit-scrollbar-thumb:hover {
-  background: var(--ic-se-gray-600) !important;
+  background: var(--v0-gray-600) !important;
 }
 
 /* ========================================================================
-   Section / group headers — 500-weight 13px, not uppercase, gray-900.
+   Section / group headers
    ======================================================================== */
 .section-header {
   padding: 8px 10px 4px 10px !important;
@@ -126,7 +151,7 @@
   background: transparent !important;
 }
 .section-label {
-  color: var(--ic-se-gray-900) !important;
+  color: var(--v0-gray-900) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   text-transform: none !important;
@@ -134,40 +159,39 @@
   margin-left: 6px !important;
 }
 .section-count {
-  color: var(--ic-se-gray-600) !important;
+  color: var(--v0-gray-600) !important;
   font-size: 11px !important;
 }
 .section-chevron,
 .section-icon {
-  color: var(--ic-se-gray-900) !important;
+  color: var(--v0-gray-900) !important;
 }
 
 .group-header {
   padding: 4px 12px 4px 20px !important;
-  border-radius: var(--ic-se-radius-md) !important;
+  border-radius: var(--v0-radius-md) !important;
   margin: 1px 6px !important;
   transition: background 0.08s ease-out !important;
 }
 .group-header:hover {
-  background: rgba(13, 13, 13, 0.05) !important;
+  background: var(--cgpt-hover-tint) !important;
 }
 .group-label {
-  color: var(--ic-se-gray-900) !important;
+  color: var(--v0-gray-900) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   margin-left: 6px !important;
 }
 .group-count {
-  color: var(--ic-se-gray-600) !important;
+  color: var(--v0-gray-600) !important;
   font-size: 11px !important;
 }
 .group-chevron {
-  color: var(--ic-se-gray-900) !important;
+  color: var(--v0-gray-900) !important;
 }
 
 /* ========================================================================
-   File items — 32px rows, 6px radius, alpha-400 hover, accent-tinted active.
-   (depth-based left-padding is still set by JS; we only touch visual.)
+   File items — identical to chat-row interaction behavior
    ======================================================================== */
 .file-item {
   min-height: 32px !important;
@@ -175,85 +199,85 @@
   padding-top: 4px !important;
   padding-bottom: 4px !important;
   padding-right: 10px !important;
-  border-radius: var(--ic-se-radius-md) !important;
+  border-radius: var(--v0-radius-md) !important;
   transition: background 0.08s ease-out, color 0.08s ease-out !important;
   gap: 8px !important;
 }
 .file-item:hover {
-  background: rgba(13, 13, 13, 0.05) !important;
+  background: var(--cgpt-hover-tint) !important;
 }
 .file-item.active {
-  background: rgba(13, 13, 13, 0.09) !important;
-  color: #0d0d0d !important;
+  background: var(--cgpt-active-tint) !important;
+  color: var(--cgpt-sidebar-body) !important;
 }
 .file-item.active .file-name {
-  color: #0d0d0d !important;
+  color: var(--cgpt-sidebar-body) !important;
   font-weight: 400 !important;
 }
 .file-item.active .file-icon {
-  color: #0d0d0d !important;
+  color: var(--cgpt-sidebar-body) !important;
 }
 .file-name {
-  color: var(--ic-se-gray-1000) !important;
+  color: var(--cgpt-sidebar-body) !important;
   font-size: 13px !important;
 }
 .file-icon {
-  color: var(--ic-se-gray-900) !important;
+  color: var(--v0-gray-900) !important;
 }
 .file-item:hover .file-icon {
-  color: var(--ic-se-gray-1000) !important;
+  color: var(--cgpt-sidebar-body) !important;
 }
 
-/* Override / state badges — keep semantic colors but use alpha-matched fills */
+/* Override / state badges */
 .override-badge {
   font-size: 10px !important;
   font-weight: 500 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
-  border-radius: var(--ic-se-radius-sm) !important;
+  border-radius: var(--v0-radius-sm) !important;
   line-height: 16px !important;
   padding: 0 6px !important;
 }
 
 /* Search-empty / fallback */
 .search-empty {
-  color: var(--ic-se-gray-600) !important;
+  color: var(--v0-gray-600) !important;
   font-size: 13px !important;
 }
 
 /* ========================================================================
-   Resize handle — subtle accent on active drag
+   Resize handle
    ======================================================================== */
 #resize-handle:hover::after {
-  background: var(--ic-se-gray-600) !important;
+  background: var(--v0-gray-600) !important;
 }
 #resize-handle.active::after {
-  background: #0d0d0d !important;
+  background: var(--cgpt-sidebar-body) !important;
 }
 
 /* ========================================================================
    View toggle on toolbar (Preview / Raw)
    ======================================================================== */
 .view-toggle {
-  background: var(--ic-se-gray-100) !important;
-  border-radius: var(--ic-se-radius-md) !important;
+  background: var(--v0-gray-100) !important;
+  border-radius: var(--v0-radius-md) !important;
 }
 .view-toggle button {
-  color: var(--ic-se-gray-900) !important;
-  border-radius: var(--ic-se-radius-sm) !important;
-  font-family: var(--ic-se-font) !important;
+  color: var(--v0-gray-900) !important;
+  border-radius: var(--v0-radius-sm) !important;
+  font-family: var(--v0-font) !important;
 }
 .view-toggle button.active {
-  background: var(--ic-se-bg-100) !important;
-  color: var(--ic-se-gray-1000) !important;
+  background: var(--v0-bg-100) !important;
+  color: var(--cgpt-sidebar-body) !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) !important;
 }
 .view-toggle button:hover:not(.active) {
-  color: var(--ic-se-gray-1000) !important;
+  color: var(--cgpt-sidebar-body) !important;
 }
 
-/* Selection inside the skills editor — match the chats rail selection */
+/* Selection inside the skills editor */
 ::selection {
   background: rgba(13, 13, 13, 0.14);
-  color: #0d0d0d;
+  color: var(--cgpt-sidebar-body);
 }

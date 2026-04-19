@@ -199,8 +199,12 @@
 .ic-settings-select:hover { border-color: #b0b0b8; }
 .ic-settings-select:focus { border-color: #2F2A95; }
 
-/* ── Header model selector (chat mode only, ghost-button style) ── */
-.ic-header-model-selector { display: block; position: relative; }
+/* ── Header model selector (hidden) ── */
+/* The header-level model picker is hidden for now — the model is a server
+   global and changing it per-user from the header created more confusion
+   than value. The markup, wiring, and `/model` slash command stay intact
+   so the selector can be re-enabled by flipping this rule. */
+.ic-header-model-selector { display: none; position: relative; }
 .ic-header-model-btn {
   background: none; border: none; cursor: pointer;
   display: flex; align-items: center; gap: 4px;

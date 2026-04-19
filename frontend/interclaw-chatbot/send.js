@@ -98,9 +98,14 @@
       cc.addMessage('user', message);
       input.value = '';
       input.style.height = 'auto'; input.style.overflowY = 'hidden';
-      sessionStorage.setItem('chatbot-programmatic-reload', 'true');
       cc.saveState();
-      window.location.reload();
+      if (window._interclawShell && window._interclawShell.reloadActiveFrame) {
+        // Refresh only the active editor iframe; keep the chat + chrome.
+        window._interclawShell.reloadActiveFrame();
+      } else {
+        sessionStorage.setItem('chatbot-programmatic-reload', 'true');
+        window.location.reload();
+      }
       return;
     }
 

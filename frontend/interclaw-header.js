@@ -35,10 +35,15 @@
   else if (path.indexOf('rule-editor') !== -1) currentEditor = 'copilot';
   else currentEditor = 'copilot'; // interop-editor = copilot
 
-  // Check for chat fullscreen mode
+  // Check for chat fullscreen mode. Two sources of truth — URL wins for
+  // deep links, localStorage survives reloads so clicking "Chat" once and
+  // hitting F5 keeps us on chat instead of falling back to the editor.
   var params = new URLSearchParams(loc.search);
   var viewMode = params.get('view');
-  var currentTab = viewMode === 'chat' ? 'chat' : currentEditor;
+  var _persistedChat = false;
+  try { _persistedChat = localStorage.getItem('ic-chat-mode') === '1'; } catch (e) {}
+  var inChatOnLoad = (viewMode === 'chat') || _persistedChat;
+  var currentTab = inChatOnLoad ? 'chat' : currentEditor;
 
   // ── Namespace: URL param > install-config global > fallback INTERCLAW ──
   // Server global ^InterClaw.Config("Namespace") is the single source of truth.
@@ -539,9 +544,23 @@
   })();
 
   // ── Chat mode: expand sidebar to full width ──
-  // ?view=chat on the dedicated chat page still works as a fallback for direct links.
-  if (viewMode === 'chat') {
+  // Applies whether chat was reached via ?view=chat (direct link) or via
+  // the persisted localStorage flag (the user clicked Chat, then reloaded).
+  if (inChatOnLoad) {
     document.body.classList.add('ic-chat-mode');
+  }
+
+  // Keep localStorage in lockstep with the body class so future reloads
+  // land in the same place. Wrap the class mutations in this helper rather
+  // than scattering setItem/removeItem across the handlers.
+  function setChatMode(on) {
+    if (on) {
+      document.body.classList.add('ic-chat-mode');
+      try { localStorage.setItem('ic-chat-mode', '1'); } catch (e) {}
+    } else {
+      document.body.classList.remove('ic-chat-mode');
+      try { localStorage.removeItem('ic-chat-mode'); } catch (e) {}
+    }
   }
 
   // Chat tab toggles chat mode on the current page instead of navigating.
@@ -566,37 +585,32 @@
         e.preventDefault();
         // Exit chat mode so the iframe becomes visible (the chatbot panel
         // otherwise fills 100% width and covers the workspace).
-        if (inChatMode) {
-          document.body.classList.remove('ic-chat-mode');
-        }
+        if (inChatMode) setChatMode(false);
         shell.activateTab(tabId);
         return;
       }
 
       if (tabId === 'chat') {
-        // On the dedicated chat page, chat tab is a no-op
-        if (_isChatPage) { e.preventDefault(); return; }
+        // Clicking chat is idempotent: the only transition is "not in chat
+        // mode" → "in chat mode". Clicking it while already on chat used
+        // to collapse back to the portal, which felt like the tab was
+        // navigating away rather than staying put. Now a second click is
+        // a no-op — use the toggle icon if you actually want to close it.
         e.preventDefault();
-        if (inChatMode) {
-          // Already in chat mode — collapse back to sidebar
-          document.body.classList.remove('ic-chat-mode');
-          document.body.classList.remove('chatbot-closed');
-        } else {
-          // Enter chat mode — expand sidebar to full width
-          document.body.classList.add('ic-chat-mode');
-          document.body.classList.remove('chatbot-closed');
-        }
-        // Update tab active states
+        if (_isChatPage) return;
+        if (inChatMode) return;
+        setChatMode(true);
+        document.body.classList.remove('chatbot-closed');
         var allTabs = headerNav.querySelectorAll('.ic-header-tab');
         for (var ti = 0; ti < allTabs.length; ti++) {
-          allTabs[ti].classList.toggle('active', allTabs[ti].dataset.tab === (document.body.classList.contains('ic-chat-mode') ? 'chat' : currentEditor));
+          allTabs[ti].classList.toggle('active', allTabs[ti].dataset.tab === 'chat');
         }
         return;
       }
 
       // Non-chat tab clicked while in chat mode
       if (inChatMode) {
-        document.body.classList.remove('ic-chat-mode');
+        setChatMode(false);
         // Update tab states immediately so active highlight switches
         var allTabs = headerNav.querySelectorAll('.ic-header-tab');
         for (var ti = 0; ti < allTabs.length; ti++) {

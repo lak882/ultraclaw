@@ -453,12 +453,30 @@
         break;
       case 'reload':
         console.log('[goto-detect] backend detected /reload');
-        sessionStorage.setItem('chatbot-programmatic-reload', 'true');
         cc.saveState();
-        setTimeout(function() { window.location.reload(); }, 500);
+        setTimeout(function() {
+          if (window._interclawShell && window._interclawShell.reloadActiveFrame) {
+            // Reload only the active editor iframe. The chat pane and shell
+            // chrome stay put — no more "opens interclaw within the page".
+            window._interclawShell.reloadActiveFrame();
+          } else {
+            sessionStorage.setItem('chatbot-programmatic-reload', 'true');
+            window.location.reload();
+          }
+        }, 500);
         break;
       case 'usage':
-        var elapsed = cc.queryStartTime ? ((Date.now() - cc.queryStartTime) / 1000).toFixed(1) : '?';
+        // Prefer the server-reported elapsed time — the BP clocks it from
+        // request receipt to usage emission, which survives window reloads
+        // and overlapping turns where the client-side timer is stale.
+        var elapsed;
+        if (typeof data.elapsed_ms === 'number' && data.elapsed_ms >= 0) {
+          elapsed = (data.elapsed_ms / 1000).toFixed(1);
+        } else if (cc.queryStartTime) {
+          elapsed = ((Date.now() - cc.queryStartTime) / 1000).toFixed(1);
+        } else {
+          elapsed = '0.0';
+        }
         cc.usageShown = true;
         var inTok = data.input_tokens || 0;
         var outTok = data.output_tokens || 0;
@@ -563,9 +581,15 @@
                 cc.switchToPlanMode();
                 // Don't set found=true — let other directives still be scanned
               } else if (doneLine === '/reload' || doneLine === '/refresh') {
-                sessionStorage.setItem('chatbot-programmatic-reload', 'true');
                 cc.saveState();
-                setTimeout(function() { window.location.reload(); }, 500);
+                setTimeout(function() {
+                  if (window._interclawShell && window._interclawShell.reloadActiveFrame) {
+                    window._interclawShell.reloadActiveFrame();
+                  } else {
+                    sessionStorage.setItem('chatbot-programmatic-reload', 'true');
+                    window.location.reload();
+                  }
+                }, 500);
                 found = true;
                 break;
               }
