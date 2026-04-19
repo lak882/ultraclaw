@@ -536,7 +536,7 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
    Rollback: delete this block.
    ======================================================================== */
 :root {
-  --cgpt-sidebar-surface:        #ffffff;
+  --cgpt-sidebar-surface:        #f9f9f9;
   --cgpt-sidebar-body:           #0d0d0d;
   --cgpt-sidebar-body-muted:     #5d5d5d;
   --cgpt-sidebar-title:          rgba(13, 13, 13, 0.5);
@@ -563,9 +563,9 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
 }
 #ic-chats-sidebar .ic-chats-brand,
 #ic-chats-sidebar .ic-chats-group-label {
-  color: var(--cgpt-sidebar-title) !important;
-  font-size: 12px !important;
-  font-weight: 400 !important;
+  color: var(--cgpt-sidebar-body) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
   line-height: 1.2 !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
@@ -588,10 +588,10 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
   opacity: 1 !important;
 }
 
-/* Search input: slightly darker than the rail so the input reads as a
-   distinct control. Focus does not add an accent ring. */
+/* Search input: same grey as the rail so it reads as an inset field,
+   not a floating control. Focus does not add an accent ring. */
 #ic-chats-sidebar .ic-chats-search-input {
-  background: rgba(13, 13, 13, 0.04) !important;
+  background: var(--cgpt-sidebar-surface) !important;
   border-color: rgba(13, 13, 13, 0.10) !important;
   color: var(--cgpt-sidebar-body) !important;
 }
@@ -717,6 +717,33 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
 }
 #ic-chats-sidebar *::-webkit-scrollbar-thumb:hover {
   background: rgba(13, 13, 13, 0.25) !important;
+}
+
+/* ------------------------------------------------------------------------
+   Fixed width — ChatGPT's sidebar does not resize. Lock both the rail
+   and the chat-panel offset to a fixed 260px and disable the resize
+   handle entirely (hide, block pointer events, kill the ew-resize cursor).
+   ------------------------------------------------------------------------ */
+:root,
+html,
+body {
+  --ic-chats-sidebar-width: 260px !important;
+}
+#ic-chats-sidebar {
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 260px !important;
+  flex: 0 0 260px !important;
+}
+body.ic-chat-mode #chatbot-sidebar {
+  left: 260px !important;
+  width: calc(100% - 260px) !important;
+}
+#ic-chats-sidebar .chatbot-resize-handle,
+#ic-chats-resize-handle {
+  display: none !important;
+  pointer-events: none !important;
+  cursor: default !important;
 }
 
 /* Toggle/arrow button in the header (opens-and-closes chat mode): icon

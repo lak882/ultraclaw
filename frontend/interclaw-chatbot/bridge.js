@@ -4,6 +4,18 @@
   cc.bridgeSend = async function(payload, opts) {
     opts = opts || {};
 
+    // Hard-guard against concurrent sends. Without this, two overlapping
+    // prompts share `cc.currentStreamEl` and `cc.queryStartTime` — the
+    // second poll writes the same answer into the bubble the first poll
+    // already rendered (doubled output), and `done` from turn N clears the
+    // timer before turn N+1's usage event arrives (the "?s" cost label).
+    // Queue the second prompt to fire after the first completes.
+    if (cc.bridgePolling) {
+      console.log('[bridge] busy — queuing prompt');
+      cc.messageQueue.push(payload);
+      return false;
+    }
+
     try {
       // Let the server bind this bridge to the chat id. Pre-existing chats
       // adopt cc.sessionId as their id; brand-new chats have no id until the
@@ -226,9 +238,11 @@
   };
 
   cc.processQueue = function() {
-    if (cc.messageQueue.length > 0 && cc.sessionId) {
-      var nextMsg = cc.messageQueue.shift();
-      var content = document.getElementById('chatbot-content');
+    if (cc.messageQueue.length === 0) return;
+    if (cc.bridgePolling) return;
+    var nextMsg = cc.messageQueue.shift();
+    var content = document.getElementById('chatbot-content');
+    if (content) {
       var msgs = content.querySelectorAll('.chatbot-message-system');
       for (var i = msgs.length - 1; i >= 0; i--) {
         if (msgs[i].textContent.indexOf('Message queued') !== -1) {
@@ -236,7 +250,19 @@
           break;
         }
       }
-      cc.saveState();
+    }
+    cc.saveState();
+    // Two shapes exist in the queue: a full /api/start payload (pushed by
+    // bridgeSend's busy-guard) or a raw string (legacy path via
+    // sendCommandToBackend). Dispatch by type.
+    if (nextMsg && typeof nextMsg === 'object') {
+      cc.showTypingIndicator();
+      cc.startTimer();
+      cc.startResponseTimeout();
+      cc.showStopButton();
+      cc.updateStatus('Thinking...');
+      cc.bridgeSend(nextMsg);
+    } else {
       cc.sendCommandToBackend(nextMsg);
     }
   };

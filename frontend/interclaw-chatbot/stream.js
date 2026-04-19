@@ -213,11 +213,22 @@
           cc.currentStreamText = '';
         }
         // Deltas only accumulate currentStreamText — the main bubble
-        // isn't rendered until now. If the terminal text matches the
-        // accumulated stream, reset currentStreamText so animateText can
-        // replay it with the typing reveal on formatted markdown.
-        if (cc.currentStreamText && cc.currentStreamText.trim() === outputText) {
-          cc.currentStreamText = '';
+        // isn't rendered until now. If the terminal text overlaps the
+        // accumulated stream (deltas are a prefix, the output is a prefix,
+        // or they share normalized-whitespace content), discard the delta
+        // accumulation so animateText doesn't render the same answer twice.
+        // Strict equality misses table/list streams where deltas include
+        // partial rows or trailing whitespace vs. the finalized output.
+        if (cc.currentStreamText) {
+          var norm = function(s) { return (s || '').replace(/\s+/g, ' ').trim(); };
+          var streamed = norm(cc.currentStreamText);
+          var finalTxt = norm(outputText);
+          if (streamed && finalTxt &&
+              (streamed === finalTxt
+               || finalTxt.indexOf(streamed) !== -1
+               || streamed.indexOf(finalTxt) !== -1)) {
+            cc.currentStreamText = '';
+          }
         }
         var prevText = cc.currentStreamText;
         cc.currentStreamText += (cc.currentStreamText ? '\n\n' : '') + outputText;

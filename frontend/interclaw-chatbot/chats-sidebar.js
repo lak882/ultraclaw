@@ -137,15 +137,39 @@
   }
 
   // Client-minted chat id, used when the user sends their first message
-   // before the backend has streamed back a `session` event. Format matches
+  // before the backend has streamed back a `session` event. Format matches
   // the backend SafeId filter (alphanumerics + dash). Without this, a chat
   // closed mid-first-turn had no id to persist under and disappeared.
   function mintChatId() {
     var rnd = Math.random().toString(36).slice(2, 10);
     return 'local-' + Date.now().toString(36) + '-' + rnd;
   }
-  cc.ensureChatId = function() {
+
+  // Only count a chat as "started" once the user has actually typed a
+  // message. System welcome bubbles, /help output, typing indicators, and
+  // assistant placeholders must not mint an id — otherwise an empty chat
+  // appears in the sidebar every time the page loads.
+  function hasUserMessage(messages) {
+    if (!messages) return false;
+    for (var i = 0; i < messages.length; i++) {
+      if (messages[i] && messages[i].type === 'user') {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = messages[i].html || '';
+        if ((tmp.textContent || '').trim()) return true;
+      }
+    }
+    return false;
+  }
+
+  // Returns the active chat id, minting one on demand BUT only when the
+  // caller confirms there's at least one real user turn to persist. Without
+  // `requireUserMessage` true, empty panes still don't get an id. Pass
+  // `true` from persist paths and anywhere we genuinely want to anchor a
+  // new chat record on first send.
+  cc.ensureChatId = function(requireUserMessage) {
     if (cc.sessionId) return cc.sessionId;
+    if (requireUserMessage && !hasUserMessage(serializeCurrentPane())) return null;
+    if (!requireUserMessage) return null;
     cc.sessionId = mintChatId();
     cc.chatsStore.activeId = cc.sessionId;
     return cc.sessionId;
@@ -164,10 +188,10 @@
 
   var _persistTimer = null;
   cc.persistChat = function() {
-    // Ensure we have an id even on the very first turn. Missing a chat id
-    // here is how chats used to vanish when the window was closed before
-    // the server sent its `session` event.
-    var chatId = cc.ensureChatId();
+    // Only persist once the user has actually typed something. Otherwise
+    // every page load (welcome message, system bubbles) would mint a chat.
+    // `ensureChatId(true)` returns null until a real user turn exists.
+    var chatId = cc.ensureChatId(true);
     if (!chatId) return;
     if (_persistTimer) clearTimeout(_persistTimer);
     _persistTimer = setTimeout(function() {
@@ -197,7 +221,7 @@
   // complete after the page starts tearing down. Without this, closing the
   // tab within ~500ms of sending a prompt loses the user's message.
   cc.flushPersistChat = function() {
-    var chatId = cc.ensureChatId();
+    var chatId = cc.ensureChatId(true);
     if (!chatId) return;
     if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
     var payload = buildPersistPayload(chatId);
