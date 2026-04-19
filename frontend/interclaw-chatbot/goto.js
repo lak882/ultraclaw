@@ -147,19 +147,53 @@
   };
 
   // Navigate to a ZEN page from a legacy-ui URL.
-  // On Portal page (viewer-frame exists): updates the iframe src.
-  // On Chat (no viewer-frame): navigates the browser to the legacy-ui page.
+  // Preference order:
+  //   1. Shell context (top window is the /ui/interop/interclaw shell):
+  //      swap the Portal or Traces iframe in place.
+  //   2. Legacy-ui context (we ARE the legacy-ui page, with #viewer-frame):
+  //      swap our own iframe.
+  //   3. No frame context: navigate the whole browser.
   cc.navigateLegacyUi = function(legacyUrl) {
     var hashIdx = legacyUrl.indexOf('#');
     if (hashIdx === -1) return false;
     var hashPath = legacyUrl.substring(hashIdx + 1);
     var pfx = cc.pathPrefix || '';
+
+    // Shell: pick the Traces iframe if the target is the message viewer,
+    // otherwise drop into Portal. The full legacy-ui URL with chrome=none
+    // makes the iframe reuse its wrapper, avoiding a double header.
+    var shell = (window.top && window.top._interclawShell) || window._interclawShell;
+    if (shell && typeof shell.openInTab === 'function') {
+      var tabId = (hashPath.indexOf('MessageViewer') !== -1) ? 'traces' : 'portal';
+      var base = pfx + '/ui/interop/interclaw/legacy-ui/index.html?chrome=none#' + hashPath;
+      if (shell.openInTab(tabId, base)) return true;
+    }
+
+    // Inside-legacy-ui case (the wrapper's own iframe exists here).
     var frame = document.getElementById('viewer-frame');
     if (frame) {
       frame.src = pfx + hashPath;
       return true;
     }
     window.location.href = pfx + '/ui/interop/interclaw/legacy-ui/index.html#' + hashPath;
+    return true;
+  };
+
+  // Navigate to a full (non-legacy-ui) portal URL — e.g. /csp/sys/* pages
+  // that live outside the HealthShare namespace wrapper. We still try to
+  // show these inside the Portal iframe first by wrapping the path in the
+  // legacy-ui chrome, because opening new tabs from /goto feels bad. If
+  // the URL is truly not Zen (no .zen, no .cls), fall back to window.open.
+  cc.navigatePortalUrl = function(url) {
+    if (!url) return false;
+    var shell = (window.top && window.top._interclawShell) || window._interclawShell;
+    if (shell && typeof shell.openInTab === 'function') {
+      // SMP-style /csp/sys/* URLs can be embedded directly in the iframe;
+      // no legacy-ui wrapper needed since the toolbar-border override in
+      // legacy-ui already applies to those via its own MutationObserver.
+      return shell.openInTab('portal', url);
+    }
+    window.open(url, '_blank');
     return true;
   };
 
@@ -250,14 +284,10 @@
             }
             cc.addMessage('system', lines.join('\n'));
             cc.saveState();
-            // legacy-ui links render inside the embedded viewer-frame when
-            // one is present (Portal shell). Plain SMP/HealthShare URLs
-            // don't have a hash path, so fall through to a window.open so
-            // the assistant doesn't clobber the chat tab.
             if (url.indexOf('/legacy-ui/') !== -1) {
-              if (!cc.navigateLegacyUi(url)) window.open(url, '_blank');
+              if (!cc.navigateLegacyUi(url)) cc.navigatePortalUrl(url);
             } else {
-              window.open(url, '_blank');
+              cc.navigatePortalUrl(url);
             }
           });
           return;
@@ -265,6 +295,28 @@
         cc.executeGoto(componentName, resolved, true);
       });
       return;
+    }
+
+    // Class match: build a portal URL and route it into the shell's iframe.
+    // Previously this path was a no-op (the "Navigation links removed from
+    // chat UI" era) which meant /goto DTL.MyTransform did nothing on the
+    // shell. Now we wrap the portal URL in the legacy-ui shell and hand it
+    // off to navigateLegacyUi so it lands inside the Portal tab.
+    if (componentName && editorType && editorType !== 'trace') {
+      var portalLink = cc.buildPortalLink(componentName, editorType);
+      if (portalLink) {
+        var pfx = cc.pathPrefix || '';
+        // Strip the origin + pathPrefix down to the zen path so we can rebuild
+        // the legacy-ui hash URL. `portalLink.url` already includes pathPrefix
+        // + /csp/healthshare/<ns>/... — we just need the /csp/... portion.
+        var zenPath = portalLink.url;
+        if (pfx && zenPath.indexOf(pfx) === 0) zenPath = zenPath.substring(pfx.length);
+        var legacyUrl = pfx + '/ui/interop/interclaw/legacy-ui/index.html#' + zenPath;
+        cc.addMessage('system', 'Opening `' + componentName + '` in ' + portalLink.label + '.');
+        cc.saveState();
+        cc.navigateLegacyUi(legacyUrl);
+        return;
+      }
     }
 
     // Traces: open in new window

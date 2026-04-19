@@ -1,15 +1,15 @@
 // shell.js — Top-level InterClaw shell controller.
 //
 // Responsibilities:
-//   1. Resolve the active tab from the hash fragment (#tab=portal|traces|skills)
-//      and set it as active. Default: portal.
-//   2. Lazily assign src to each iframe on first activation, then keep the
-//      iframe alive so state is preserved across tab switches.
-//   3. Intercept header tab clicks so they switch the iframe instead of
-//      navigating the top-level page. Update the hash fragment so reload
-//      and bookmarking preserve the tab.
-//   4. Forward active-context messages from iframes to the chatbot via
-//      postMessage bridge.
+//   1. Eagerly load all three workspace iframes (portal / traces / skills)
+//      so they exist and keep their state across tab switches.
+//   2. Intercept header tab clicks at the window capture phase so they
+//      switch the active iframe instead of navigating the top-level page.
+//   3. Expose `window._interclawShell.openInTab(tabId, url)` so the chatbot's
+//      /goto can target the correct iframe (portal/traces) instead of
+//      opening new tabs.
+//   4. Gate the workspace behind IRIS login and forward iframe context to
+//      the chatbot via postMessage.
 (function() {
   'use strict';
 
@@ -49,54 +49,40 @@
   }
 
   var sources = buildSources();
-  var loaded = {}; // tabId → boolean
+  var currentTab = DEFAULT_TAB;
 
-  // ── Tab state ──
-  function currentTabFromHash() {
-    var h = window.location.hash || '';
-    var m = h.match(/tab=(\w+)/);
-    if (m && VALID_TABS[m[1]]) return m[1];
-    return DEFAULT_TAB;
-  }
-
-  function setHash(tabId) {
-    var target = '#tab=' + tabId;
-    if (window.location.hash !== target) {
-      // Use replaceState to avoid polluting history with every click.
-      history.replaceState(null, '', window.location.pathname + window.location.search + target);
-    }
+  // ── Eager iframe load ──
+  // Previously lazy. A lazy frame means the first click on a tab has to wait
+  // for the whole page to boot inside the iframe before anything shows. Worse,
+  // if the click handler ever fails to intercept (e.g. a race during header
+  // render), the header's `<a href>` fires and navigates the top window —
+  // the user sees the full standalone editor instead of the iframe. Eagerly
+  // loading all three guarantees the iframe content is always the thing
+  // visible when a tab is active, even if something else goes wrong.
+  function preloadAllIframes() {
+    Object.keys(sources).forEach(function(tabId) {
+      var frame = document.getElementById('shell-iframe-' + tabId);
+      if (frame && !frame.src) frame.src = sources[tabId];
+    });
   }
 
   function activateTab(tabId) {
     if (!VALID_TABS[tabId]) tabId = DEFAULT_TAB;
+    currentTab = tabId;
 
-    // Lazy-load the iframe src on first activation.
-    if (!loaded[tabId]) {
-      var frame = document.getElementById('shell-iframe-' + tabId);
-      if (frame) {
-        frame.src = sources[tabId];
-        loaded[tabId] = true;
-      }
-    }
-
-    // Toggle the --active class.
     var frames = document.querySelectorAll('.shell-iframe');
     for (var i = 0; i < frames.length; i++) {
       frames[i].classList.toggle('shell-iframe--active', frames[i].dataset.tab === tabId);
     }
 
-    // Sync the header tab highlight.
     syncHeaderTabs(tabId);
 
-    // Broadcast to chatbot so its active-component state follows.
     if (window._cc) {
       window._cc.shellActiveTab = tabId;
     }
     window.dispatchEvent(new CustomEvent('interclaw-shell-tab-change', {
       detail: { tab: tabId }
     }));
-
-    setHash(tabId);
   }
 
   function syncHeaderTabs(tabId) {
@@ -106,30 +92,41 @@
     }
   }
 
-  // ── Intercept header tab clicks ──
-  // interclaw-header.js binds its own click handler, but the shell needs
-  // tabs to switch iframes, not navigate away. We install a capture-phase
-  // handler on the header nav so we run before the header's own handler.
-  function installHeaderInterception() {
-    var nav = document.querySelector('#interclaw-header .ic-header-tabs');
-    if (!nav) {
-      // Header may not be rendered yet — try again after microtask.
-      setTimeout(installHeaderInterception, 50);
-      return;
-    }
-    nav.addEventListener('click', function(e) {
-      var tab = e.target.closest('.ic-header-tab');
-      if (!tab) return;
-      var tabId = tab.dataset.tab;
-      // The 'chat' tab is handled by interclaw-header itself (expands the
-      // chatbot sidebar) — let it pass through.
-      if (tabId === 'chat') return;
-      if (!VALID_TABS[tabId]) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
+  // ── Intercept header tab clicks (window capture) ──
+  // Attaching on `window` with capture:true means our handler runs before
+  // any descendant handler regardless of when the header element is
+  // rendered. This avoids the timing race the previous `setTimeout` retry
+  // loop was papering over.
+  window.addEventListener('click', function(e) {
+    var tab = e.target.closest && e.target.closest('.ic-header-tab');
+    if (!tab) return;
+    var tabId = tab.dataset.tab;
+    if (tabId === 'chat') return; // chat tab handled by interclaw-header
+    if (!VALID_TABS[tabId]) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    activateTab(tabId);
+  }, true);
+
+  // ── Public API for chatbot /goto ──
+  // The chatbot resolves a class or portal page to a URL and needs to land
+  // that URL inside the correct iframe. `openInTab` is the single entry
+  // point: tabId is 'portal', 'traces', or 'skills'; url is the full URL
+  // to load into that iframe. Returns true if the navigation was applied.
+  window._interclawShell = {
+    activateTab: activateTab,
+    openInTab: function(tabId, url) {
+      if (!VALID_TABS[tabId] || !url) return false;
+      var frame = document.getElementById('shell-iframe-' + tabId);
+      if (!frame) return false;
+      // Always set src — even if the URL matches. A direct re-set forces
+      // the iframe to reload, which is what the user expects from /goto.
+      frame.src = url;
       activateTab(tabId);
-    }, true);
-  }
+      return true;
+    },
+    currentTab: function() { return currentTab; }
+  };
 
   // ── postMessage bridge: iframes → shell → chatbot ──
   // Iframes post { type: 'interclaw-context', tab, context } when their
@@ -139,7 +136,6 @@
     var data = ev.data;
     if (!data || typeof data !== 'object') return;
     if (data.type !== 'interclaw-context') return;
-    // Expose to chatbot and any listeners.
     if (window._cc) {
       window._cc.shellIframeContext = window._cc.shellIframeContext || {};
       window._cc.shellIframeContext[data.tab] = data.context;
@@ -149,24 +145,11 @@
     }));
   });
 
-  // ── Hash routing ──
-  window.addEventListener('hashchange', function() {
-    activateTab(currentTabFromHash());
-  });
-
   // ── Auth gate ──
-  // Workspace iframes (Portal / Traces / Skills) are frozen until the user
-  // logs in via the chatbot (/login <user> <pass>). The chatbot itself stays
-  // interactive so the login flow is reachable.
-  //
-  // The body class `shell-login-required` toggles the overlay + grey-out.
-  // We refresh auth on boot, on window focus, on hash change (covers
-  // back/forward nav), and whenever the chatbot dispatches the
-  // `interclaw-auth-changed` event after a successful login/logout.
+  // Workspace iframes are frozen (pointer-events off, greyed out) until
+  // the user logs in via the chatbot (/login <user> <pass>). The chatbot
+  // itself stays interactive so the login flow is reachable.
   function apiBase() {
-    // Chatbot derives its API base from the URL path prefix:
-    // page at /{prefix}/ui/interop/interclaw/... -> REST at /{prefix}/api/interclaw
-    // Mirror the same resolution here.
     var m = window.location.pathname.match(/^(\/[^/]+)\/ui\/interop\/(?:interclaw|cc)\//);
     return m ? m[1] + '/api/interclaw' : '/api/interclaw';
   }
@@ -190,7 +173,6 @@
       var data = await resp.json();
       applyAuthGate(!!data.logged_in);
     } catch (e) {
-      // On failure, fail closed — gate the workspace rather than leak access.
       console.warn('[shell] auth-status check failed:', e.message);
       applyAuthGate(false);
     }
@@ -201,8 +183,8 @@
 
   // ── Boot ──
   function boot() {
-    installHeaderInterception();
-    activateTab(currentTabFromHash());
+    preloadAllIframes();
+    activateTab(DEFAULT_TAB);
     refreshAuth();
   }
 

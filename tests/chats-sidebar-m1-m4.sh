@@ -47,13 +47,24 @@ else
 fi
 
 # Required DOM hooks
-for hook in "ic-chats-sidebar" "ic-chats-new" "ic-chats-list" "ic-chats-collapse" "ic-chats-reopen"; do
+# Sidebar is always visible — collapse/reopen buttons intentionally removed.
+for hook in "ic-chats-sidebar" "ic-chats-new" "ic-chats-list"; do
   if grep -q "$hook" "$sidebar_js_path"; then
     pass "sidebar defines #$hook"
   else
     fail "sidebar defines #$hook"
   fi
 done
+if ! grep -q "ic-chats-collapse-btn" "$sidebar_js_path"; then
+  pass "sidebar no longer renders collapse button"
+else
+  fail "sidebar no longer renders collapse button"
+fi
+if ! grep -q "reopenBtn.id = 'ic-chats-reopen'" "$sidebar_js_path"; then
+  pass "sidebar no longer injects reopen button"
+else
+  fail "sidebar no longer injects reopen button"
+fi
 
 # Core action functions exist
 for fn in "cc.startNewChat" "cc.openChat" "cc.renameChatInline" "cc.deleteChat" "cc.renderChatsSidebar" "cc.refreshChatsList"; do

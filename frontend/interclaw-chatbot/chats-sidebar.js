@@ -4,7 +4,9 @@
   'use strict';
 
   // ── SVG icons ───────────────────────────────────────────────────────────
-  var ICON_NEW_CHAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
+  // Writing icon (Lucide "square-pen"): notepad with a pencil overlay — same
+  // affordance ChatGPT/Claude use for "start a new chat".
+  var ICON_NEW_CHAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>';
   var ICON_COLLAPSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>';
   var ICON_EXPAND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>';
   var ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
@@ -141,34 +143,18 @@
     sidebar.innerHTML =
       '<div class="ic-chats-header">' +
         '<span class="ic-chats-brand">Chats</span>' +
-        '<button class="ic-chats-collapse-btn" id="ic-chats-collapse" title="Hide chats">' + ICON_COLLAPSE + '</button>' +
       '</div>' +
       '<button class="ic-chats-new" id="ic-chats-new">' + ICON_NEW_CHAT + '<span>New chat</span></button>' +
       '<div class="ic-chats-list" id="ic-chats-list"></div>';
     document.body.appendChild(sidebar);
 
-    var reopenBtn = document.createElement('button');
-    reopenBtn.id = 'ic-chats-reopen';
-    reopenBtn.title = 'Show chats';
-    reopenBtn.innerHTML = ICON_EXPAND;
-    document.body.appendChild(reopenBtn);
-
-    // ── Event wiring ──────────────────────────────────────────────────────
-    document.getElementById('ic-chats-collapse').addEventListener('click', function() {
-      document.body.classList.add('ic-chats-collapsed');
-      try { localStorage.setItem('ic-chats-collapsed', '1'); } catch (e) {}
-    });
-    reopenBtn.addEventListener('click', function() {
-      document.body.classList.remove('ic-chats-collapsed');
-      try { localStorage.removeItem('ic-chats-collapsed'); } catch (e) {}
-    });
     document.getElementById('ic-chats-new').addEventListener('click', cc.startNewChat);
 
-    // Restore collapsed state
+    // Sidebar is no longer collapsible — clear any stale flag from a prior
+    // session so the rail always renders.
     try {
-      if (localStorage.getItem('ic-chats-collapsed') === '1') {
-        document.body.classList.add('ic-chats-collapsed');
-      }
+      localStorage.removeItem('ic-chats-collapsed');
+      document.body.classList.remove('ic-chats-collapsed');
     } catch (e) {}
 
     cc.renderChatsSidebar();
@@ -202,15 +188,10 @@
       return;
     }
 
-    var html = '';
-    var lastGroup = null;
+    // Single "Recents" header for the whole list (no date grouping).
+    var html = '<div class="ic-chats-group-label">Recents</div>';
     for (var i = 0; i < chats.length; i++) {
       var c = chats[i];
-      var grp = groupLabel(c.updatedAt || Date.now());
-      if (grp !== lastGroup) {
-        html += '<div class="ic-chats-group-label">' + escapeHtml(grp) + '</div>';
-        lastGroup = grp;
-      }
       var active = c.id === cc.chatsStore.activeId ? ' active' : '';
       html += '<div class="ic-chats-item' + active + '" data-chat-id="' + escapeHtml(c.id) + '">' +
                 '<span class="ic-chats-item-title">' + escapeHtml(c.title || 'Untitled') + '</span>' +

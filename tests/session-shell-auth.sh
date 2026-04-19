@@ -130,12 +130,12 @@ fi
 
 for needle in \
   "VALID_TABS" \
-  "currentTabFromHash" \
   "activateTab" \
-  "installHeaderInterception" \
   "shell-iframe--active" \
-  "hashchange" \
   "buildSources" \
+  "preloadAllIframes" \
+  "_interclawShell" \
+  "openInTab" \
   "interclaw-shell-tab-change" ; do
   if echo "$js" | grep -q -- "$needle"; then
     pass "shell.js contains '$needle'"
@@ -144,7 +144,15 @@ for needle in \
   fi
 done
 
-# Lazy-load marker: sources should include the three known paths
+# Hash-shortcut removal: per user request, #tab=... URL state is gone.
+# Assert we no longer touch the hash for tab state.
+if echo "$js" | grep -q "setHash\|hashchange\|tab=.*\\\\w"; then
+  fail "shell.js no longer uses #tab=... shortcut"
+else
+  pass "shell.js no longer uses #tab=... shortcut"
+fi
+
+# Sources should include the three known paths
 for src in "legacy-ui/index.html" "skills-editor/index.html" "EnsPortal.ProductionConfig.zen" "EnsPortal.MessageViewer.zen"; do
   if echo "$js" | grep -q "$src"; then
     pass "shell.js references '$src'"
@@ -158,6 +166,30 @@ if echo "$js" | grep -q "chrome=none"; then
   pass "shell.js passes chrome=none to iframe sources"
 else
   fail "shell.js passes chrome=none to iframe sources"
+fi
+
+# Header click interception must attach at window capture to beat any
+# descendant handler regardless of render timing. A plain addEventListener
+# on `#interclaw-header` or similar is the old, race-prone pattern.
+if echo "$js" | grep -q "window.addEventListener('click'" && echo "$js" | grep -A20 "window.addEventListener('click'" | grep -E -q "^\s*\}, true\)"; then
+  pass "shell.js installs click interception at window capture"
+else
+  fail "shell.js installs click interception at window capture"
+fi
+
+# Eager iframe preload: the previous lazy-load made first clicks flicker and
+# amplified race conditions with the header. boot() must preload all three.
+if echo "$js" | grep -q "preloadAllIframes"; then
+  pass "shell.js eagerly preloads all iframes"
+else
+  fail "shell.js eagerly preloads all iframes"
+fi
+
+# Public API for /goto integration
+if echo "$js" | grep -q "window._interclawShell" && echo "$js" | grep -q "openInTab"; then
+  pass "shell.js exposes window._interclawShell.openInTab"
+else
+  fail "shell.js exposes window._interclawShell.openInTab"
 fi
 
 # ── Shell-4 ─────────────────────────────────────────────────────────────
@@ -304,6 +336,43 @@ if [[ "$skills_code" == "200" ]]; then
   fi
 else
   fail "skills-editor/index.html served 200 (got $skills_code)"
+fi
+
+# ── Goto-1: /goto routes into shell iframes ─────────────────────────────
+section "Goto-1: goto.js is shell-aware"
+
+goto_js=$(curl -s "$FRONT_URL/interclaw-chatbot/goto.js")
+if [[ -n "$goto_js" ]]; then
+  pass "goto.js served non-empty"
+else
+  fail "goto.js served non-empty"
+fi
+
+# navigateLegacyUi must prefer the shell's openInTab over the legacy-ui-only
+# #viewer-frame and over window.location.href. Without this, /goto on the
+# shell either opens new tabs or navigates the top window away.
+if echo "$goto_js" | grep -q "_interclawShell" && echo "$goto_js" | grep -q "openInTab"; then
+  pass "goto.js navigateLegacyUi calls _interclawShell.openInTab"
+else
+  fail "goto.js navigateLegacyUi calls _interclawShell.openInTab"
+fi
+
+# Class-lookup success path must actually navigate now — previously it fell
+# through to the "Non-trace gotos: nothing to do" no-op, so /goto My.DTL.Foo
+# did nothing on the shell.
+if echo "$goto_js" | grep -q "buildPortalLink" && echo "$goto_js" | grep -B2 -A5 "buildPortalLink" | grep -q "navigateLegacyUi"; then
+  pass "goto.js class-match path navigates via navigateLegacyUi"
+else
+  fail "goto.js class-match path navigates via navigateLegacyUi"
+fi
+
+# Catalog fallback no longer relies on window.open for legacy-ui URLs; it
+# must use navigatePortalUrl (which itself routes to the shell) as the
+# last resort.
+if echo "$goto_js" | grep -q "navigatePortalUrl"; then
+  pass "goto.js catalog fallback uses navigatePortalUrl"
+else
+  fail "goto.js catalog fallback uses navigatePortalUrl"
 fi
 
 # ── Portal-1 ────────────────────────────────────────────────────────────

@@ -1,0 +1,248 @@
+/* chatgpt-theme.css — Claude.ai-style left chats sidebar (white).
+   Scoped strictly to #ic-chats-sidebar and its children. Does NOT touch
+   the chatbot panel (#chatbot-sidebar) or anything inside it.
+
+   Ported from the Claude.ai sidebar DOM: bg-bg-100 surface, text-text-200
+   hover, text-text-400 icons, border-border-300 outlines, rounded-lg (8px)
+   item radius, 32px (h-8) items, truncate with fade mask on item hover.
+
+   To roll back: remove the <link> injection in index.js and delete this file.
+*/
+
+:root {
+  /* White sidebar with cool-gray hovers — pure white base */
+  --cl-bg-100:        #ffffff;   /* sidebar base */
+  --cl-bg-200:        #f7f7f8;   /* subtle block background */
+  --cl-bg-300:        #ececed;   /* hover / active surface */
+  --cl-bg-000:        #ffffff;   /* pure white for contenteditable/rename field */
+
+  --cl-text-100:      #1a1915;   /* primary text */
+  --cl-text-200:      #2b2a26;   /* body on hover */
+  --cl-text-300:      #3f3e39;   /* dim body */
+  --cl-text-400:      #6b6a63;   /* icon default */
+  --cl-text-500:      #8e8d85;   /* section headings, muted labels */
+
+  --cl-border-200:    rgba(26, 25, 21, 0.08);
+  --cl-border-300:    rgba(26, 25, 21, 0.12);
+  --cl-border-400:    rgba(26, 25, 21, 0.18);
+
+  /* Brand blue (kept consistent with the 2px chat-panel header) */
+  --cl-accent:        #007aff;
+
+  /* Tailwind-ish radii that Claude uses */
+  --cl-radius-md:     0.5rem;    /* rounded-lg */
+  --cl-radius-sm:     0.375rem;  /* rounded-md */
+
+  --cl-font: "Anthropic Sans", ui-sans-serif, -apple-system, system-ui,
+             "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
+             "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+
+  --cl-sidebar-width: 260px;
+}
+
+/* Expand rail width to 260px (Claude's default) while we're restyling. */
+:root { --ic-chats-sidebar-width: var(--cl-sidebar-width); }
+
+/* ========================================================================
+   Shell
+   ======================================================================== */
+#ic-chats-sidebar {
+  background: var(--cl-bg-100) !important;
+  border-top: 2px solid var(--cl-accent) !important;
+  border-right: 1px solid var(--cl-border-200) !important;
+  color: var(--cl-text-100) !important;
+  font-family: var(--cl-font) !important;
+  font-size: 14px !important;
+  padding: 0 !important;
+}
+
+/* Scrollbar — thin, low-contrast */
+#ic-chats-sidebar *::-webkit-scrollbar { width: 6px; height: 6px; }
+#ic-chats-sidebar *::-webkit-scrollbar-track { background: transparent; }
+#ic-chats-sidebar *::-webkit-scrollbar-thumb {
+  background: var(--cl-border-300) !important;
+  border-radius: 999px !important;
+}
+#ic-chats-sidebar *::-webkit-scrollbar-thumb:hover {
+  background: var(--cl-border-400) !important;
+}
+
+/* ========================================================================
+   Header row — the "Chats" title line
+   Claude puts a subtle monogram / pin toggle here. We just keep the brand
+   label, muted, left-aligned.
+   ======================================================================== */
+#ic-chats-sidebar .ic-chats-header {
+  padding: 10px 12px 4px 14px !important;
+  min-height: 40px !important;
+}
+#ic-chats-sidebar .ic-chats-brand {
+  color: var(--cl-text-500) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+/* ========================================================================
+   "New chat" button — Claude's top-level nav item style:
+   h-8, rounded-lg, px-4, -translate-x-2 so the icon appears flush left
+   while the text hugs the content edge.
+   ======================================================================== */
+#ic-chats-sidebar .ic-chats-new {
+  margin: 2px 8px 4px 8px !important;
+  padding: 6px 16px !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--cl-text-100) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  border-radius: var(--cl-radius-md) !important;
+  transition: background 0.075s ease-out !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-height: 32px !important;
+}
+#ic-chats-sidebar .ic-chats-new:hover {
+  background: var(--cl-bg-300) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+#ic-chats-sidebar .ic-chats-new svg {
+  color: var(--cl-text-400) !important;
+  opacity: 1 !important;
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+  transition: color 0.1s ease-out, transform 0.1s ease-out !important;
+}
+#ic-chats-sidebar .ic-chats-new:hover svg {
+  color: var(--cl-text-100) !important;
+}
+
+/* ========================================================================
+   Chat list
+   ======================================================================== */
+#ic-chats-sidebar .ic-chats-list {
+  padding: 12px 8px 16px 8px !important;
+}
+
+/* Section labels ("Today", "Yesterday", "April 2025")
+   Claude's markup: `text-text-500 pb-2 mt-1 text-xs pl-2 pr-2` */
+#ic-chats-sidebar .ic-chats-group-label {
+  padding: 12px 10px 6px 10px !important;
+  margin: 4px 0 0 0 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: var(--cl-text-500) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  user-select: none !important;
+}
+/* First group label gets no extra top margin so it hugs the "New chat" row */
+#ic-chats-sidebar .ic-chats-group-label:first-child {
+  margin-top: 0 !important;
+  padding-top: 6px !important;
+}
+
+/* Items — Claude renders each row at h-8, rounded-lg, px-4, 14px text.
+   The title is truncated and gets a fade-mask on hover. */
+#ic-chats-sidebar .ic-chats-item {
+  position: relative !important;
+  color: var(--cl-text-100) !important;
+  padding: 6px 12px !important;
+  margin: 1px 0 !important;
+  border-radius: var(--cl-radius-md) !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  min-height: 32px !important;
+  transition: background 0.075s ease-out !important;
+  display: flex !important;
+  align-items: center !important;
+}
+#ic-chats-sidebar .ic-chats-item:hover {
+  background: var(--cl-bg-300) !important;
+}
+#ic-chats-sidebar .ic-chats-item.active {
+  background: var(--cl-bg-300) !important;
+  font-weight: 500 !important;
+}
+
+/* Title: truncate + fade-mask on hover, mimicking Claude's
+   group-hover:[mask-image:linear-gradient(...)] trick so the action
+   buttons appear to float over a soft text edge. */
+#ic-chats-sidebar .ic-chats-item-title {
+  color: var(--cl-text-100) !important;
+  font-size: 14px !important;
+  font-weight: inherit !important;
+  padding-right: 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  transition: -webkit-mask-image 0.1s ease-out, mask-image 0.1s ease-out !important;
+}
+#ic-chats-sidebar .ic-chats-item:hover .ic-chats-item-title,
+#ic-chats-sidebar .ic-chats-item.active .ic-chats-item-title {
+  -webkit-mask-image: linear-gradient(to right, black 78%, transparent 95%) !important;
+  mask-image: linear-gradient(to right, black 78%, transparent 95%) !important;
+  -webkit-mask-size: 100% 100% !important;
+  mask-size: 100% 100% !important;
+}
+#ic-chats-sidebar .ic-chats-item-title[contenteditable="true"] {
+  background: var(--cl-bg-000) !important;
+  color: var(--cl-text-100) !important;
+  border: 1px solid var(--cl-border-400) !important;
+  border-radius: var(--cl-radius-sm) !important;
+  outline: 2px solid var(--cl-accent) !important;
+  outline-offset: -1px !important;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+  padding: 2px 6px !important;
+}
+
+/* Action buttons (rename, delete) — icon-only, mono color, rounded-md */
+#ic-chats-sidebar .ic-chats-item-actions {
+  position: absolute !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  gap: 2px !important;
+  padding-left: 0 !important;
+  background: transparent !important;
+}
+#ic-chats-sidebar .ic-chats-item-action {
+  color: var(--cl-text-400) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--cl-radius-sm) !important;
+  padding: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background 0.1s ease-out, color 0.1s ease-out !important;
+}
+#ic-chats-sidebar .ic-chats-item-action:hover {
+  background: rgba(26, 25, 21, 0.12) !important;
+  color: var(--cl-text-100) !important;
+}
+#ic-chats-sidebar .ic-chats-item-action svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+#ic-chats-sidebar .ic-chats-empty {
+  color: var(--cl-text-500) !important;
+  font-size: 13px !important;
+  padding: 24px 14px !important;
+  text-align: center !important;
+  line-height: 1.5 !important;
+}
+
+/* Selection highlight inside the sidebar */
+#ic-chats-sidebar ::selection {
+  background: rgba(0, 122, 255, 0.18);
+  color: var(--cl-text-100);
+}
