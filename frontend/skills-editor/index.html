@@ -143,123 +143,116 @@ html, body {
 /* ── Main ───────────────────────────────────────── */
 #main { flex: 1; display: flex; overflow: hidden; }
 
-/* ── Sidebar (chatbot-style) ───────────────────── */
+/* ── Sidebar — aligned with the chats-sidebar rail ────────────────────
+   Shared tokens (both rails use the same values so the two feel like
+   one design system):
+     Rail bg: #f7f7f8    Right border: 1px solid #e8e8ec
+     Row padding: 6px 10px    Row margin: 1px 6px    Row radius: 6px
+     Hover bg: rgba(0,0,0,0.05)
+   The skills rail differs only in that file icons keep their type colors
+   (the "colorful" bit) and the active row uses the InterClaw primary
+   tint instead of the chats rail's neutral grey — everything else
+   matches so the two rails read as siblings.
+*/
 #sidebar {
-  width: 280px; min-width: 200px; max-width: 420px;
-  background: var(--fr-styles-color-white);
-  border-right: none;
+  width: 260px; min-width: 200px; max-width: 420px;
+  background: #f7f7f8;
+  border-right: 1px solid #e8e8ec;
   display: flex; flex-direction: column;
   overflow: hidden; flex-shrink: 0;
   position: relative;
 }
-#sidebar::after {
-  content: ''; position: absolute; right: 0; top: 0; bottom: 0;
-  width: 1px; background: var(--fr-styles-color-light-grey);
-  pointer-events: none;
-}
-#sidebar-search { padding: 8px 12px; flex-shrink: 0; }
+#sidebar-search { padding: 10px 10px 6px 10px; flex-shrink: 0; }
 #sidebar-search input {
-  width: 100%; padding: 5px 10px;
-  border: 1px solid rgba(0,0,0,0.38); border-radius: 4px;
-  font-family: inherit; font-size: var(--fr-styles-font-size-2xs);
-  color: rgba(0,0,0,0.87); background: var(--fr-styles-color-white); outline: none;
+  width: 100%; padding: 6px 10px;
+  border: 1px solid #e0e0e4; border-radius: 6px;
+  font-family: inherit; font-size: 13px;
+  color: #1a1a2e; background: #ffffff; outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 #sidebar-search input::placeholder { color: rgba(0,0,0,0.38); }
 #sidebar-search input:focus {
-  border-color: var(--fr-styles-color-secondary);
-  box-shadow: 0 0 0 1px var(--fr-styles-color-secondary);
+  border-color: var(--fr-styles-color-primary);
+  box-shadow: 0 0 0 2px hsla(238, 49%, 39%, 0.15);
 }
-#sidebar-content { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+#sidebar-content { flex: 1; overflow-y: auto; padding: 4px 0 12px 0; }
 #sidebar-content::-webkit-scrollbar { width: 4px; }
 #sidebar-content::-webkit-scrollbar-track { background: transparent; }
-#sidebar-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
-#sidebar-content::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.26); }
+#sidebar-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+#sidebar-content::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
 
-/* ── Hierarchy visual system ─────────────────────
-   Three levels:
-     (1) Top-level section = UPPERCASE label, solid color, always drawn at
-         the page edge.
-     (2) Nested group / sub-directory = nested by indentation AND a 1px
-         vertical "guide" line drawn down the left so the eye can trace
-         the tree without counting pixels.
-     (3) File item = smallest, with the same guide-line continuation.
-   The `.section-items` and `.group-items` wrappers are the only elements
-   that own the guide line, so depth is additive without JS help.
-*/
-
-/* ── Section ────────────────────────────────────── */
-.section { margin-bottom: 4px; }
+/* ── Section header (top-level group, e.g. "commands", "skills") ────
+   Styled like the chats rail's group label — subtle uppercase caption
+   above the rows, not a clickable-feeling chip. */
+.section { margin-bottom: 2px; }
 .section-header {
   display: flex; align-items: center;
-  padding: 8px 12px 4px 12px; cursor: pointer; user-select: none;
-  transition: background 0.1s;
+  padding: 10px 10px 4px 10px;
+  cursor: pointer; user-select: none;
+  transition: color 0.1s;
 }
 .section-header:hover .section-label,
-.section-header:hover .section-count { color: rgba(0,0,0,0.87); }
+.section-header:hover .section-count { color: rgba(0,0,0,0.75); }
 .section-chevron {
-  width: 14px; height: 14px;
+  width: 12px; height: 12px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; color: rgba(0,0,0,0.42);
   transition: transform 0.15s ease;
 }
 .section-chevron.collapsed { transform: rotate(-90deg); }
 .section-chevron svg { width: 10px; height: 10px; }
-.section-icon {
-  width: 16px; height: 16px;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; margin-left: 4px; color: rgba(0,0,0,0.54);
-}
-.section-icon svg { width: 14px; height: 14px; }
+.section-icon { display: none; } /* removed folder icon — caption is enough */
 .section-label {
-  font-size: var(--fr-styles-font-size-3xs);
-  font-weight: 700; color: rgba(0,0,0,0.56);
-  text-transform: uppercase; letter-spacing: 0.7px;
+  font-size: 11px; font-weight: 600;
+  color: rgba(0,0,0,0.45);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   margin-left: 6px; flex: 1;
   transition: color 0.1s;
 }
 .section-count {
-  font-size: var(--fr-styles-font-size-3xs);
-  color: rgba(0,0,0,0.38);
+  font-size: 11px;
+  color: rgba(0,0,0,0.35);
   font-variant-numeric: tabular-nums;
   transition: color 0.1s;
 }
-/* Indent wrapper for the section's contents — this is where the guide
-   line lives. padding-left matches the header chevron + icon. */
+/* Hierarchy guide line stays, but narrower + lighter so it reads as a
+   quiet structural rail rather than a visual divider. */
 .section-items {
   overflow: hidden;
   position: relative;
-  margin-left: 18px;
-  border-left: 1px solid rgba(0,0,0,0.08);
+  margin-left: 14px;
+  border-left: 1px solid rgba(0,0,0,0.05);
   padding-left: 2px;
 }
 .section-items.collapsed { display: none; }
 
-/* ── Group (sub-section in References/Templates) ── */
+/* ── Group (sub-directory) ─────────────────────────────────────────
+   Looks just like a file row but with a chevron + count. */
 .group-header {
   display: flex; align-items: center;
-  padding: 4px 10px; cursor: pointer; user-select: none;
-  border-radius: 4px;
+  padding: 6px 10px; cursor: pointer; user-select: none;
+  border-radius: 6px;
   margin: 1px 6px;
   transition: background 0.1s;
 }
-.group-header:hover { background: rgba(0,0,0,0.045); }
+.group-header:hover { background: rgba(0,0,0,0.05); }
 .group-chevron {
   width: 12px; height: 12px;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; color: rgba(0,0,0,0.4);
+  flex-shrink: 0; color: rgba(0,0,0,0.42);
   transition: transform 0.15s ease;
 }
 .group-chevron.collapsed { transform: rotate(-90deg); }
 .group-chevron svg { width: 8px; height: 8px; }
 .group-label {
-  font-size: var(--fr-styles-font-size-2xs);
-  font-weight: 600;
-  color: rgba(0,0,0,0.72);
-  margin-left: 6px; flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a2e;
+  margin-left: 8px; flex: 1;
 }
 .group-count {
-  font-size: var(--fr-styles-font-size-3xs);
+  font-size: 11px;
   color: rgba(0,0,0,0.38);
   font-variant-numeric: tabular-nums;
 }
@@ -267,26 +260,26 @@ html, body {
   overflow: hidden;
   position: relative;
   margin-left: 14px;
-  border-left: 1px solid rgba(0,0,0,0.06);
+  border-left: 1px solid rgba(0,0,0,0.05);
   padding-left: 2px;
 }
 .group-items.collapsed { display: none; }
 
-/* ── File item ──────────────────────────────────── */
-/* Depth is handled by nested .section-items / .group-items wrappers
-   (margin-left + border-left guide line). Each row just needs its own
-   horizontal padding to align icon + name with the headers above. */
+/* ── File item ────────────────────────────────────
+   Matches the chats rail .ic-chats-item cadence (padding, margin, radius,
+   hover). File-type icon colors carry the "colorful" identity that
+   distinguishes the skills rail. */
 .file-item {
   display: flex; align-items: center;
-  padding: 3px 10px; cursor: pointer; user-select: none;
+  padding: 6px 10px; cursor: pointer; user-select: none;
   gap: 8px; white-space: nowrap;
-  border-radius: 4px;
+  border-radius: 6px;
   margin: 1px 6px;
   transition: background 0.1s;
 }
-.file-item:hover { background: rgba(0,0,0,0.045); }
+.file-item:hover { background: rgba(0,0,0,0.05); }
 .file-item.active {
-  background: hsla(238, 49%, 39%, 0.10);
+  background: hsla(238, 49%, 39%, 0.12);
 }
 .file-item.active .file-name { color: var(--fr-styles-color-primary); font-weight: 600; }
 .file-item.active .file-icon { color: var(--fr-styles-color-primary); }
@@ -299,25 +292,29 @@ html, body {
   display: inline-flex; align-items: center; justify-content: center;
   width: 16px; height: 16px; flex-shrink: 0;
 }
-.file-icon svg { width: 16px; height: 16px; }
-.file-icon.py,
-.file-icon.md,
-.file-icon.json,
-.file-icon.js,
-.file-icon.sh,
+.file-icon svg { width: 15px; height: 15px; }
+/* File-type colors — the "colorful" personality of the skills rail.
+   Keeps file scanning fast: markdown looks like markdown, scripts look
+   like scripts, etc. Hue choices match IDE conventions so returning
+   users don't have to relearn them. */
+.file-icon.py   { color: #3572A5; } /* Python blue */
+.file-icon.md   { color: #083fa1; } /* Markdown indigo */
+.file-icon.json { color: #808080; } /* JSON grey */
+.file-icon.js   { color: #f1c40f; } /* JS yellow */
+.file-icon.sh   { color: #4EAA25; } /* Shell green */
 .file-icon.cls,
-.file-icon.cos,
-.file-icon.tpl,
-.file-icon.html,
-.file-icon.css,
-.file-icon.xml,
+.file-icon.cos  { color: #7e57c2; } /* ObjectScript purple */
+.file-icon.tpl  { color: rgba(0,0,0,0.45); }
+.file-icon.html { color: #e34c26; } /* HTML orange */
+.file-icon.css  { color: #264de4; } /* CSS blue */
+.file-icon.xml  { color: #e34c26; }
 .file-icon.yml,
 .file-icon.toml,
-.file-icon.cfg,
+.file-icon.cfg  { color: #6b6f76; }
 .file-icon.txt,
-.file-icon.default { color: rgba(0,0,0,0.38); }
+.file-icon.default { color: rgba(0,0,0,0.40); }
 .file-name {
-  font-size: var(--fr-styles-font-size-2xs); color: rgba(0,0,0,0.87);
+  font-size: 13px; color: #1a1a2e;
   overflow: hidden; text-overflow: ellipsis;
 }
 .override-badge {
@@ -640,13 +637,6 @@ html, body {
   display: flex; align-items: center; justify-content: center;
   padding: 20px; color: rgba(0,0,0,0.38); font-size: var(--fr-styles-font-size-2xs);
 }
-.spinner {
-  width: 16px; height: 16px;
-  margin-right: 8px;
-  animation: spin 1.2s ease-in-out infinite;
-  opacity: 0.3;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
 <!-- Theme overlay removed — user feedback was that the pre-overlay
@@ -694,7 +684,7 @@ html, body {
           <input type="text" id="search-input" placeholder="Search files..." spellcheck="false">
         </div>
         <div id="sidebar-content">
-          <div class="loading"><svg class="spinner" viewBox="0 0 22 57"><polygon fill="#2F2A95" points="7.2 8 0.2 4.5 0.2 49.3 14.3 56.3 14.3 48.5 7.2 44.9"/><polygon fill="#00B2A9" points="14.3 48.5 21.3 52 21.3 7.2 7.2 0.2 7.2 8 14.3 11.6"/></svg> Loading...</div>
+          <div class="loading" aria-hidden="true"></div>
         </div>
       <div id="resize-handle"></div>
       </div>
