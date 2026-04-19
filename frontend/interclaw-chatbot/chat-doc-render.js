@@ -41,9 +41,17 @@
       : '<div class="reasoning-step-icon reasoning-tool-icon">' + cc.getToolIcon(step.toolName || 'wrench') + '</div>';
     var row = document.createElement('div');
     row.className = 'reasoning-step-row';
+    // Humanize the title through the same function the live stream uses.
+    // BP writes raw tool names (run_sql, put_class); live renders "Running
+    // SQL", "Pushing class" via cc.getToolLabel. Keep the two paths in
+    // sync by running the same mapping here.
+    var displayTitle = step.title || '';
+    if (step.type !== 'thinking' && cc.getToolLabel) {
+      displayTitle = cc.getToolLabel(step.toolName || step.title || '', null);
+    }
     row.innerHTML = iconHtml +
       '<button class="reasoning-step-label clickable">' +
-        '<span style="flex:1">' + escapeHtml(step.title || '') + '</span>' +
+        '<span style="flex:1">' + escapeHtml(displayTitle) + '</span>' +
         '<span class="reasoning-chevron-step' + (!step.body ? ' invisible' : '') + '">' + cc.CHEVRON_SVG + '</span>' +
       '</button>';
     el.appendChild(row);

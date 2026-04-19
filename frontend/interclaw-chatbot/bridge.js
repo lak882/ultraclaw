@@ -222,7 +222,14 @@
 
   cc.initSession = async function(opts) {
     opts = opts || {};
-    cc.sessionId = null;
+    // Don't clobber a sessionId set by openChat's URL auto-open. initSession
+    // runs on page load (300ms setTimeout) AFTER refreshChatsList's
+    // .then(openChat) already ran and set cc.sessionId to the deep-linked
+    // chat. Nulling it here caused every new send to ensureChatId(true) →
+    // mint a fresh local-id → create a new empty chat file.
+    if (!opts.preserveSession) {
+      cc.sessionId = null;
+    }
     cc.sessionReady = false;
     cc.bridgeConnected = false;
 

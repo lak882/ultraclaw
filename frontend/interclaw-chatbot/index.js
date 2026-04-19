@@ -68,7 +68,7 @@
   ];
 
   // Cache-busting version — bump this to force-reload all modules
-  var MODULE_VERSION = 55;
+  var MODULE_VERSION = 57;
 
   function loadNext(i) {
     if (i >= modules.length) {

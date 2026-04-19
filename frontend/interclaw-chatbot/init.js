@@ -76,12 +76,15 @@
         var hasUrlChat = /^#\/chat\/[^?]+/.test(window.location.hash || '');
         if (hasUrlChat) {
           sessionStorage.removeItem('chatbot-state');
-          cc.initSession({ skipWelcome: true });
+          // preserveSession: the sidebar's URL auto-open has already called
+          // openChat which set cc.sessionId. Don't null it here or the
+          // next send will mint a fresh chat.
+          cc.initSession({ skipWelcome: true, preserveSession: true });
         } else if (!isReload && cc.restoreState()) {
-          // Restored conversation from tab navigation — welcome is already
-          // in the restored HTML if it was there at save time; showWelcome
-          // is idempotent so calling it is safe either way.
+          // Restored conversation from tab navigation. restoreState set
+          // cc.sessionId from sessionStorage — don't wipe it.
           if (cc.showWelcomeMessage) cc.showWelcomeMessage();
+          cc.initSession({ skipWelcome: true, preserveSession: true });
         } else {
           sessionStorage.removeItem('chatbot-state');
           cc.initSession();
