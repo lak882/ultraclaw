@@ -73,6 +73,7 @@ You are a professional assistant to a healthcare IT executive. You are knowledge
 ## Project Structure
 
 - `config/servers.json` -- server connection fallback (path prefix, credentials); scripts default to localhost
+- `config/portal-urls.json` -- curated Management Portal URL catalog (SMP, Ensemble, HealthShare) used by the chatbot's `/goto` for fuzzy-matched navigation. Validate with `scripts/docs/catalog_portal_urls.py`.
 - `.claude/skills/interclaw/` -- single skill: scripts, references, templates organized by domain
 - `.claude/commands/` -- slash commands
 - `src/<Namespace>/` -- locally generated/pulled class files
@@ -207,6 +208,7 @@ Run `permissions.py --check <operation>` before destructive ops. Exit 0 = no con
 
 - Never output `/goto` text in responses. `put_doc.py` emits it on stdout; backend detects automatically.
 - For manual navigation: `/goto <name>` (auto-detects editor type). Traces: `/trace-view [sessionID]`.
+- `/goto` resolution order: (1) explicit flag (`--dtl`, `--rule`, `--bpl`, `--production`, `--trace`); (2) server `%Dictionary` lookup on the class name; (3) naming heuristic on the package segment; (4) fuzzy match against the Management Portal catalog at `config/portal-urls.json`. Fallback matches accept plain English like `/goto audit`, `/goto message viewer`, `/goto queues`.
 
 #### ZEN Editor URL Formats
 
@@ -338,7 +340,7 @@ Scripts live in `.claude/skills/interclaw/scripts/` organized by domain. Run fro
 | `diagnostics/` | get_errors, audit, changelog, trace, feedback | Errors, audit trail, change tracking, message traces |
 | `infrastructure/` | manage_namespace, manage_webapp, reset_package, permissions, setup_interclaw_portal | Namespaces, web apps, permissions, portal setup |
 | `git/` | git_issue, git_push, git_token | GitLab integration |
-| `docs/` | pull_docs, docx_to_md, open_portal | Documentation tools |
+| `docs/` | pull_docs, docx_to_md, open_portal, catalog_portal_urls | Documentation tools, portal URL catalog validator |
 | `lib/` | iris_api, iris_http, iris_terminal, iris_terminal_pool, portal_urls, gitlab_api, platform | Shared libraries (imported, not run directly) |
 
 All scripts accept `--server`, `--namespace`, `--password`, `--config`. The `--server` flag is optional; when omitted, scripts connect to localhost using the default entry from `config/servers.json`. Run any script with `--help` for full usage.

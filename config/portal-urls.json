@@ -19,30 +19,21 @@
       "description": "Top-level Management Portal landing page."
     },
     {
-      "slug": "system-explorer",
-      "title": "System Explorer",
-      "aliases": ["explorer", "sys explorer"],
-      "keywords": ["classes", "sql", "globals", "routines"],
-      "category": "system",
-      "url": "{origin}/csp/sys/exp/UtilExpHome.csp",
-      "description": "Browse classes, routines, globals, and SQL tables."
-    },
-    {
       "slug": "classes",
       "title": "Classes",
-      "aliases": ["class browser", "class list"],
-      "keywords": ["classes", "browser"],
+      "aliases": ["class browser", "class list", "explorer"],
+      "keywords": ["classes", "browser", "explorer"],
       "category": "system",
-      "url": "{origin}/csp/sys/exp/UtilExpClassList.csp?$NAMESPACE={namespace}",
+      "url": "{origin}/csp/sys/exp/%25CSP.UI.Portal.ClassList.zen?$NAMESPACE={namespace}",
       "description": "Browse compiled ObjectScript classes in the current namespace."
     },
     {
       "slug": "sql",
-      "title": "SQL Explorer",
-      "aliases": ["sql explorer", "query tool"],
+      "title": "SQL",
+      "aliases": ["sql explorer", "query tool", "sql home"],
       "keywords": ["sql", "query", "tables"],
       "category": "system",
-      "url": "{origin}/csp/sys/exp/UtilExecuteQuery.csp?$NAMESPACE={namespace}",
+      "url": "{origin}/csp/sys/exp/%25CSP.UI.Portal.SQL.Home.zen?$NAMESPACE={namespace}",
       "description": "Run SQL queries, browse tables and views."
     },
     {
@@ -60,7 +51,7 @@
       "aliases": ["routine list"],
       "keywords": ["routines", "mac", "int"],
       "category": "system",
-      "url": "{origin}/csp/sys/exp/UtilExpRoutineList.csp?$NAMESPACE={namespace}",
+      "url": "{origin}/csp/sys/exp/%25CSP.UI.Portal.RoutineList.zen?$NAMESPACE={namespace}",
       "description": "Browse MAC/INT/OBJ routines in the namespace."
     },
     {
@@ -123,7 +114,7 @@
       "aliases": ["audit log", "audit database"],
       "keywords": ["audit", "security", "history"],
       "category": "security",
-      "url": "{origin}/csp/sys/sec/%25CSP.UI.Portal.Audit.zen",
+      "url": "{origin}/csp/sys/sec/%25CSP.UI.Portal.Audit.View.zen",
       "description": "Security/system audit events."
     },
     {
@@ -132,7 +123,7 @@
       "aliases": ["process list", "jobs"],
       "keywords": ["processes", "jobs", "pid"],
       "category": "system",
-      "url": "{origin}/csp/sys/op/%25CSP.UI.Portal.ProcessList.zen",
+      "url": "{origin}/csp/sys/op/%25CSP.UI.Portal.Processes.zen",
       "description": "Running IRIS processes with job ids and device info."
     },
     {
@@ -145,31 +136,31 @@
       "description": "Current IRIS lock table."
     },
     {
-      "slug": "system-dashboard",
-      "title": "System Dashboard",
-      "aliases": ["dashboard", "health dashboard"],
-      "keywords": ["dashboard", "health", "monitor"],
-      "category": "system",
-      "url": "{origin}/csp/sys/%25CSP.Portal.Dashboard.cls",
-      "description": "Real-time system health (license, journal, errors, performance)."
-    },
-    {
       "slug": "journal",
       "title": "Journal Files",
       "aliases": ["journals"],
       "keywords": ["journal", "recovery"],
       "category": "system",
-      "url": "{origin}/csp/sys/op/%25CSP.UI.Portal.Journal.zen",
+      "url": "{origin}/csp/sys/mgr/%25CSP.UI.Portal.Journal.zen",
       "description": "Journal files and journal configuration."
     },
     {
       "slug": "tasks",
       "title": "Task Manager",
-      "aliases": ["task scheduler", "scheduled tasks"],
+      "aliases": ["task scheduler", "scheduled tasks", "task schedule"],
       "keywords": ["task", "schedule", "cron"],
       "category": "system",
-      "url": "{origin}/csp/sys/mgr/%25CSP.UI.Portal.TaskList.zen",
+      "url": "{origin}/csp/sys/op/%25CSP.UI.Portal.TaskSchedule.zen",
       "description": "System task schedule (like cron, but IRIS-native)."
+    },
+    {
+      "slug": "task-history",
+      "title": "Task History",
+      "aliases": ["completed tasks", "task log"],
+      "keywords": ["task", "history", "log"],
+      "category": "system",
+      "url": "{origin}/csp/sys/op/%25CSP.UI.Portal.TaskHistory.zen",
+      "description": "Historical record of scheduled-task executions."
     },
     {
       "slug": "production",
@@ -183,11 +174,20 @@
     {
       "slug": "production-list",
       "title": "Production List",
-      "aliases": ["production browser", "all productions"],
+      "aliases": ["production browser", "all productions", "productions"],
       "keywords": ["production", "list"],
       "category": "interop",
-      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.ProductionList.zen?$NAMESPACE={namespace}",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.Productions.zen?$NAMESPACE={namespace}",
       "description": "Browse every production defined in the namespace."
+    },
+    {
+      "slug": "production-monitor",
+      "title": "Production Monitor",
+      "aliases": ["monitor", "prod monitor"],
+      "keywords": ["production", "monitor", "metrics"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.ProductionMonitor.zen?$NAMESPACE={namespace}",
+      "description": "Live production metrics and throughput."
     },
     {
       "slug": "message-viewer",
@@ -217,22 +217,31 @@
       "description": "Per-production event log (info/warning/error/alert)."
     },
     {
-      "slug": "business-hosts",
-      "title": "Business Hosts",
-      "aliases": ["hosts", "components", "host list"],
-      "keywords": ["service", "operation", "process", "host"],
+      "slug": "business-processes",
+      "title": "Business Processes",
+      "aliases": ["processes list", "bp list"],
+      "keywords": ["business", "process", "bp"],
       "category": "interop",
-      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.BusinessHosts.zen?$NAMESPACE={namespace}",
-      "description": "All business services, processes, and operations in the namespace."
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.BusinessProcesses.zen?$NAMESPACE={namespace}",
+      "description": "All business processes (BPL and code-based) in the namespace."
     },
     {
       "slug": "dtl-list",
       "title": "Data Transformations",
-      "aliases": ["dtl list", "transformations"],
+      "aliases": ["dtl list", "transformations", "transforms"],
       "keywords": ["dtl", "transformation", "data"],
       "category": "interop",
-      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.DTL.List.zen?$NAMESPACE={namespace}",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.DataTransformations.zen?$NAMESPACE={namespace}",
       "description": "Browse all DTL classes in the namespace."
+    },
+    {
+      "slug": "rule-list",
+      "title": "Business Rules",
+      "aliases": ["rules list", "rules", "routing rules"],
+      "keywords": ["rule", "routing"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.Rules.zen?$NAMESPACE={namespace}",
+      "description": "Browse all business rules and routing rules in the namespace."
     },
     {
       "slug": "dtl-editor",
@@ -275,22 +284,13 @@
       "requires": ["name"]
     },
     {
-      "slug": "lookup-tables",
-      "title": "Lookup Tables",
-      "aliases": ["lookup list", "lookups"],
-      "keywords": ["lookup", "table"],
-      "category": "interop",
-      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.LookupTables.zen?$NAMESPACE={namespace}",
-      "description": "Browse all ensemble lookup tables."
-    },
-    {
       "slug": "lookup-table",
       "title": "Lookup Table Editor",
-      "aliases": ["lookup", "lookup settings"],
-      "keywords": ["lookup", "edit", "lut"],
+      "aliases": ["lookup", "lookup settings", "lookup tables", "lookups"],
+      "keywords": ["lookup", "edit", "lut", "table"],
       "category": "interop",
       "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.LookupSettings.zen?LookupTable={name}.lut",
-      "description": "Edit a single lookup table. Requires {name}.",
+      "description": "Edit a lookup table. Without {name}, the editor shows the picker.",
       "requires": ["name"]
     },
     {
@@ -349,37 +349,10 @@
       "description": "Named SSL/TLS configurations for outbound HTTPS."
     },
     {
-      "slug": "healthshare-home",
-      "title": "HealthShare Home",
-      "aliases": ["hs home", "healthshare portal"],
-      "keywords": ["healthshare", "hub", "home"],
-      "category": "healthshare",
-      "url": "{origin}/csp/healthshare/hshome.zen",
-      "description": "HealthShare administrative home."
-    },
-    {
-      "slug": "foundation-install",
-      "title": "HealthShare Foundation Install/Upgrade",
-      "aliases": ["foundation", "hsinstall"],
-      "keywords": ["foundation", "install", "upgrade", "namespace"],
-      "category": "healthshare",
-      "url": "{origin}/csp/healthshare/hslib/HS.Hub.UI.InstallUpgrade.zen",
-      "description": "Install or upgrade a HealthShare Foundation namespace."
-    },
-    {
-      "slug": "interclaw-chat",
-      "title": "InterClaw Chat",
-      "aliases": ["chat", "interclaw chatbot"],
-      "keywords": ["chat", "assistant"],
-      "category": "interclaw",
-      "url": "{origin}{pathPrefix}/ui/interop/interclaw/",
-      "description": "InterClaw chat UI (fullscreen chatbot + editor)."
-    },
-    {
       "slug": "interclaw-legacy-ui",
       "title": "InterClaw Legacy UI",
       "aliases": ["legacy ui", "interclaw portal"],
-      "keywords": ["legacy", "portal"],
+      "keywords": ["legacy", "portal", "interclaw"],
       "category": "interclaw",
       "url": "{origin}{pathPrefix}/ui/interop/interclaw/legacy-ui/index.html#/csp/healthshare/{namespaceLower}/EnsPortal.ProductionConfig.zen?$NAMESPACE={namespace}",
       "description": "Legacy portal shell embedded inside the InterClaw chatbot frame."

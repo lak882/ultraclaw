@@ -251,6 +251,14 @@
     } catch (e) {}
   };
 
+  // Roadmap: remember the Management Portal URL (or active component) that
+  // was open when each chat was last saved, and restore it when the chat is
+  // reopened. Requires: (a) ChatStore.Put accepting a `portalUrl` or
+  // `activeComponent` field — already merge-friendly, so just add to the
+  // payload in persistChat(); (b) openChat() below, after rehydrating
+  // messages, calls cc.navigateLegacyUi(chat.portalUrl) if set. Keep the
+  // restore best-effort: if the referenced component no longer exists, fall
+  // back to Production Config.
   cc.openChat = function(id) {
     cc.chatsStore.activeId = id;
     cc.renderChatsSidebar();
