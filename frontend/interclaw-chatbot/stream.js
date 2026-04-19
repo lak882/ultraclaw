@@ -212,33 +212,18 @@
           if (ce) ce.innerHTML = '';
           cc.currentStreamText = '';
         }
-        // Deltas only accumulate currentStreamText — the main bubble
-        // isn't rendered until now. If the terminal text overlaps the
-        // accumulated stream (deltas are a prefix, the output is a prefix,
-        // or they share normalized-whitespace content), discard the delta
-        // accumulation so animateText doesn't render the same answer twice.
-        // Strict equality misses table/list streams where deltas include
-        // partial rows or trailing whitespace vs. the finalized output.
-        if (cc.currentStreamText) {
-          var norm = function(s) { return (s || '').replace(/\s+/g, ' ').trim(); };
-          var streamed = norm(cc.currentStreamText);
-          var finalTxt = norm(outputText);
-          if (streamed && finalTxt &&
-              (streamed === finalTxt
-               || finalTxt.indexOf(streamed) !== -1
-               || streamed.indexOf(finalTxt) !== -1)) {
-            cc.currentStreamText = '';
-          }
-        }
-        var prevText = cc.currentStreamText;
-        cc.currentStreamText += (cc.currentStreamText ? '\n\n' : '') + outputText;
+        // `output` is the authoritative answer for this turn. Discard any
+        // prior accumulation (delta chunks, earlier partial `output` events
+        // from mid-answer revisions) and render only this text. Previous
+        // attempts to dedupe via prefix/substring matching failed when the
+        // model emitted two different versions of the same answer (e.g. a
+        // Count+Examples table followed by a Count+"Key application classes"
+        // table) — neither was a prefix of the other, so both rendered.
+        cc.currentStreamText = outputText;
         var mc = cc.currentStreamEl.querySelector('.msg-content');
         if (mc) {
-          if (prevText) mc.innerHTML = cc.renderMarkdownWithQuickReplies(prevText);
-          else mc.innerHTML = '';
-          (function(el, prev, added, scroll) {
-            cc.animateText(el, added, scroll, prev);
-          })(mc, prevText, outputText, chatMessages);
+          mc.innerHTML = '';
+          cc.animateText(mc, outputText, chatMessages, '');
         }
         break;
       case 'session':
@@ -250,7 +235,10 @@
         if (!cc.sessionId) cc.sessionId = data.session_id;
         cc.sessionReady = true;
         cc.saveState();
-        cc.processQueue();
+        // Don't drain the queue here — `session` fires mid-turn and the
+        // bridge is still streaming. Draining now would spin up a second
+        // typing indicator inside the live bubble, producing duplicate
+        // `.reasoning-steps` containers. Wait for `done` instead.
         break;
       case 'error':
         cc.stopTimer();

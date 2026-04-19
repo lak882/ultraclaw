@@ -59,7 +59,7 @@
         // Cache-bust v: bump when skills-editor/index.html changes so the
         // iframe doesn't serve a stale copy out of the disk cache after a
         // deploy. The browser keyed cache on URL so this is the only knob.
-        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=5'
+        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=7'
       }
     };
   }
@@ -208,6 +208,17 @@
     window.dispatchEvent(new CustomEvent('interclaw-shell-context', {
       detail: { tab: data.tab, context: data.context }
     }));
+    // For the Skills tab: the iframe already wrote the full selection to
+    // same-origin localStorage (including file content). Re-dispatch the
+    // `interclaw-tree-selection` event on THIS window so the chatbot's
+    // init.js listener, which only hears events in the parent frame,
+    // updates its context-indicator pill. send.js still reads the content
+    // from localStorage at send time.
+    if (data.tab === 'skills' && data.context) {
+      window.dispatchEvent(new CustomEvent('interclaw-tree-selection', {
+        detail: data.context
+      }));
+    }
     // Portal iframe broadcasts its zen context as tab='portal' or tab='traces'
     // depending on the zen page loaded. Use that to keep the tab highlight in
     // sync with what the user is actually looking at.

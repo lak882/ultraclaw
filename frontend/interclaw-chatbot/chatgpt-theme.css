@@ -746,6 +746,16 @@ body.ic-chat-mode #chatbot-sidebar {
   cursor: default !important;
 }
 
+/* Quick-reply pills in the welcome message — override chatbot.css:20 which
+   forces every button inside #chatbot-sidebar to `font-size: inherit`.
+   The base `.quick-reply-btn` rule sets 14px but loses to that more-
+   specific button selector. */
+#chatbot-sidebar .quick-reply-btn,
+#chatbot-sidebar button.quick-reply-btn {
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+}
+
 /* Toggle/arrow button in the header (opens-and-closes chat mode): icon
    is always near-black, hover tint matches sidebar rows.
    `body.ic-chat-mode #chatbot-toggle` in interclaw-header.css:329 dims

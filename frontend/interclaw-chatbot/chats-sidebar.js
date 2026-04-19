@@ -405,11 +405,12 @@
       var isRunning = c.status === 'running';
       var runningBadge = isRunning
         ? '<span class="ic-chats-item-running" title="Running"></span>' : '';
+      var fullTitle = c.title || 'Untitled';
       return '<div class="ic-chats-item' + active + (isRunning ? ' running' : '') + '" data-chat-id="' + escapeHtml(c.id) +
                    '" data-favorite="' + (c.favorite ? 'true' : 'false') +
-                   '" data-status="' + escapeHtml(c.status || '') + '" draggable="true">' +
+                   '" data-status="' + escapeHtml(c.status || '') + '" title="' + escapeHtml(fullTitle) + '" draggable="true">' +
                 runningBadge +
-                '<span class="ic-chats-item-title">' + escapeHtml(c.title || 'Untitled') + '</span>' +
+                '<span class="ic-chats-item-title">' + escapeHtml(fullTitle) + '</span>' +
                 '<span class="ic-chats-item-actions">' +
                   '<button class="ic-chats-item-action ic-chats-item-more" data-action="more" title="More" aria-label="More actions">' + ICON_MORE + '</button>' +
                 '</span>' +

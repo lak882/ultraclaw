@@ -71,14 +71,16 @@
    Sidebar — aligns with the chats rail: pure white, thin gray-300 right
    border, 6px hover radius on rows.
    ======================================================================== */
+/* Rail surface: same off-white grey as the chats rail (#f9f9f9). */
 #sidebar {
-  background: var(--ic-se-bg-100) !important;
+  background: #f9f9f9 !important;
 }
 #sidebar::after {
-  background: var(--ic-se-alpha-400) !important;
+  background: rgba(13, 13, 13, 0.06) !important;
 }
 
-/* Search input: match the chats-sidebar search row */
+/* Search input: matches the chats-sidebar search row — inset field on the
+   grey surface, no accent-colored focus ring. */
 #sidebar-search {
   padding: 8px 10px !important;
 }
@@ -86,9 +88,9 @@
   width: 100% !important;
   height: 32px !important;
   padding: 0 10px !important;
-  border: 1px solid var(--ic-se-alpha-400) !important;
-  background: var(--ic-se-bg-100) !important;
-  color: var(--ic-se-gray-1000) !important;
+  border: 1px solid rgba(13, 13, 13, 0.10) !important;
+  background: #f9f9f9 !important;
+  color: #0d0d0d !important;
   font-family: var(--ic-se-font) !important;
   font-size: 13px !important;
   border-radius: var(--ic-se-radius-md) !important;
@@ -99,8 +101,8 @@
   color: var(--ic-se-gray-600) !important;
 }
 #sidebar-search input:focus {
-  border-color: var(--ic-se-accent) !important;
-  box-shadow: 0 0 0 3px rgba(59, 59, 148, 0.18) !important;
+  border-color: rgba(13, 13, 13, 0.25) !important;
+  box-shadow: none !important;
 }
 
 /* Sidebar scrollbar */
@@ -147,7 +149,7 @@
   transition: background 0.08s ease-out !important;
 }
 .group-header:hover {
-  background: var(--ic-se-alpha-400) !important;
+  background: rgba(13, 13, 13, 0.05) !important;
 }
 .group-label {
   color: var(--ic-se-gray-900) !important;
@@ -178,18 +180,18 @@
   gap: 8px !important;
 }
 .file-item:hover {
-  background: var(--ic-se-alpha-400) !important;
+  background: rgba(13, 13, 13, 0.05) !important;
 }
 .file-item.active {
-  background: rgba(59, 59, 148, 0.10) !important;
-  color: var(--ic-se-accent) !important;
+  background: rgba(13, 13, 13, 0.09) !important;
+  color: #0d0d0d !important;
 }
 .file-item.active .file-name {
-  color: var(--ic-se-accent) !important;
-  font-weight: 500 !important;
+  color: #0d0d0d !important;
+  font-weight: 400 !important;
 }
 .file-item.active .file-icon {
-  color: var(--ic-se-accent) !important;
+  color: #0d0d0d !important;
 }
 .file-name {
   color: var(--ic-se-gray-1000) !important;
@@ -226,7 +228,7 @@
   background: var(--ic-se-gray-600) !important;
 }
 #resize-handle.active::after {
-  background: var(--ic-se-accent) !important;
+  background: #0d0d0d !important;
 }
 
 /* ========================================================================
@@ -250,8 +252,8 @@
   color: var(--ic-se-gray-1000) !important;
 }
 
-/* Selection inside the skills editor */
+/* Selection inside the skills editor — match the chats rail selection */
 ::selection {
-  background: rgba(59, 59, 148, 0.18);
-  color: var(--ic-se-gray-1000);
+  background: rgba(13, 13, 13, 0.14);
+  color: #0d0d0d;
 }
