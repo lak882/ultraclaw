@@ -1,6 +1,100 @@
 // interclaw-chatbot/goto.js — executeGoto, navigation, and search
 (function(cc) {
 
+  // ── Portal URL catalog (M4) ─────────────────────────────────────────────
+  // Loaded once per page from GET /api/portal-urls, which serves the
+  // hand-curated config/portal-urls.json. Used as a fallback matcher when
+  // /goto <query> does not resolve to an ObjectScript class: "goto audit",
+  // "goto queues", "goto message viewer" all land here.
+  cc._portalCatalog = null;
+  cc._portalCatalogPromise = null;
+
+  cc.loadPortalCatalog = function() {
+    if (cc._portalCatalog) return Promise.resolve(cc._portalCatalog);
+    if (cc._portalCatalogPromise) return cc._portalCatalogPromise;
+    var url = (cc.chatApiBase || '/api/interclaw/production') + '/api/portal-urls';
+    cc._portalCatalogPromise = fetch(url, { credentials: 'same-origin' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        cc._portalCatalog = (data && data.entries) ? data : { entries: [] };
+        return cc._portalCatalog;
+      })
+      .catch(function(err) {
+        console.warn('[interclaw] portal catalog fetch failed:', err);
+        cc._portalCatalog = { entries: [] };
+        return cc._portalCatalog;
+      });
+    return cc._portalCatalogPromise;
+  };
+
+  // Score one catalog entry against the query. 0..~3 range: slug/alias
+  // exact match dominates; title/description contains and keyword hits
+  // add fractional bonuses; trigram similarity catches near-misses.
+  function scoreEntry(entry, queryLower) {
+    var score = 0;
+    var fields = [entry.slug, entry.title, entry.description];
+    (entry.aliases || []).forEach(function(a) { fields.push(a); });
+    (entry.keywords || []).forEach(function(k) { fields.push(k); });
+
+    if (entry.slug && entry.slug.toLowerCase() === queryLower) score += 2.0;
+    if (entry.title && entry.title.toLowerCase() === queryLower) score += 2.0;
+    (entry.aliases || []).forEach(function(a) {
+      if (a.toLowerCase() === queryLower) score += 1.8;
+    });
+    (entry.keywords || []).forEach(function(k) {
+      if (k.toLowerCase() === queryLower) score += 1.2;
+    });
+
+    for (var i = 0; i < fields.length; i++) {
+      if (!fields[i]) continue;
+      var f = fields[i].toLowerCase();
+      if (f === queryLower) continue; // already scored
+      if (f.indexOf(queryLower) !== -1) score += 0.4;
+      var sim = trigramSimilarity(queryLower, f);
+      if (sim > 0.3) score += sim * 0.6;
+    }
+    return score;
+  }
+
+  cc.findPortalEntries = function(query, maxResults) {
+    if (!cc._portalCatalog) return [];
+    var q = (query || '').trim().toLowerCase();
+    if (!q) return [];
+    var entries = cc._portalCatalog.entries || [];
+    var scored = [];
+    for (var i = 0; i < entries.length; i++) {
+      var s = scoreEntry(entries[i], q);
+      if (s > 0.4) scored.push({ entry: entries[i], score: s });
+    }
+    scored.sort(function(a, b) { return b.score - a.score; });
+    return scored.slice(0, maxResults || 5);
+  };
+
+  function expandTemplate(tpl, ns, extraName) {
+    var ctx = cc.getEditorContext ? cc.getEditorContext() : {};
+    var nsUpper = (ns || ctx.namespace || cc.detectNamespace() || 'INTERCLAW').toUpperCase();
+    var nsLower = nsUpper.toLowerCase();
+    // Keep the origin/pathPrefix relative — the browser already fills them
+    // when the resulting URL starts with /, so we leave {origin} collapsed
+    // to '' and {pathPrefix} to cc.pathPrefix. That way rendered links stay
+    // on the same host and prefix the user is currently browsing.
+    return tpl
+      .replace(/\{origin\}/g, '')
+      .replace(/\{pathPrefix\}/g, cc.pathPrefix || '')
+      .replace(/\{namespace\}/g, nsUpper)
+      .replace(/\{namespaceLower\}/g, nsLower)
+      .replace(/\{name\}/g, extraName || '');
+  }
+
+  cc.resolvePortalUrl = function(entry, extraName) {
+    return expandTemplate(entry.url, null, extraName);
+  };
+
+  // Kick off the catalog fetch early so the first /goto is snappy.
+  // Fire-and-forget; resolution is awaited inside executeGoto's fallback.
+  try { cc.loadPortalCatalog(); } catch (e) {}
+
+
   // Extract CSP base directly from the full page URL (query params, hash, or iframe).
   function getCspBase() {
     var hash = window.location.hash;
@@ -102,10 +196,61 @@
   // Navigate to a component. Handles traces (opens new window) and everything
   // else (renders a clickable nav link in chat).
   cc.executeGoto = function(componentName, editorType, _typeResolved) {
-    // Resolve editor type: explicit flag > server %Dictionary lookup > name heuristic
+    // Resolve editor type: explicit flag > server %Dictionary lookup > name heuristic > portal catalog
     if (!editorType && componentName && !_typeResolved) {
       lookupClassType(componentName, function(serverType) {
         var resolved = serverType || cc.inferEditorType(componentName);
+        if (!resolved) {
+          // Not a known class. Fall back to the Management Portal catalog:
+          // fuzzy-match the query against slug/alias/keyword and open the
+          // best hit. This is what makes `/goto audit`, `/goto queues`,
+          // `/goto message viewer` work without the user knowing class names.
+          cc.loadPortalCatalog().then(function() {
+            var hits = cc.findPortalEntries(componentName, 5);
+            if (!hits.length) {
+              cc.addMessage('system', 'Could not resolve `' + componentName + '` as a class or portal page. Try `/find ' + componentName + '` to search class names.');
+              cc.saveState();
+              return;
+            }
+            var top = hits[0];
+            // Require name-bearing templates (like DTL editor) to also be given a component name.
+            var needsName = (top.entry.requires || []).indexOf('name') !== -1;
+            if (needsName) {
+              var alt = hits.filter(function(h) { return (h.entry.requires || []).indexOf('name') === -1; })[0];
+              if (alt) top = alt;
+            }
+            var url = cc.resolvePortalUrl(top.entry);
+            // If the top hit still needs a name (no other candidates), we
+            // can't meaningfully navigate — tell the user what's missing.
+            if ((top.entry.requires || []).indexOf('name') !== -1) {
+              cc.addMessage('system', '`' + top.entry.title + '` needs a target name. Example: `/goto --dtl My.DTL.Name`.');
+              cc.saveState();
+              return;
+            }
+            // Other plausible hits get listed so the user can pick alternatives
+            // without having to retype a completely different query.
+            var lines = ['Opening **' + top.entry.title + '** (' + top.entry.slug + ').'];
+            if (hits.length > 1) {
+              lines.push('');
+              lines.push('Other matches:');
+              for (var i = 1; i < Math.min(hits.length, 4); i++) {
+                lines.push('- `/goto ' + hits[i].entry.slug + '` \u2014 ' + hits[i].entry.title);
+              }
+            }
+            cc.addMessage('system', lines.join('\n'));
+            cc.saveState();
+            // legacy-ui links render inside the embedded viewer-frame when
+            // one is present (Portal shell). Plain SMP/HealthShare URLs
+            // don't have a hash path, so fall through to a window.open so
+            // the assistant doesn't clobber the chat tab.
+            if (url.indexOf('/legacy-ui/') !== -1) {
+              if (!cc.navigateLegacyUi(url)) window.open(url, '_blank');
+            } else {
+              window.open(url, '_blank');
+            }
+          });
+          return;
+        }
         cc.executeGoto(componentName, resolved, true);
       });
       return;

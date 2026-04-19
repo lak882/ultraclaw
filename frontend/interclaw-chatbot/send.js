@@ -273,6 +273,7 @@
         var loginData = await loginResp.json();
         if (loginResp.ok && loginData.success) {
           cc.addMessage('assistant', 'Logged in as `' + loginData.username + '`.');
+          window.dispatchEvent(new CustomEvent('interclaw-auth-changed', { detail: { loggedIn: true, user: loginData.username } }));
           // Check if API key is also configured
           try {
             var checkResp = await fetch(cc.apiBase + '/api/auth-status');
@@ -311,6 +312,7 @@
         if (logoutData.success) {
           cc.addMessage('assistant', 'Logged out.');
           cc.updateStatus('Not logged in');
+          window.dispatchEvent(new CustomEvent('interclaw-auth-changed', { detail: { loggedIn: false } }));
           cc.showSetupPrompt({ needsLogin: true });
         } else {
           cc.addMessage('error', 'Logout failed.');

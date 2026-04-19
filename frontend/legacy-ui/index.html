@@ -101,8 +101,25 @@ html, body {
 </style>
 </head>
 <body data-no-auth-gate>
+<script>
+  // When embedded in the shell (?chrome=none), skip header + chatbot injection.
+  // The shell hosts both for the whole wrapper so nested copies would duplicate
+  // the UI and create competing namespace/model state.
+  window._interclawChromeNone = new URLSearchParams(location.search).get('chrome') === 'none';
+</script>
 <script src="../install-config.js"></script>
-<script src="../interclaw-header.js?v=13"></script>
+<script>
+  if (!window._interclawChromeNone) {
+    var _s = document.createElement('script');
+    _s.src = '../interclaw-header.js?v=13';
+    document.head.appendChild(_s);
+  } else {
+    // Shift app-root to fill the shell's viewport (no sidebar gap).
+    var _st = document.createElement('style');
+    _st.textContent = '#app-root { right: 0 !important; }';
+    document.head.appendChild(_st);
+  }
+</script>
   <div id="app-root">
     <iframe id="viewer-frame"></iframe>
     <div id="viewer-error">
@@ -115,8 +132,14 @@ html, body {
     </div>
   </div>
 
-  <!-- Chatbot -->
-  <script src="../interclaw-chatbot.js?v=19"></script>
+  <!-- Chatbot (skipped when embedded in the shell) -->
+  <script>
+    if (!window._interclawChromeNone) {
+      var _c = document.createElement('script');
+      _c.src = '../interclaw-chatbot.js?v=19';
+      document.body.appendChild(_c);
+    }
+  </script>
 
 <script>
 (function() {
@@ -266,6 +289,16 @@ html, body {
         try { displayPath = decodeURIComponent(displayPath); } catch (e) {}
         var newUrl = window.location.pathname + '#' + displayPath;
         history.replaceState(null, '', newUrl);
+
+        // --- Notify parent shell of active page (when embedded) ---
+        if (window._interclawChromeNone && window.parent && window.parent !== window) {
+          var isTraces = displayPath.indexOf('MessageViewer') !== -1;
+          window.parent.postMessage({
+            type: 'interclaw-context',
+            tab: isTraces ? 'traces' : 'portal',
+            context: { zenPath: displayPath, namespace: namespace }
+          }, window.location.origin);
+        }
       } catch (urlErr) {
         // Cross-origin — can't read iframe URL
       }

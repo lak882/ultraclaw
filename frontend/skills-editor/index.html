@@ -589,8 +589,23 @@ html, body {
 </style>
 </head>
 <body data-no-auth-gate>
+<script>
+  // When embedded in the shell (?chrome=none), skip header + chatbot injection.
+  window._interclawChromeNone = new URLSearchParams(location.search).get('chrome') === 'none';
+</script>
 <script src="../install-config.js"></script>
-<script src="../interclaw-header.js?v=13"></script>
+<script>
+  if (!window._interclawChromeNone) {
+    var _s = document.createElement('script');
+    _s.src = '../interclaw-header.js?v=13';
+    document.head.appendChild(_s);
+  } else {
+    // Shift app-root to fill the shell's viewport (no sidebar gap).
+    var _st = document.createElement('style');
+    _st.textContent = '#app-root { right: 0 !important; }';
+    document.head.appendChild(_st);
+  }
+</script>
   <div id="app-root">
     <!-- Toolbar -->
     <div id="toolbar">
@@ -639,8 +654,14 @@ html, body {
     </div>
   </div>
 
-  <!-- Chatbot (identical injection as interop-editor / rule-editor) -->
-  <script src="../interclaw-chatbot.js?v=19"></script>
+  <!-- Chatbot (skipped when embedded in the shell) -->
+  <script>
+    if (!window._interclawChromeNone) {
+      var _c = document.createElement('script');
+      _c.src = '../interclaw-chatbot.js?v=19';
+      document.body.appendChild(_c);
+    }
+  </script>
 
   <!-- Prism.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
@@ -968,6 +989,15 @@ html, body {
     if (type === 'file' && content !== undefined) sel.content = content;
     localStorage.setItem('interclaw-tree-selection', JSON.stringify(sel));
     window.dispatchEvent(new CustomEvent('interclaw-tree-selection', { detail: sel }));
+    // Notify parent shell (when embedded) so the chatbot can pick up the
+    // active file as its current editing context.
+    if (window._interclawChromeNone && window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'interclaw-context',
+        tab: 'skills',
+        context: { type: type, name: name, path: path }
+      }, window.location.origin);
+    }
   }
 
   /* ── Rendering helpers ─────────────────────────────────────────────── */

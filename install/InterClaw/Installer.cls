@@ -187,12 +187,22 @@ ClassMethod Setup() As %Status
     write !,"[Step 13/", totalSteps, "] Running verification checks...",!
     do ..Verify()
 
+    // Build the welcome URL so the admin can click straight into the
+    // new-user onboarding page. The welcome page polls /api/diagnostics
+    // and walks the user through anything that still needs setup.
+    set pathPrefix = $get(^InterClaw.Config("PathPrefix"), "")
+    set hostGuess  = $system.INetInfo.LocalHostName()
+    set welcomeUrl = "http://" _ hostGuess _ pathPrefix _ "/ui/interop/interclaw/welcome/index.html"
+
     write !,"================================================================",!
     write "  InterClaw Setup Complete",!
     write "================================================================",!
-    write "  Frontend:   /ui/interop/interclaw/interop-editor/index.html",!
-    write "  REST API:   /api/interclaw/api/health",!
+    write "  Welcome:    ", welcomeUrl,!
+    write "  Frontend:   ", pathPrefix, "/ui/interop/interclaw/interop-editor/index.html",!
+    write "  REST API:   ", pathPrefix, "/api/interclaw/api/health",!
     write "  Production: Inteclaw.Production",!
+    write "================================================================",!
+    write "  Open the Welcome URL above in a browser to finish setup.",!
     write "================================================================",!
     return $$$OK
 }

@@ -10,16 +10,127 @@
   var ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
   var ICON_DELETE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
 
-  // ── In-memory stub (M1 only — replaced by server-backed store in M2) ────
-  cc.chatsStore = cc.chatsStore || {
-    chats: [
-      { id: 'stub-1', title: 'Slim the toolbar border', updatedAt: Date.now() - 1000 * 60 * 30 },
-      { id: 'stub-2', title: 'Fix SMP iframe fit', updatedAt: Date.now() - 1000 * 60 * 60 * 3 },
-      { id: 'stub-3', title: 'Frontend dead-code cleanup', updatedAt: Date.now() - 1000 * 60 * 60 * 24 * 2 },
-      { id: 'stub-4', title: 'Sanford POC test run 3', updatedAt: Date.now() - 1000 * 60 * 60 * 24 * 6 }
-    ],
-    activeId: null
+  // ── Chat store (M2/M3: server-backed CRUD) ──────────────────────────────
+  // Shape: { chats: [{id,title,updatedAt}], activeId, user }
+  // List is hydrated via GET /api/chats; full message history is fetched
+  // on demand via GET /api/chats/:id. M3: PUT /api/chats/:id persists
+  // on every turn (debounced) and on rename; DELETE /api/chats/:id removes.
+  cc.chatsStore = cc.chatsStore || { chats: [], activeId: null, user: null };
+
+  function chatsUrl(suffix) {
+    return (cc.chatApiBase || '/api/interclaw/production') + '/api/chats' + (suffix || '');
+  }
+
+  cc.refreshChatsList = function() {
+    return fetch(chatsUrl(), { credentials: 'same-origin' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data) return;
+        cc.chatsStore.chats = data.chats || [];
+        cc.chatsStore.user = data.user || null;
+        cc.renderChatsSidebar();
+      })
+      .catch(function(err) { console.warn('[interclaw] chats list failed:', err); });
   };
+
+  // ── Persistence (M3) ────────────────────────────────────────────────────
+  // The chat id == cc.sessionId (set by the 'session' event from the
+  // backend on the first turn). Before we have a session, we have no id
+  // yet, so the very first prompt can't be persisted — the backend's
+  // session_id arrives mid-stream and the next saveState catches it.
+  function serializeCurrentPane() {
+    var out = [];
+    var content = document.getElementById('chatbot-content');
+    if (!content) return out;
+    var children = content.children;
+    for (var i = 0; i < children.length; i++) {
+      var el = children[i];
+      var msgEl = el.classList && el.classList.contains('chatbot-msg-wrap')
+        ? el.querySelector('.chatbot-message') : el;
+      if (!msgEl || !msgEl.classList) continue;
+      var type = 'assistant';
+      if (msgEl.classList.contains('chatbot-message-user')) type = 'user';
+      else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
+      else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
+      else if (msgEl.classList.contains('chatbot-message-tool')) type = 'tool';
+      out.push({ type: type, html: msgEl.innerHTML });
+    }
+    return out;
+  }
+
+  function deriveTitle(messages) {
+    for (var i = 0; i < messages.length; i++) {
+      if (messages[i].type !== 'user') continue;
+      var tmp = document.createElement('div');
+      tmp.innerHTML = messages[i].html || '';
+      var text = (tmp.textContent || '').trim();
+      if (!text) continue;
+      if (text.charAt(0) === '/') {
+        var parts = text.split(/\s+/);
+        parts.shift();
+        text = parts.join(' ').trim();
+        if (!text) continue;
+      }
+      if (text.length > 60) {
+        var cut = text.substring(0, 60);
+        var sp = cut.lastIndexOf(' ');
+        if (sp >= 40) cut = cut.substring(0, sp);
+        text = cut + '...';
+      }
+      return text;
+    }
+    return 'Untitled';
+  }
+
+  function upsertChat(entry) {
+    var chats = cc.chatsStore.chats || (cc.chatsStore.chats = []);
+    for (var i = 0; i < chats.length; i++) {
+      if (chats[i].id === entry.id) { chats[i] = entry; return; }
+    }
+    chats.push(entry);
+  }
+
+  var _persistTimer = null;
+  cc.persistChat = function() {
+    if (!cc.sessionId) return;
+    if (_persistTimer) clearTimeout(_persistTimer);
+    _persistTimer = setTimeout(function() {
+      _persistTimer = null;
+      var messages = serializeCurrentPane();
+      if (!messages.length) return;
+      var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === cc.sessionId; })[0];
+      var body = { messages: messages };
+      if (!chat || !chat.title || chat.title === 'Untitled') {
+        body.title = deriveTitle(messages);
+      }
+      fetch(chatsUrl('/' + encodeURIComponent(cc.sessionId)), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(body)
+      })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (!data) return;
+        cc.chatsStore.activeId = data.id;
+        upsertChat({ id: data.id, title: data.title || 'Untitled', updatedAt: data.updatedAt || Date.now() });
+        cc.renderChatsSidebar();
+      })
+      .catch(function(err) { console.warn('[interclaw] persistChat failed:', err); });
+    }, 500);
+  };
+
+  // Wrap saveState so every DOM change triggers a debounced server PUT.
+  // Guard against double-wrapping if the module is re-evaluated.
+  if (cc.saveState && !cc.saveState._m3Wrapped) {
+    var _origSaveState = cc.saveState;
+    cc.saveState = function() {
+      var r = _origSaveState.apply(this, arguments);
+      try { cc.persistChat(); } catch (e) { console.warn('[interclaw] persistChat threw:', e); }
+      return r;
+    };
+    cc.saveState._m3Wrapped = true;
+  }
 
   // ── DOM construction ────────────────────────────────────────────────────
   function buildSidebar() {
@@ -61,6 +172,7 @@
     } catch (e) {}
 
     cc.renderChatsSidebar();
+    cc.refreshChatsList();
   }
 
   // ── Grouping by recency ─────────────────────────────────────────────────
@@ -127,25 +239,65 @@
     };
   };
 
-  // ── Actions (M1 stubs; wired up to real store in M2/M3) ─────────────────
+  // ── Actions ─────────────────────────────────────────────────────────────
   cc.startNewChat = function() {
-    var id = 'local-' + Date.now();
-    cc.chatsStore.chats.unshift({ id: id, title: 'New chat', updatedAt: Date.now() });
-    cc.chatsStore.activeId = id;
+    cc.chatsStore.activeId = null;
+    cc.sessionId = null;
+    cc.sessionReady = false;
+    clearMessagesPane();
     cc.renderChatsSidebar();
-    // In M2, the real implementation will also clear the messages pane and start a new session.
-    // For M1, just signal intent via a system message so the user sees something happened.
-    try { cc.addMessage && cc.addMessage('system', 'New chat started'); } catch (e) {}
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('chatbot-state');
+    } catch (e) {}
   };
 
   cc.openChat = function(id) {
     cc.chatsStore.activeId = id;
     cc.renderChatsSidebar();
-    // M1: display a system message so the click is visibly acknowledged.
-    // In M2, this will call GET /api/chats/:id and rehydrate the conversation.
-    var chat = findChat(id);
-    try { cc.addMessage && cc.addMessage('system', 'Opened: ' + (chat ? chat.title : id)); } catch (e) {}
+    fetch(chatsUrl('/' + encodeURIComponent(id)), { credentials: 'same-origin' })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(chat) {
+        if (!chat || !chat.messages) return;
+        clearMessagesPane();
+        rehydrateMessages(chat.messages);
+        // Adopt the chat id as the active session so /api/start sends
+        // the right session_id AND subsequent saveState PUTs hit the
+        // same file instead of creating a new one.
+        cc.sessionId = chat.id;
+        cc.sessionReady = true;
+      })
+      .catch(function(err) { console.warn('[interclaw] openChat failed:', err); });
   };
+
+  function clearMessagesPane() {
+    var content = document.getElementById('chatbot-content');
+    if (content) content.innerHTML = '';
+  }
+
+  // Rebuild message bubbles from the stored {type, html} array. Matches the
+  // DOM structure produced by cc.addMessage / cc.saveState.
+  function rehydrateMessages(messages) {
+    var content = document.getElementById('chatbot-content');
+    if (!content) return;
+    messages.forEach(function(m) {
+      var msg = document.createElement('div');
+      msg.className = 'chatbot-message';
+      if (m.type === 'user') msg.className += ' chatbot-message-user';
+      else if (m.type === 'system') msg.className += ' chatbot-message-system';
+      else if (m.type === 'error') msg.className += ' chatbot-message-error';
+      else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
+      msg.innerHTML = m.html || '';
+      if (m.type === 'user' || m.type === 'assistant') {
+        var wrap = document.createElement('div');
+        wrap.className = 'chatbot-msg-wrap' + (m.type === 'user' ? ' chatbot-msg-wrap--user' : '');
+        wrap.appendChild(msg);
+        content.appendChild(wrap);
+      } else {
+        content.appendChild(msg);
+      }
+    });
+    content.scrollTop = content.scrollHeight;
+  }
 
   cc.renameChatInline = function(id, itemEl) {
     var titleEl = itemEl.querySelector('.ic-chats-item-title');
@@ -166,9 +318,17 @@
       if (commit) {
         var newTitle = titleEl.textContent.trim();
         var chat = findChat(id);
-        if (chat && newTitle) {
+        if (chat && newTitle && newTitle !== chat.title) {
           chat.title = newTitle;
           chat.updatedAt = Date.now();
+          fetch(chatsUrl('/' + encodeURIComponent(id)), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ title: newTitle })
+          })
+          .then(function(r) { if (!r.ok) console.warn('[interclaw] rename PUT failed:', r.status); })
+          .catch(function(err) { console.warn('[interclaw] rename failed:', err); });
         }
       }
       cc.renderChatsSidebar();
@@ -186,9 +346,27 @@
     var chat = findChat(id);
     if (!chat) return;
     if (!window.confirm('Delete "' + chat.title + '"?')) return;
-    cc.chatsStore.chats = cc.chatsStore.chats.filter(function(c) { return c.id !== id; });
-    if (cc.chatsStore.activeId === id) cc.chatsStore.activeId = null;
-    cc.renderChatsSidebar();
+    fetch(chatsUrl('/' + encodeURIComponent(id)), {
+      method: 'DELETE',
+      credentials: 'same-origin'
+    })
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) {
+      if (!data || !data.deleted) {
+        console.warn('[interclaw] delete failed — server returned:', data);
+        return;
+      }
+      cc.chatsStore.chats = cc.chatsStore.chats.filter(function(c) { return c.id !== id; });
+      if (cc.chatsStore.activeId === id) {
+        cc.chatsStore.activeId = null;
+        cc.sessionId = null;
+        cc.sessionReady = false;
+        clearMessagesPane();
+        try { sessionStorage.removeItem('chatbot-state'); } catch (e) {}
+      }
+      cc.renderChatsSidebar();
+    })
+    .catch(function(err) { console.warn('[interclaw] delete failed:', err); });
   };
 
   function findChat(id) {

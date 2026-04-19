@@ -1,6 +1,7 @@
-/// InterClaw.REST.Dispatch — Pure %CSP.REST backend for the Claude chatbot sidebar.
-/// All endpoint logic is embedded Python. Streaming endpoints (init, message)
-/// write SSE events to a temp file; ObjectScript forwards via Write+Flush.
+/// InterClaw.REST.Dispatch — control-plane REST for the chatbot sidebar.
+/// Handles config, commands, permissions, auth, uploads, telemetry, feedback,
+/// namespace/model preferences, and the skill index. Chat streaming lives in
+/// InterClaw.V2.RESTAdapter, which owns /api/interclaw/production.
 Class InterClaw.REST.Dispatch Extends %CSP.REST
 {
 
@@ -37,22 +38,18 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 <Route Url="/api/deauthenticate"      Method="POST"  Call="Deauthenticate"/>
 <Route Url="/api/login"               Method="POST"  Call="Login"/>
 <Route Url="/api/logout"              Method="POST"  Call="Logout"/>
-<Route Url="/api/init"                Method="POST"  Call="InitSession"/>
-<Route Url="/api/message"             Method="POST"  Call="SendMessage"/>
 <Route Url="/api/upload"              Method="POST"  Call="Upload"/>
 <Route Url="/api/telemetry/summary"   Method="GET"   Call="TelemetrySummary"/>
 <Route Url="/api/telemetry"           Method="POST"  Call="Telemetry"/>
 <Route Url="/api/feedback"            Method="POST"  Call="PostFeedback"/>
 <Route Url="/api/feedback"            Method="GET"   Call="GetFeedback"/>
-<Route Url="/api/test-claude"         Method="GET"   Call="TestClaude"/>
 <Route Url="/api/namespace"            Method="GET"   Call="GetNamespace"/>
 <Route Url="/api/namespace"            Method="PUT"   Call="SetNamespace"/>
 <Route Url="/api/model"                Method="GET"   Call="GetModel"/>
 <Route Url="/api/model"                Method="PUT"   Call="SetModel"/>
-<Route Url="/api/bridge/start"        Method="POST"  Call="BridgeStart"/>
-<Route Url="/api/bridge/events"       Method="GET"   Call="BridgeEvents"/>
 <Route Url="/api/skill-index"         Method="GET"   Call="SkillIndex"/>
 <Route Url="/api/skill-file"          Method="GET"   Call="SkillFile"/>
+<Route Url="/api/diagnostics"         Method="GET"   Call="Diagnostics"/>
 </Routes>
 }
 
@@ -97,12 +94,6 @@ ClassMethod SetupEnvPy(cwd As %String, cliHome As %String, walletSecret As %Stri
     os.chdir(cwd)
 }
 
-ClassMethod WriteSSE(data As %String)
-{
-    Write "data: " _ data _ $char(10,10)
-    Do %response.Flush()
-}
-
 ClassMethod ReadBody() As %String
 {
     Set body = ""
@@ -113,272 +104,6 @@ ClassMethod ReadBody() As %String
         }
     }
     Return body
-}
-
-/// Resolve the CWD for Claude Code sessions.
-/// Priority: INTERCLAW_CWD env var > ^InterClaw.Config > fallback.
-ClassMethod ResolveCWD() As %String
-{
-    return ..GetCWD()
-}
-
-/// Read all entries from the InterClaw.ToolLabels lookup table as a JSON object.
-/// Called once per request by ForwardSSE; the result is passed to ResolveToolLabel.
-ClassMethod GetToolLabelsJSON() As %String
-{
-    Set obj = ##class(%DynamicObject).%New()
-    Set key = ""
-    For {
-        Set key = $order(^Ens.LookupTable("InterClaw.ToolLabels", key))
-        If key = "" Quit
-        Set val = $get(^Ens.LookupTable("InterClaw.ToolLabels", key))
-        Do obj.%Set(key, val)
-    }
-    Return obj.%ToJSON()
-}
-
-/// Map a raw tool call (name + input JSON) to a human-readable label.
-/// Labels are stored in the InterClaw.ToolLabels lookup table (editable in Portal).
-/// Template values use {1} as placeholder for the primary dynamic argument.
-/// labelsJson: pre-loaded JSON from GetToolLabelsJSON() — avoids iris.gref in Python.
-ClassMethod ResolveToolLabel(toolName As %String, toolInput As %String, labelsJson As %String = "") As %String [ Language = python ]
-{
-    import json, re, os
-
-    labels = json.loads(labelsJson) if labelsJson else {}
-
-    def lkup(key):
-        return labels.get(key)
-
-    def fill(template, val):
-        if not val:
-            return template.replace(' {1}', '').replace('{1}', '')
-        return template.replace('{1}', str(val))
-
-    try:
-        inp = json.loads(toolInput) if toolInput else {}
-    except Exception:
-        inp = {}
-
-    # --- Non-Bash tools: lookup by tool:<name> ---
-    if toolName != 'Bash':
-        tmpl = lkup('tool:' + toolName)
-        if not tmpl:
-            return toolName
-        if toolName in ('Read', 'Write', 'Edit'):
-            val = os.path.basename(inp.get('file_path', ''))
-        elif toolName == 'Glob':
-            val = inp.get('pattern', '')
-        elif toolName == 'Grep':
-            val = inp.get('pattern', '')[:50]
-        elif toolName == 'Skill':
-            val = inp.get('skill', 'unknown')
-        elif toolName == 'Agent':
-            val = inp.get('description', 'Agent task')[:60]
-        elif toolName == 'WebFetch':
-            url = inp.get('url', '')
-            m = re.match(r'https?://([^/]+)', url)
-            val = m.group(1) if m else url[:40]
-        else:
-            val = ''
-        return fill(tmpl, val)
-
-    # --- Bash tool: identify script + action, build lookup key ---
-    cmd = inp.get('command', '')
-
-    script_m = re.search(r'scripts/\w+/(\w+)\.py', cmd)
-    if script_m:
-        script = script_m.group(1)
-        key = script
-        arg = ''
-
-        # --- Per-script key + arg extraction ---
-        if script in ('put_doc', 'get_doc', 'compile'):
-            m = re.search(r'--doc\s+(\S+)', cmd)
-            arg = m.group(1).replace('.cls', '') if m else ''
-
-        elif script == 'list_docs':
-            m = re.search(r'--filter\s+(\S+)', cmd)
-            if m:
-                key = 'list_docs:filter'; arg = m.group(1)
-            elif '--type cls' in cmd: key = 'list_docs:cls'
-            elif '--type mac' in cmd: key = 'list_docs:mac'
-            elif '--type inc' in cmd: key = 'list_docs:inc'
-
-        elif script == 'run_query':
-            m = re.search(r'--sql\s+["\'](.{0,60})', cmd)
-            arg = m.group(1).rstrip('"\'') if m else ''
-
-        elif script == 'search_code':
-            m = re.search(r'--query\s+["\']?([^"\']+)', cmd)
-            arg = m.group(1)[:50] if m else ''
-
-        elif script == 'class_inspect':
-            m = re.search(r'--class\s+(\S+)', cmd)
-            arg = m.group(1) if m else ''
-
-        elif script == 'manage_lookup':
-            m = re.search(r'--table\s+"?(\S+?)"?(?:\s|$)', cmd)
-            targ = m.group(1) if m else ''
-            if '--list-tables' in cmd: key = 'manage_lookup:list-tables'
-            elif '--set' in cmd: key = 'manage_lookup:set'; arg = targ
-            elif '--clear' in cmd: key = 'manage_lookup:clear'; arg = targ
-            elif '--delete' in cmd: key = 'manage_lookup:delete'; arg = targ
-            elif '--list' in cmd: key = 'manage_lookup:list'; arg = targ
-            elif '--count' in cmd: key = 'manage_lookup:list'; arg = targ
-            else: arg = targ
-
-        elif script == 'manage_production':
-            m = re.search(r'--(?:start|stop|recover|clean|status|list)\s*(\S*)', cmd)
-            parg = m.group(1) if m else ''
-            if '--start' in cmd and '--stop-first' in cmd:
-                key = 'manage_production:restart'; arg = parg
-            elif '--start' in cmd: key = 'manage_production:start'; arg = parg
-            elif '--stop' in cmd: key = 'manage_production:stop'
-            elif '--status' in cmd: key = 'manage_production:status'
-            elif '--recover' in cmd: key = 'manage_production:recover'
-            elif '--clean' in cmd: key = 'manage_production:clean'
-            elif '--list' in cmd: key = 'manage_production:list'
-
-        elif script == 'diagram_production':
-            m = re.search(r'--(?:package|production)\s+(\S+)', cmd)
-            arg = m.group(1) if m else ''
-
-        elif script == 'validate_package':
-            m = re.search(r'--package\s+(\S+)', cmd)
-            arg = m.group(1) if m else ''
-
-        elif script == 'get_schema':
-            if '--message' in cmd:
-                key = 'get_schema:message'
-                m = re.search(r'--message\s+(\S+)', cmd)
-                arg = m.group(1) if m else ''
-            elif '--segment' in cmd:
-                key = 'get_schema:segment'
-                m = re.search(r'--segment\s+(\S+)', cmd)
-                arg = m.group(1) if m else ''
-            elif '--list-categories' in cmd: key = 'get_schema:list-categories'
-            elif '--list-messages' in cmd:
-                key = 'get_schema:list-messages'
-                m = re.search(r'--list-messages\s+(\S+)', cmd)
-                arg = m.group(1) if m else ''
-            elif '--list-segments' in cmd:
-                key = 'get_schema:list-segments'
-                m = re.search(r'--list-segments\s+(\S+)', cmd)
-                arg = m.group(1) if m else ''
-
-        elif script in ('send_hl7', 'send_json'):
-            m = re.search(r'--to\s+(\S+)', cmd)
-            if m and script == 'send_hl7': key = 'send_hl7:to'; arg = m.group(1)
-
-        elif script == 'test_dtl':
-            m = re.search(r'--dtl\s+(\S+)', cmd)
-            arg = m.group(1) if m else ''
-
-        elif script == 'test_suite':
-            m = re.search(r'--package\s+(\S+)', cmd)
-            arg = m.group(1) if m else ''
-
-        elif script == 'test_connection':
-            m = re.search(r'--namespace\s+(\S+)', cmd)
-            ms = re.search(r'--server\s+(\S+)', cmd)
-            if m and ms: key = 'test_connection:namespace'; arg = ms.group(1) + '/' + m.group(1)
-            elif ms: arg = ms.group(1)
-
-        elif script == 'get_settings':
-            m = re.search(r'--class\s+(\S+)', cmd)
-            arg = m.group(1) if m else ''
-
-        elif script == 'trace':
-            m = re.search(r'--session\s+(\S+)', cmd)
-            if m: key = 'trace:session'; arg = m.group(1)
-            else:
-                m = re.search(r'--last\s+(\S+)', cmd)
-                if m: key = 'trace:last'; arg = m.group(1)
-                else:
-                    m = re.search(r'--component\s+(\S+)', cmd)
-                    if m: key = 'trace:component'; arg = m.group(1)
-
-        elif script == 'get_errors':
-            m = re.search(r'--package\s+(\S+)', cmd)
-            if m: key = 'get_errors:package'; arg = m.group(1)
-
-        elif script == 'changelog':
-            m = re.search(r'--class\s+(\S+)', cmd)
-            if m: key = 'changelog:class'; arg = m.group(1)
-
-        elif script == 'manage_namespace':
-            for act in ('create', 'delete', 'check'):
-                m = re.search(r'--' + act + r'\s+(\S+)', cmd)
-                if m: key = 'manage_namespace:' + act; arg = m.group(1); break
-            else:
-                if '--list' in cmd: key = 'manage_namespace:list'
-
-        elif script == 'manage_webapp':
-            for act in ('create', 'delete'):
-                m = re.search(r'--' + act + r'\s+(\S+)', cmd)
-                if m: key = 'manage_webapp:' + act; arg = m.group(1); break
-            else:
-                if '--list' in cmd: key = 'manage_webapp:list'
-
-        elif script == 'reset_package':
-            m = re.search(r'--package\s+(\S+)', cmd)
-            arg = m.group(1) if m else ''
-            if '--dry-run' in cmd: key = 'reset_package:dry-run'
-
-        elif script == 'permissions':
-            m = re.search(r'--check\s+(\S+)', cmd)
-            if m: key = 'permissions:check'; arg = m.group(1)
-            else:
-                m = re.search(r'--mode\s+(\S+)', cmd)
-                if m: key = 'permissions:mode'; arg = m.group(1)
-
-        elif script == 'pull_docs':
-            m = re.search(r'--key\s+(\S+)', cmd)
-            if m: key = 'pull_docs:key'; arg = m.group(1)
-            else:
-                m = re.search(r'--search\s+["\']?([^"\']+)', cmd)
-                if m: key = 'pull_docs:search'; arg = m.group(1)[:40]
-
-        elif script == 'docx_to_md':
-            m = re.search(r'--input\s+(\S+)', cmd)
-            arg = os.path.basename(m.group(1)) if m else ''
-
-        elif script == 'iris_terminal':
-            m = re.search(r'--code\s+["\'](.{0,50})', cmd)
-            arg = m.group(1).rstrip('"\'') if m else ''
-
-        tmpl = lkup(key)
-        if tmpl:
-            return fill(tmpl, arg)
-        return fill(script.replace('_', ' ').title(), arg)
-
-    # --- Shell commands: lookup by shell:<cmd> ---
-    stripped = cmd.strip()
-    if '&&' in stripped:
-        stripped = stripped.split('&&')[-1].strip()
-
-    if stripped.startswith('git '):
-        parts = stripped.split()
-        git_cmd = parts[1] if len(parts) > 1 else ''
-        tmpl = lkup('shell:git_' + git_cmd)
-        if tmpl:
-            arg = parts[2] if len(parts) > 2 and git_cmd in ('add', 'checkout') else ''
-            return fill(tmpl, arg)
-        return 'git ' + stripped[4:54]
-
-    for prefix in ('ls', 'mkdir', 'cp', 'chmod', 'chown', 'curl', 'wc', 'cat'):
-        if stripped.startswith(prefix + ' ') or stripped == prefix:
-            tmpl = lkup('shell:' + prefix)
-            if tmpl:
-                return tmpl
-            break
-
-    # Fallback: truncate
-    short = cmd[:70]
-    if len(cmd) > 70:
-        short += '...'
-    return short
 }
 
 ClassMethod WriteJSON(json As %String, status As %Integer = 200)
@@ -393,9 +118,7 @@ ClassMethod WriteJSON(json As %String, status As %Integer = 200)
 
 ClassMethod Health() As %Status
 {
-    Set prodStatus = ..EnsureProduction()
-    Set json = "{""status"":""ok"",""production"":" _ prodStatus _ "}"
-    Do ..WriteJSON(json)
+    Do ..WriteJSON("{""status"":""ok"",""service"":""interclaw-control""}")
     Return $$$OK
 }
 
@@ -467,163 +190,6 @@ ClassMethod SetModel() As %Status
     Set json = "{""model"":""" _ $zconvert(model, "O", "JSON") _ """}"
     Do ..WriteJSON(json)
     Return $$$OK
-}
-
-/// Ensure InterClaw.Pipeline.Production is running. Handles every possible state:
-///   1 (Running)        — if InterClaw.Pipeline.Production, no-op; if different, stop it then start ours
-///   2 (Stopped)        — start InterClaw.Pipeline.Production
-///   3 (Suspended)      — recover, fallback to clean+stop, then start
-///   4 (Troubled)       — recover, fallback to clean+stop, then start
-///   5 (NetworkStopped) — stop then start
-///   0 (None)           — start InterClaw.Pipeline.Production
-/// 
-/// Returns a JSON string: {"running":true/false,"state":"...","action":"...","error":"..."}
-ClassMethod EnsureProduction() As %String
-{
-    Set prodTarget = "InterClaw.Pipeline.Production"
-    Set result = ##class(%DynamicObject).%New()
-    Do result.%Set("running", 0, "boolean")
-    Do result.%Set("action", "none")
-    Do result.%Set("state", "unknown")
-    Do result.%Set("error", "")
-
-    Try {
-        Set sc = ##class(Ens.Director).GetProductionStatus(.prodName, .prodState)
-        Set prodName = $get(prodName, "")
-        Set prodState = +$get(prodState, 0)
-
-        // Map state number to label
-        Set stateLabel = $case(prodState,
-            1:"Running", 2:"Stopped", 3:"Suspended", 4:"Troubled", 5:"NetworkStopped", :"None")
-        Do result.%Set("state", stateLabel)
-
-        // ── Fast path: InterClaw.Pipeline.Production is already running ──
-        If prodName = prodTarget && (prodState = 1) {
-            Do result.%Set("running", 1, "boolean")
-            Return result.%ToJSON()
-        }
-
-        // ── Another production is active (any state) — clear it first ──
-        If prodName '= "" && (prodName '= prodTarget) {
-            Do result.%Set("action", "replaced-" _ prodName)
-            If prodState = 1 {
-                // Running — graceful stop
-                Set sc = ##class(Ens.Director).StopProduction(30, 1)
-            } ElseIf prodState = 3 || (prodState = 4) {
-                // Suspended or Troubled — recover then stop
-                Set sc = ##class(Ens.Director).RecoverProduction(30)
-                Set sc = ##class(Ens.Director).StopProduction(30, 1)
-                If $$$ISERR(sc) {
-                    // Recovery didn't help — force clean
-                    Set sc = ##class(Ens.Director).CleanProduction(0)
-                }
-            } ElseIf prodState = 5 {
-                // NetworkStopped — just stop
-                Set sc = ##class(Ens.Director).StopProduction(30, 1)
-            }
-            // State 2 (Stopped) needs no action — already stopped
-        }
-
-        // ── InterClaw.Pipeline.Production is registered but not running ──
-        If prodName = prodTarget {
-            If prodState = 3 {
-                // Suspended — try recover first (restarts suspended hosts)
-                Do result.%Set("action", "recover-from-suspended")
-                Set sc = ##class(Ens.Director).RecoverProduction(30)
-                If $$$ISOK(sc) {
-                    // Check if recover brought it back to Running
-                    Set sc = ##class(Ens.Director).GetProductionStatus(.chkName, .chkState)
-                    If $get(chkState) = 1 {
-                        Do result.%Set("running", 1, "boolean")
-                        Return result.%ToJSON()
-                    }
-                }
-                // Recover didn't fully fix it — clean and restart
-                Do result.%Set("action", "clean-from-suspended")
-                Set sc = ##class(Ens.Director).CleanProduction(0)
-                If $$$ISERR(sc) {
-                    Do result.%Set("error", "CleanProduction failed: " _ $system.Status.GetOneStatusText(sc))
-                    Return result.%ToJSON()
-                }
-            } ElseIf prodState = 4 {
-                // Troubled — try recover, fallback to clean
-                Do result.%Set("action", "recover-from-troubled")
-                Set sc = ##class(Ens.Director).RecoverProduction(30)
-                If $$$ISOK(sc) {
-                    Set sc = ##class(Ens.Director).GetProductionStatus(.chkName, .chkState)
-                    If $get(chkState) = 1 {
-                        Do result.%Set("running", 1, "boolean")
-                        Return result.%ToJSON()
-                    }
-                }
-                Do result.%Set("action", "clean-from-troubled")
-                Set sc = ##class(Ens.Director).CleanProduction(0)
-                If $$$ISERR(sc) {
-                    Do result.%Set("error", "CleanProduction failed: " _ $system.Status.GetOneStatusText(sc))
-                    Return result.%ToJSON()
-                }
-            }
-            // State 2 (Stopped) or cleaned state — fall through to StartProduction
-        }
-
-        // ── Start InterClaw.Pipeline.Production ──
-        If result.action = "none" {
-            Do result.%Set("action", "started")
-        }
-        Set sc = ##class(Ens.Director).StartProduction(prodTarget)
-        If $$$ISERR(sc) {
-            Do result.%Set("error", "StartProduction failed: " _ $system.Status.GetOneStatusText(sc))
-            Return result.%ToJSON()
-        }
-        Do result.%Set("running", 1, "boolean")
-
-    } Catch ex {
-        Do result.%Set("error", "Exception: " _ ex.DisplayString())
-    }
-
-    Return result.%ToJSON()
-}
-
-ClassMethod TestClaude() As %Status
-{
-    Set %response.ContentType = "application/json"
-    Set %response.CharSet = "utf-8"
-    Do ..SetupEnv()
-    Set result = ..TestClaudePy(..ResolveCWD(), ..GetCLIHome())
-    Write result
-    Return $$$OK
-}
-
-ClassMethod TestClaudePy(cwd As %String, cliHome As %String) As %String [ Language = python ]
-{
-    import json, os, asyncio
-    os.chdir(cwd)
-    os.makedirs(cliHome, exist_ok=True)
-    os.environ["HOME"] = cliHome
-    from claude_agent_sdk import query, ClaudeAgentOptions, ResultMessage, AssistantMessage, TextBlock
-    options = ClaudeAgentOptions(cwd=cwd, permission_mode="bypassPermissions")
-    output_text = []
-    session_id = None
-    async def _run():
-        nonlocal session_id
-        async for message in query(prompt="Say hi in one word", options=options):
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        output_text.append(block.text)
-            elif isinstance(message, ResultMessage):
-                session_id = message.session_id
-    try:
-        asyncio.run(_run())
-        return json.dumps(dict(output="\n".join(output_text), session_id=session_id, error=None))
-    except Exception as e:
-        import traceback
-        return json.dumps(dict(output=None, session_id=None, error=str(e), detail=traceback.format_exc()))
-}
-
-ClassMethod RunTest()
-{
-    Write ..TestClaudePy(..ResolveCWD(), ..GetCLIHome()),!
 }
 
 ClassMethod Config() As %Status
@@ -1297,6 +863,126 @@ ClassMethod Upload() As %Status
     Return $$$OK
 }
 
+/// GET /api/diagnostics — health check for the Welcome page. Returns the
+/// status of each component a new user needs working before they can chat:
+/// install config, embedded Python, interop enablement, Bedrock API key,
+/// IRIS login credential, and the Inteclaw.Production.
+ClassMethod Diagnostics() As %Status
+{
+    Set obj = ##class(%DynamicObject).%New()
+
+    // 1. Install namespace + path prefix from ^InterClaw.Config
+    Set installNs   = $get(^InterClaw.Config("Namespace"), "")
+    Set pathPrefix  = $get(^InterClaw.Config("PathPrefix"), "")
+    Set installedAt = $get(^InterClaw.Config("InstalledAt"), "")
+    Do obj.%Set("namespace",   $select(installNs'="":installNs, 1:$namespace))
+    Do obj.%Set("pathPrefix",  pathPrefix)
+    Do obj.%Set("installedAt", installedAt)
+    Do obj.%Set("currentNamespace", $namespace)
+
+    // 2. Embedded Python — can we execute an import?
+    Set pyOk = 0, pyDetail = ""
+    Try {
+        Set pyDetail = ..PyProbe()
+        Set pyOk = (pyDetail '= "")
+    } Catch ex {
+        Set pyDetail = ex.DisplayString()
+    }
+    Set pyCard = ##class(%DynamicObject).%New()
+    Do pyCard.%Set("ok", pyOk, "boolean")
+    Do pyCard.%Set("detail", pyDetail)
+    Do obj.%Set("embeddedPython", pyCard)
+
+    // 3. Interop enablement — Ens package visible in target namespace?
+    Set interopOk = 0
+    Try {
+        Set interopOk = ##class(%Dictionary.CompiledClass).%ExistsId("Ens.Director")
+    } Catch ex {}
+    Set ioCard = ##class(%DynamicObject).%New()
+    Do ioCard.%Set("ok", interopOk, "boolean")
+    Do ioCard.%Set("detail", $select(interopOk:"Ens.Director reachable", 1:"Ens.Director not found — namespace is not interop-enabled"))
+    Do obj.%Set("interop", ioCard)
+
+    // 4. Bedrock credential
+    Set bedrockOk = 0, bedrockPrefix = ""
+    Try {
+        If ##class(Ens.Config.Credentials).%ExistsId("InterClaw.Bedrock") {
+            Set cred = ##class(Ens.Config.Credentials).%OpenId("InterClaw.Bedrock")
+            If cred '= "" {
+                Set raw = cred.Password
+                If raw '= "" {
+                    Set parsed = ##class(%DynamicObject).%FromJSON(raw)
+                    If $IsObject(parsed) {
+                        Set key = parsed.key
+                        If (key '= "") && ($extract(key,1,4) = "ABSK") {
+                            Set bedrockOk = 1
+                            Set bedrockPrefix = $extract(key,1,4) _ "..." _ $extract(key,$length(key)-3,$length(key))
+                        }
+                    }
+                }
+            }
+        }
+    } Catch ex {}
+    Set bCard = ##class(%DynamicObject).%New()
+    Do bCard.%Set("ok", bedrockOk, "boolean")
+    Do bCard.%Set("detail", $select(bedrockOk:"Bedrock key stored ("_bedrockPrefix_")", 1:"No Bedrock key configured"))
+    Do obj.%Set("bedrock", bCard)
+
+    // 5. IRIS user login credential
+    Set loginOk = 0, loginUser = ""
+    Try {
+        If ##class(Ens.Config.Credentials).%ExistsId("InterClaw.User") {
+            Set userCred = ##class(Ens.Config.Credentials).%OpenId("InterClaw.User")
+            If userCred '= "" { Set loginOk = 1, loginUser = userCred.Username }
+        }
+    } Catch ex {}
+    Set uCard = ##class(%DynamicObject).%New()
+    Do uCard.%Set("ok", loginOk, "boolean")
+    Do uCard.%Set("detail", $select(loginOk:"Logged in as "_loginUser, 1:"No IRIS login credential stored"))
+    Do obj.%Set("login", uCard)
+
+    // 6. Production state (Inteclaw.Production in install namespace)
+    Set prodOk = 0, prodState = 0, prodName = "", prodDetail = ""
+    Try {
+        Set origNs = $namespace
+        Set targetNs = $select(installNs'="":installNs, 1:origNs)
+        New $namespace
+        Set $namespace = targetNs
+        Set sc = ##class(Ens.Director).GetProductionStatus(.prodName, .prodState)
+        If $$$ISOK(sc) {
+            Set prodOk = (prodState = 1) || (prodState = 3)
+            Set prodDetail = "State "_prodState_" ("_..ProdStateLabel(prodState)_")"_$select(prodName'="":" — "_prodName, 1:"")
+        } Else {
+            Set prodDetail = $system.Status.GetErrorText(sc)
+        }
+    } Catch ex {
+        Set prodDetail = ex.DisplayString()
+    }
+    Set pCard = ##class(%DynamicObject).%New()
+    Do pCard.%Set("ok", prodOk, "boolean")
+    Do pCard.%Set("name", prodName)
+    Do pCard.%Set("state", prodState)
+    Do pCard.%Set("detail", prodDetail)
+    Do obj.%Set("production", pCard)
+
+    // Overall ready flag
+    Do obj.%Set("ready", (pyOk && interopOk && bedrockOk && loginOk && prodOk), "boolean")
+
+    Do ..WriteJSON(obj.%ToJSON())
+    Return $$$OK
+}
+
+ClassMethod PyProbe() As %String [ Language = python ]
+{
+    import sys
+    return "Python " + sys.version.split()[0]
+}
+
+ClassMethod ProdStateLabel(state As %Integer) As %String
+{
+    Return $case(state, 1:"Running", 2:"Stopped", 3:"Suspended", 4:"Troubled", :"Unknown")
+}
+
 ClassMethod UploadPy(cwd As %String, tmpPath As %String, filename As %String) As %String [ Language = python ]
 {
     import json, os, re, shutil
@@ -1323,419 +1009,5 @@ ClassMethod UploadPy(cwd As %String, tmpPath As %String, filename As %String) As
     return json.dumps(dict(success=True, path=dest, filename=name, size=file_size))
 }
 
-/// Forward SSE events from a temp file, enriching tool_use events with human-readable labels.
-ClassMethod ForwardSSE(tmpFile As %String)
-{
-    If '##class(%File).Exists(tmpFile) Quit
-    Set labelsJson = ..GetToolLabelsJSON()
-    Set stream = ##class(%Stream.FileCharacter).%New()
-    Set sc = stream.LinkToFile(tmpFile)
-    If $$$ISERR(sc) Quit
-    While 'stream.AtEnd {
-        Set line = stream.ReadLine()
-        If line '= "" {
-            // Enrich tool_use events with resolved labels
-            If line [ """type"":""tool_use""" {
-                Try {
-                    Set obj = ##class(%DynamicObject).%FromJSON(line)
-                    Set toolName = obj.%Get("tool")
-                    Set toolInput = obj.%Get("input")
-                    If toolName '= "" {
-                        Set label = ..ResolveToolLabel(toolName, $select(toolInput="":"", 1:toolInput), labelsJson)
-                        Do obj.%Set("label", label)
-                        Set line = obj.%ToJSON()
-                    }
-                } Catch ex {}
-            }
-            Do ..WriteSSE(line)
-        }
-    }
-}
-
-ClassMethod InitSession() As %Status
-{
-    Do ..SetupEnv()
-    // Ensure InterClaw.Pipeline.Production is running before starting a Claude session
-    Set prodResult = ..EnsureProduction()
-    Set body = ..ReadBody()
-    Set %response.ContentType = "text/event-stream"
-    Set %response.CharSet = "utf-8"
-    Do %response.SetHeader("Cache-Control", "no-cache")
-    Do %response.SetHeader("X-Accel-Buffering", "no")
-    Set tmpFile = ##class(%File).TempFilename("sse")
-    Set result = ..InitSessionPy(..ResolveCWD(), ..GetCLIHome(), body, tmpFile)
-    Do ..ForwardSSE(tmpFile)
-    Set fallbackId = $piece(result, "|", 1)
-    Set claudeId = $piece(result, "|", 2)
-    // Claude session ID is the canonical identifier; UUID is fallback only
-    Set sessionId = $select(claudeId '= "": claudeId, 1: fallbackId)
-    // Resolve per-session model and namespace (body → Config defaults)
-    Try {
-        Set bodyObj = ##class(%DynamicObject).%FromJSON(body)
-        Set sessionModel = bodyObj.%Get("model")
-        Set sessionNs = bodyObj.%Get("namespace")
-    } Catch ex {
-        Set sessionModel = ""
-        Set sessionNs = ""
-    }
-    If sessionModel = "" Set sessionModel = $get(^InterClaw.Config("Model"), "opus")
-    If sessionNs = "" Set sessionNs = $get(^InterClaw.Config("Namespace"), "INTERCLAW")
-    Do ..WriteSSE("{""type"":""session"",""session_id"":""" _ sessionId _ """,""model"":""" _ sessionModel _ """,""namespace"":""" _ sessionNs _ """}")
-    Do ..WriteSSE("{""type"":""status"",""text"":""Ready""}")
-    If ##class(%File).Exists(tmpFile) { Do ##class(%File).Delete(tmpFile) }
-    Return $$$OK
-}
-
-ClassMethod InitSessionPy(cwd As %String, cliHome As %String, body As %String, sseFile As %String) As %String [ Language = python ]
-{
-    import json, os, asyncio, uuid, re
-    os.makedirs(cliHome, exist_ok=True)
-    os.environ["HOME"] = cliHome
-    os.chdir(cwd)
-    from claude_agent_sdk import (
-        query, ClaudeAgentOptions, AssistantMessage, UserMessage,
-        SystemMessage, ResultMessage, TextBlock, ToolUseBlock, ToolResultBlock, ThinkingBlock,
-    )
-    data = json.loads(body) if body else dict()
-    namespace = data.get("namespace")
-    model = data.get("model")
-    session_id = str(uuid.uuid4())
-    if namespace:
-        init_prompt = "You are connected to InterSystems IRIS, namespace " + namespace + ". The user is working in the interop editor. Be ready to help with production components, DTLs, rules, etc. Do not list available commands - wait for the user to ask."
-    else:
-        init_prompt = "You are connected to InterSystems IRIS. Be ready to help. Do not list available commands."
-    options = ClaudeAgentOptions(cwd=cwd, permission_mode="bypassPermissions")
-    if model:
-        options.model = model
-    claude_session_id = None
-    all_text = []
-    sse_out = open(sseFile, "w")
-    def sse(d):
-        sse_out.write(json.dumps(d) + "\n")
-        sse_out.flush()
-    sse(dict(type="status", text="Connecting..."))
-    async def _run():
-        nonlocal claude_session_id
-        try:
-            async for message in query(prompt=init_prompt, options=options):
-                if isinstance(message, SystemMessage):
-                    if message.subtype == "init" and message.data:
-                        sid = message.data.get("session_id")
-                        if sid:
-                            claude_session_id = sid
-                elif isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        if isinstance(block, TextBlock):
-                            all_text.append(block.text)
-                            sse(dict(type="output", text=block.text))
-                        elif isinstance(block, ToolUseBlock):
-                            _tinp = json.dumps(block.input)[:2000]
-                            sse(dict(type="tool_use", tool=block.name, input=_tinp))
-                        elif isinstance(block, ThinkingBlock):
-                            sse(dict(type="thinking", text=block.thinking))
-                elif isinstance(message, UserMessage):
-                    for block in message.content:
-                        if isinstance(block, ToolResultBlock):
-                            result_str = str(block.content)[:8000]
-                            all_text.append(result_str)
-                            sse(dict(type="tool_result", text=result_str))
-                elif isinstance(message, ResultMessage):
-                    claude_session_id = message.session_id
-        except Exception as e:
-            err_str = str(e)
-            if "exit code: 255" not in err_str and "exit code 255" not in err_str:
-                sse(dict(type="error", text=err_str))
-    asyncio.run(_run())
-    full_text = "\n".join(all_text)
-    def _infer_editor(cn):
-        parts = cn.split(".")
-        parent = parts[-2].lower() if len(parts) >= 2 else ""
-        if parent == "dtl": return "dtl"
-        if parent == "rule" or cn.lower().endswith("routingrule"): return "rule"
-        if parent == "bpl": return "bpl"
-        if cn.lower().endswith(".production"): return "production"
-        return None
-    for line in reversed(full_text.split("\n")):
-        cleaned = line.strip().strip("`").strip()
-        if cleaned.startswith("/goto-reload ") or cleaned.startswith("/goto "):
-            is_reload = cleaned.startswith("/goto-reload ")
-            offset = 13 if is_reload else 6
-            target = cleaned[offset:].strip().strip("`.,;:!?")
-            editor = None
-            if target.startswith("--dtl "): editor = "dtl"; target = target[6:].strip()
-            elif target.startswith("--rule "): editor = "rule"; target = target[7:].strip()
-            elif target.startswith("--bpl "): editor = "bpl"; target = target[6:].strip()
-            elif target.startswith("--trace"): editor = "trace"; target = target[7:].strip() or None
-            if not editor and target:
-                editor = _infer_editor(target)
-            if target or editor == "trace":
-                evt = dict(type="goto", target=target)
-                if editor: evt["editor"] = editor
-                sse(evt)
-            break
-    ok_classes = re.findall(r"OK: (?:Created|Updated|Compiled) '([^']+\.cls)'", full_text)
-    if ok_classes:
-        target = ok_classes[-1].replace(".cls", "")
-        editor = _infer_editor(target)
-        evt = dict(type="goto", target=target)
-        if editor: evt["editor"] = editor
-        sse(evt)
-    sse(dict(type="done", session_id=claude_session_id or session_id))
-    sse_out.close()
-    return session_id + "|" + (claude_session_id or "")
-}
-
-ClassMethod SendMessage() As %Status
-{
-    Do ..SetupEnv()
-    Set body = ..ReadBody()
-    Set %response.ContentType = "text/event-stream"
-    Set %response.CharSet = "utf-8"
-    Do %response.SetHeader("Cache-Control", "no-cache")
-    Do %response.SetHeader("X-Accel-Buffering", "no")
-    Set tmpFile = ##class(%File).TempFilename("sse")
-    // session_id from the frontend IS the Claude session ID — no lookup needed
-    Set result = ..SendMessagePy(..ResolveCWD(), ..GetCLIHome(), body, tmpFile)
-    Do ..ForwardSSE(tmpFile)
-    Do ..WriteSSE("{""type"":""status"",""text"":""Ready""}")
-    Set sessionId = $piece(result, "|", 1)
-    Set latestId = $piece(result, "|", 2)
-    Set activeId = $select(latestId '= "": latestId, 1: sessionId)
-    If ##class(%File).Exists(tmpFile) { Do ##class(%File).Delete(tmpFile) }
-    Return $$$OK
-}
-
-ClassMethod SendMessagePy(cwd As %String, cliHome As %String, body As %String, sseFile As %String) As %String [ Language = python ]
-{
-    import json, os, asyncio, re
-    os.makedirs(cliHome, exist_ok=True)
-    os.environ["HOME"] = cliHome
-    os.chdir(cwd)
-    from claude_agent_sdk import (
-        query, ClaudeAgentOptions, AssistantMessage, UserMessage,
-        SystemMessage, ResultMessage, TextBlock, ToolUseBlock, ToolResultBlock, ThinkingBlock,
-    )
-    data = json.loads(body) if body else dict()
-    session_id = data.get("session_id", "")
-    text = data.get("text", "")
-    model = data.get("model")
-    options = ClaudeAgentOptions(cwd=cwd, permission_mode="bypassPermissions")
-    if model:
-        options.model = model
-    if session_id:
-        options.resume = session_id
-    all_text = []
-    new_claude_sid = None
-    sse_out = open(sseFile, "w")
-    def sse(d):
-        sse_out.write(json.dumps(d) + "\n")
-        sse_out.flush()
-    async def _run():
-        nonlocal new_claude_sid
-        try:
-            async for message in query(prompt=text, options=options):
-                if isinstance(message, SystemMessage):
-                    if message.subtype == "init" and message.data:
-                        sid = message.data.get("session_id")
-                        if sid:
-                            new_claude_sid = sid
-                elif isinstance(message, AssistantMessage):
-                    for block in message.content:
-                        if isinstance(block, TextBlock):
-                            all_text.append(block.text)
-                            sse(dict(type="output", text=block.text))
-                        elif isinstance(block, ToolUseBlock):
-                            _tinp = json.dumps(block.input)[:2000]
-                            sse(dict(type="tool_use", tool=block.name, input=_tinp))
-                        elif isinstance(block, ThinkingBlock):
-                            sse(dict(type="thinking", text=block.thinking))
-                elif isinstance(message, UserMessage):
-                    for block in message.content:
-                        if isinstance(block, ToolResultBlock):
-                            result_str = str(block.content)[:8000]
-                            all_text.append(result_str)
-                            sse(dict(type="tool_result", text=result_str))
-                elif isinstance(message, ResultMessage):
-                    new_claude_sid = message.session_id
-        except Exception as e:
-            err_str = str(e)
-            if "exit code: 255" not in err_str and "exit code 255" not in err_str:
-                sse(dict(type="error", text=err_str))
-    asyncio.run(_run())
-    full_text = "\n".join(all_text)
-    def _infer_editor(cn):
-        parts = cn.split(".")
-        parent = parts[-2].lower() if len(parts) >= 2 else ""
-        if parent == "dtl": return "dtl"
-        if parent == "rule" or cn.lower().endswith("routingrule"): return "rule"
-        if parent == "bpl": return "bpl"
-        if cn.lower().endswith(".production"): return "production"
-        return None
-    for line in reversed(full_text.split("\n")):
-        cleaned = line.strip().strip("`").strip()
-        if cleaned.startswith("/goto-reload ") or cleaned.startswith("/goto "):
-            is_reload = cleaned.startswith("/goto-reload ")
-            offset = 13 if is_reload else 6
-            target = cleaned[offset:].strip().strip("`.,;:!?")
-            editor = None
-            if target.startswith("--dtl "): editor = "dtl"; target = target[6:].strip()
-            elif target.startswith("--rule "): editor = "rule"; target = target[7:].strip()
-            elif target.startswith("--bpl "): editor = "bpl"; target = target[6:].strip()
-            elif target.startswith("--trace"): editor = "trace"; target = target[7:].strip() or None
-            if not editor and target:
-                editor = _infer_editor(target)
-            if target or editor == "trace":
-                evt = dict(type="goto", target=target)
-                if editor: evt["editor"] = editor
-                sse(evt)
-            break
-    ok_classes = re.findall(r"OK: (?:Created|Updated|Compiled) '([^']+\.cls)'", full_text)
-    if ok_classes:
-        target = ok_classes[-1].replace(".cls", "")
-        editor = _infer_editor(target)
-        evt = dict(type="goto", target=target)
-        if editor: evt["editor"] = editor
-        sse(evt)
-    sse(dict(type="done", session_id=new_claude_sid or session_id))
-    sse_out.close()
-    return session_id + "|" + (new_claude_sid or "")
-}
-
-/// POST /api/bridge/start — start a chat via the production pipeline, return bridge_id.
-/// Body: {"prompt":"...", "session_id":"...", "model":"...", "namespace":"...", "action":"init|message",
-///        "permission_mode":"...", "effort":"...", "editor_context":{...}}
-ClassMethod BridgeStart() As %Status
-{
-    Do ..SetupEnv()
-    Set body = ..ReadBody()
-    Set %response.ContentType = "application/json"
-    Set %response.CharSet = "utf-8"
-
-    Try {
-        Set obj = ##class(%DynamicObject).%FromJSON(body)
-    } Catch ex {
-        Do ..WriteJSON("{""error"":""Invalid JSON""}", 400)
-        Return $$$OK
-    }
-
-    Set prompt = obj.%Get("prompt")
-    Set sessionId = obj.%Get("session_id")
-    Set model = obj.%Get("model")
-    Set namespace = obj.%Get("namespace")
-    If namespace = "" Set namespace = "CLAUDE"
-    Set action = obj.%Get("action")
-    If action = "" Set action = $select(sessionId = "":"init", 1:"message")
-
-    // Create bridge session
-    Set bridgeId = $extract($system.Util.CreateGUID(), 1, 12)
-    Set ^InterClaw.ChatEvents(bridgeId, "seq") = 0
-    Set ^InterClaw.ChatEvents(bridgeId, "done") = 0
-    Set ^InterClaw.ChatEvents(bridgeId, "session") = sessionId
-
-    // Build payload JSON for the BO (includes all fields the SDK needs)
-    Set payload = ##class(%DynamicObject).%New()
-    Do payload.%Set("action", action)
-    Do payload.%Set("prompt", prompt)
-    Do payload.%Set("bridge_id", bridgeId)
-    Do payload.%Set("namespace", namespace)
-    If model '= "" Do payload.%Set("model", model)
-    If sessionId '= "" Do payload.%Set("session_id", sessionId)
-    If obj.%Get("permission_mode") '= "" Do payload.%Set("permission_mode", obj.%Get("permission_mode"))
-    If obj.%Get("effort") '= "" Do payload.%Set("effort", obj.%Get("effort"))
-    If obj.%IsDefined("editor_context") Do payload.%Set("editor_context", obj.%Get("editor_context"))
-
-    // Route through the production for tracing and management
-    Set request = ##class(InterClaw.Pipeline.Msg.ChatRequest).%New()
-    Set request.BridgeId = bridgeId
-    Set request.PayloadJSON = payload.%ToJSON()
-    Set request.Prompt = prompt
-    Set request.SessionId = sessionId
-    Set request.Model = model
-    Set request.Namespace = namespace
-    Set request.Action = action
-    Set sc = ##class(Ens.Director).CreateBusinessService("InterClaw.Pipeline.BS.ChatService", .service)
-    If $$$ISOK(sc) {
-        Set sc = service.ProcessInput(request)
-        If $$$ISERR(sc) {
-            Do ..WriteJSON("{""error"":""" _ $replace($system.Status.GetOneStatusText(sc), """", "\""") _ """}", 500)
-            Return $$$OK
-        }
-    } Else {
-        Do ..WriteJSON("{""error"":""Failed to create service: " _ $replace($system.Status.GetOneStatusText(sc), """", "\""") _ """}", 500)
-        Return $$$OK
-    }
-
-    Write "{""bridge_id"":""" _ bridgeId _ """}"
-    Return $$$OK
-}
-
-/// GET /api/bridge/events?bridge_id=X&after=N — server-hold polling for events.
-/// Waits up to 30s for new events, returns immediately when events are ready.
-/// Pure ObjectScript — reads ^InterClaw.ChatEvents directly, no iris Python module.
-ClassMethod BridgeEvents() As %Status
-{
-    Set bridgeId = $get(%request.Data("bridge_id", 1), "")
-    Set after = +$get(%request.Data("after", 1), 0)
-    Set %response.ContentType = "application/json"
-    Set %response.CharSet = "utf-8"
-
-    If bridgeId = "" {
-        Write "{""error"":""Missing bridge_id""}"
-        Return $$$OK
-    }
-
-    // Check session exists
-    If '$data(^InterClaw.ChatEvents(bridgeId, "seq")) {
-        Write "{""error"":""Unknown bridge_id""}"
-        Return $$$OK
-    }
-
-    // Server-hold: wait up to 30s for new events
-    Set events = ##class(%DynamicArray).%New()
-    Set start = $zh
-
-    For {
-        Set currentSeq = +$get(^InterClaw.ChatEvents(bridgeId, "seq"), 0)
-
-        If currentSeq > after {
-            // Collect all events after the requested sequence
-            For seq = after+1:1:currentSeq {
-                Set raw = $get(^InterClaw.ChatEvents(bridgeId, "evt", seq))
-                If raw '= "" {
-                    Set evt = ##class(%DynamicObject).%New()
-                    Do evt.%Set("seq", seq, "number")
-                    Try {
-                        Set data = ##class(%DynamicObject).%FromJSON(raw)
-                        Do evt.%Set("data", data)
-                    } Catch ex {
-                        Set fallback = ##class(%DynamicObject).%New()
-                        Do fallback.%Set("type", "raw")
-                        Do fallback.%Set("text", raw)
-                        Do evt.%Set("data", fallback)
-                    }
-                    Do events.%Push(evt)
-                }
-            }
-            Quit
-        }
-
-        // Check if done with no new events
-        Set done = $get(^InterClaw.ChatEvents(bridgeId, "done"))
-        If (done = 1) && (currentSeq <= after) Quit
-
-        // Check deadline
-        If ($zh - start) >= 30 Quit
-
-        // Wait a short interval before checking again
-        Hang 0.05
-    }
-
-    Set doneFlag = +$get(^InterClaw.ChatEvents(bridgeId, "done"), 0)
-    Set result = ##class(%DynamicObject).%New()
-    Do result.%Set("events", events)
-    Do result.%Set("done", (doneFlag = 1), "boolean")
-    Write result.%ToJSON()
-    Return $$$OK
-}
 
 }

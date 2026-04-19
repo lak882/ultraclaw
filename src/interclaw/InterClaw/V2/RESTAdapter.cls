@@ -1,7 +1,7 @@
 /// Adapter REST gateway that speaks the frontend chatbot's vocabulary
 /// (/api/start, /api/events, /api/approve) but routes work through the
 /// Inteclaw native-IRIS agent pipeline.
-///
+/// 
 /// Plan: this replaces the legacy InterClaw.Pipeline.REST.Dispatch when the
 /// /api/interclaw/production web app is repointed to this class. The legacy
 /// code stays installed for easy rollback.
@@ -15,10 +15,15 @@ Parameter CHARSET = "utf-8";
 XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 {
 <Routes>
-<Route Url="/api/start"    Method="POST" Call="Start"/>
-<Route Url="/api/events"   Method="GET"  Call="Events"/>
-<Route Url="/api/approve"  Method="POST" Call="Approve"/>
-<Route Url="/api/health"   Method="GET"  Call="Health"/>
+<Route Url="/api/start"      Method="POST" Call="Start"/>
+<Route Url="/api/events"     Method="GET"  Call="Events"/>
+<Route Url="/api/approve"    Method="POST" Call="Approve"/>
+<Route Url="/api/health"     Method="GET"  Call="Health"/>
+<Route Url="/api/chats"      Method="GET"  Call="ChatsList"/>
+<Route Url="/api/chats/:id"  Method="GET"  Call="ChatsGet"/>
+<Route Url="/api/chats/:id"  Method="PUT"  Call="ChatsPut"/>
+<Route Url="/api/chats/:id"  Method="DELETE" Call="ChatsDelete"/>
+<Route Url="/api/portal-urls" Method="GET" Call="PortalUrls"/>
 </Routes>
 }
 
@@ -217,6 +222,134 @@ ClassMethod Events() As %Status
     Do result.%Set("events", arr)
     Do result.%Set("done", (+$Get(^Inteclaw.ChatEvents(bridgeId, "done"), 0) = 1), "boolean")
     Write result.%ToJSON()
+    Return $$$OK
+}
+
+/// GET /api/chats — list chat headers (id/title/updatedAt) for the current user.
+ClassMethod ChatsList() As %Status
+{
+    Set %response.ContentType = "application/json"
+    Set %response.CharSet = "utf-8"
+    Try {
+        Set user = ##class(InterClaw.V2.ChatStore).ResolveUser()
+        Set arr = ##class(InterClaw.V2.ChatStore).List(user)
+        Set resp = ##class(%DynamicObject).%New()
+        Do resp.%Set("user", user)
+        Do resp.%Set("chats", arr)
+        Write resp.%ToJSON()
+    } Catch ex {
+        Set %response.Status = "500 Internal Server Error"
+        Write "{""error"":""" _ $Replace(ex.DisplayString(), """", "\""") _ """}"
+    }
+    Return $$$OK
+}
+
+/// GET /api/chats/:id — return a single chat with its full message history.
+ClassMethod ChatsGet(id As %String) As %Status
+{
+    Set %response.ContentType = "application/json"
+    Set %response.CharSet = "utf-8"
+    Try {
+        Set user = ##class(InterClaw.V2.ChatStore).ResolveUser()
+        Set obj = ##class(InterClaw.V2.ChatStore).Read(user, id)
+        If '$IsObject(obj) {
+            Set %response.Status = "404 Not Found"
+            Write "{""error"":""Chat not found""}"
+            Return $$$OK
+        }
+        Write obj.%ToJSON()
+    } Catch ex {
+        Set %response.Status = "500 Internal Server Error"
+        Write "{""error"":""" _ $Replace(ex.DisplayString(), """", "\""") _ """}"
+    }
+    Return $$$OK
+}
+
+/// PUT /api/chats/:id — create-or-update a single chat. Body shape:
+///   { "title": "...", "messages": [...], "model": "...", "namespace": "..." }
+/// Any omitted field is left untouched on the existing file. The :id is
+/// the frontend's local chat id (== Claude session id when available).
+ClassMethod ChatsPut(id As %String) As %Status
+{
+    Set %response.ContentType = "application/json"
+    Set %response.CharSet = "utf-8"
+    Try {
+        Set user = ##class(InterClaw.V2.ChatStore).ResolveUser()
+        Set body = ..ReadBody()
+        Set input = ""
+        If body '= "" {
+            Try { Set input = ##class(%DynamicObject).%FromJSON(body) }
+            Catch ex {
+                Set %response.Status = "400 Bad Request"
+                Write "{""error"":""Invalid JSON""}"
+                Return $$$OK
+            }
+        }
+        Set obj = ##class(InterClaw.V2.ChatStore).Put(user, id, input)
+        If '$IsObject(obj) {
+            Set %response.Status = "400 Bad Request"
+            Write "{""error"":""Invalid chat id""}"
+            Return $$$OK
+        }
+        Write obj.%ToJSON()
+    } Catch ex {
+        Set %response.Status = "500 Internal Server Error"
+        Write "{""error"":""" _ $Replace(ex.DisplayString(), """", "\""") _ """}"
+    }
+    Return $$$OK
+}
+
+/// DELETE /api/chats/:id — remove a chat file. Returns {"deleted":true|false}.
+ClassMethod ChatsDelete(id As %String) As %Status
+{
+    Set %response.ContentType = "application/json"
+    Set %response.CharSet = "utf-8"
+    Try {
+        Set user = ##class(InterClaw.V2.ChatStore).ResolveUser()
+        Set ok = ##class(InterClaw.V2.ChatStore).Delete(user, id)
+        Set resp = ##class(%DynamicObject).%New()
+        Do resp.%Set("deleted", (ok = 1), "boolean")
+        Write resp.%ToJSON()
+    } Catch ex {
+        Set %response.Status = "500 Internal Server Error"
+        Write "{""error"":""" _ $Replace(ex.DisplayString(), """", "\""") _ """}"
+    }
+    Return $$$OK
+}
+
+/// GET /api/portal-urls — return the curated Management Portal catalog
+/// (config/portal-urls.json) so the frontend can fuzzy-match slash-command
+/// targets without bundling the file. Cached in-process per OS mtime so
+/// editing the JSON file takes effect without a compile.
+ClassMethod PortalUrls() As %Status
+{
+    Set %response.ContentType = "application/json"
+    Set %response.CharSet = "utf-8"
+    Try {
+        Set root = ##class(InterClaw.Installer).DeployRoot()
+        Set path = root _ "config/portal-urls.json"
+        If '##class(%File).Exists(path) {
+            Set %response.Status = "404 Not Found"
+            Write "{""error"":""portal-urls.json not deployed""}"
+            Return $$$OK
+        }
+        Set mtime = ##class(%File).GetFileDateModified(path)
+        If $Data(^Inteclaw.PortalUrlsCache("body"))
+           && ($Get(^Inteclaw.PortalUrlsCache("mtime")) = mtime) {
+            Write ^Inteclaw.PortalUrlsCache("body")
+            Return $$$OK
+        }
+        Set stream = ##class(%Stream.FileCharacter).%New()
+        Set stream.Filename = path
+        Set raw = ""
+        While 'stream.AtEnd { Set raw = raw _ stream.Read(32000) }
+        Set ^Inteclaw.PortalUrlsCache("body") = raw
+        Set ^Inteclaw.PortalUrlsCache("mtime") = mtime
+        Write raw
+    } Catch ex {
+        Set %response.Status = "500 Internal Server Error"
+        Write "{""error"":""" _ $Replace(ex.DisplayString(), """", "\""") _ """}"
+    }
     Return $$$OK
 }
 

@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Welcome to InterClaw</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="../favicon.ico">
+  <script src="../install-config.js"></script>
+  <style>
+  :root {
+    --ic-bg: #f5f5f7;
+    --ic-panel: #ffffff;
+    --ic-text: #1d1d1f;
+    --ic-text-dim: #6e6e73;
+    --ic-border: #d2d2d7;
+    --ic-accent: #0071e3;
+    --ic-accent-hover: #0077ed;
+    --ic-ok: #1db94a;
+    --ic-warn: #f5a623;
+    --ic-err: #ff3b30;
+    --ic-radius-card: 18px;
+    --ic-radius-pill: 980px;
+    --ic-shadow-card: 0 4px 24px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ic-bg: #000000;
+      --ic-panel: #1c1c1e;
+      --ic-text: #f5f5f7;
+      --ic-text-dim: #a1a1a6;
+      --ic-border: #38383a;
+      --ic-accent: #2997ff;
+      --ic-accent-hover: #3ea2ff;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: var(--ic-bg);
+    color: var(--ic-text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+                 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 17px;
+    line-height: 1.47;
+    letter-spacing: -0.022em;
+  }
+
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 88px 32px 96px;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 72px;
+  }
+
+  .hero .eyebrow {
+    color: var(--ic-text-dim);
+    font-size: 14px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+
+  .hero h1 {
+    font-size: 56px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    margin-bottom: 18px;
+  }
+
+  .hero p {
+    font-size: 21px;
+    color: var(--ic-text-dim);
+    font-weight: 400;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  .overall {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 28px;
+    padding: 8px 16px;
+    border-radius: var(--ic-radius-pill);
+    background: var(--ic-panel);
+    border: 1px solid var(--ic-border);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ic-text-dim);
+  }
+
+  .overall.ready { color: var(--ic-ok); border-color: var(--ic-ok); }
+  .overall.notready { color: var(--ic-warn); border-color: var(--ic-warn); }
+
+  .overall .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ic-text-dim);
+  }
+  .overall.ready .dot { background: var(--ic-ok); }
+  .overall.notready .dot { background: var(--ic-warn); }
+
+  .cards {
+    display: grid;
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--ic-panel);
+    border-radius: var(--ic-radius-card);
+    padding: 22px 26px;
+    box-shadow: var(--ic-shadow-card);
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    gap: 18px;
+    align-items: center;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .card .status {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--ic-border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .card .status svg { width: 12px; height: 12px; stroke: white; fill: none; stroke-width: 3; }
+
+  .card.ok .status { background: var(--ic-ok); }
+  .card.err .status { background: var(--ic-err); }
+  .card.unknown .status { background: var(--ic-border); }
+
+  .card .body h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 2px;
+    letter-spacing: -0.01em;
+  }
+
+  .card .body p {
+    font-size: 14px;
+    color: var(--ic-text-dim);
+    line-height: 1.4;
+  }
+
+  .card .action {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: var(--ic-radius-pill);
+    border: 1px solid var(--ic-border);
+    background: transparent;
+    color: var(--ic-text);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btn:hover { background: var(--ic-bg); }
+
+  .btn-primary {
+    background: var(--ic-accent);
+    border-color: var(--ic-accent);
+    color: white;
+  }
+  .btn-primary:hover {
+    background: var(--ic-accent-hover);
+    border-color: var(--ic-accent-hover);
+  }
+
+  .cta {
+    margin-top: 56px;
+    padding: 36px;
+    background: var(--ic-panel);
+    border-radius: var(--ic-radius-card);
+    box-shadow: var(--ic-shadow-card);
+    text-align: center;
+  }
+
+  .cta h2 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+
+  .cta p {
+    font-size: 16px;
+    color: var(--ic-text-dim);
+    margin-bottom: 22px;
+  }
+
+  .cta .btn-primary {
+    padding: 12px 26px;
+    font-size: 16px;
+  }
+
+  .remediation {
+    grid-column: 1 / -1;
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: var(--ic-bg);
+    border-radius: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    color: var(--ic-text);
+    overflow-x: auto;
+    white-space: pre;
+    display: none;
+  }
+  .card.err .remediation { display: block; }
+
+  .footer {
+    margin-top: 48px;
+    text-align: center;
+    color: var(--ic-text-dim);
+    font-size: 12px;
+  }
+
+  .footer a { color: var(--ic-text-dim); }
+
+  .meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--ic-text-dim);
+  }
+
+  .meta code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    padding: 1px 6px;
+    background: var(--ic-bg);
+    border-radius: 4px;
+  }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 48px 20px 64px; }
+    .hero h1 { font-size: 38px; }
+    .hero p { font-size: 17px; }
+    .card { grid-template-columns: 22px 1fr; }
+    .card .action { grid-column: 1 / -1; justify-content: flex-start; margin-top: 6px; }
+  }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="eyebrow">InterClaw</div>
+      <h1>Welcome.</h1>
+      <p>Let's make sure everything is ready so you can start working.</p>
+      <div class="overall" id="overall"><span class="dot"></span><span id="overall-label">Checking status...</span></div>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <div class="cards" id="cards"><!-- populated by JS --></div>
+
+    <div class="cta" id="cta" style="display:none">
+      <h2>You're all set.</h2>
+      <p>Open the assistant and start a conversation.</p>
+      <a class="btn btn-primary" id="open-chat" href="#">Open InterClaw</a>
+    </div>
+
+    <div class="footer">
+      <div>Installed in namespace <code id="ns-code">...</code></div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    var cfg = window._interclawConfig || {};
+    var pathPrefix = cfg.pathPrefix || '';
+    var namespace  = (cfg.namespace  || 'INTERCLAW').toUpperCase();
+
+    var checkIcon = '<svg viewBox="0 0 24 24"><polyline points="4,12 10,18 20,6"/></svg>';
+    var xIcon     = '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+
+    // Card schema: which backend keys map to which UI cards, and the
+    // remediation text shown if the check fails. Remediation is intentionally
+    // copy-paste terminal-friendly.
+    var SCHEMA = [
+      {
+        key: 'embeddedPython',
+        title: 'Embedded Python',
+        okText: 'Python is configured and reachable.',
+        errText: 'Embedded Python is not reachable from this namespace.',
+        remediation:
+          '# Enable embedded Python in IRIS (run from the iris session)\n' +
+          'zn "%SYS"\n' +
+          'do ##class(Security.System).Get(,.props)\n' +
+          'set props("EnableEmbeddedPython")=1\n' +
+          'do ##class(Security.System).Modify(,.props)'
+      },
+      {
+        key: 'interop',
+        title: 'Interoperability enabled',
+        okText: 'Ens.Director is reachable.',
+        errText: 'This namespace is not interop-enabled.',
+        remediation:
+          '# Enable interoperability for this namespace\n' +
+          'zn "%SYS"\n' +
+          'do ##class(%EnsembleMgr).EnableNamespace("' + namespace + '",1)'
+      },
+      {
+        key: 'bedrock',
+        title: 'AWS Bedrock API key',
+        okText: 'Bedrock credential stored.',
+        errText: 'No Bedrock key configured.',
+        action: { label: 'Configure', onClick: 'openAuth' }
+      },
+      {
+        key: 'login',
+        title: 'IRIS login',
+        okText: 'You are logged in.',
+        errText: 'No IRIS user credential stored.',
+        action: { label: 'Log in', onClick: 'openLogin' }
+      },
+      {
+        key: 'production',
+        title: 'Inteclaw production',
+        okText: 'The production is running.',
+        errText: 'The production is not running.',
+        action: { label: 'Start', onClick: 'startProduction' }
+      }
+    ];
+
+    function render(state) {
+      var container = document.getElementById('cards');
+      container.innerHTML = '';
+
+      SCHEMA.forEach(function(spec) {
+        var item = state[spec.key] || {};
+        var ok = !!item.ok;
+        var card = document.createElement('div');
+        card.className = 'card ' + (ok ? 'ok' : 'err');
+
+        var status = '<div class="status">' + (ok ? checkIcon : xIcon) + '</div>';
+
+        var bodyHtml = '<div class="body">' +
+          '<h3>' + spec.title + '</h3>' +
+          '<p>' + (item.detail || (ok ? spec.okText : spec.errText)) + '</p>' +
+          '</div>';
+
+        var actionHtml = '<div class="action"></div>';
+        if (!ok && spec.action) {
+          actionHtml = '<div class="action"><button class="btn" data-action="' + spec.action.onClick + '">' + spec.action.label + '</button></div>';
+        } else if (ok) {
+          actionHtml = '<div class="action"></div>';
+        }
+
+        var remediationHtml = '';
+        if (!ok && spec.remediation) {
+          remediationHtml = '<pre class="remediation">' + spec.remediation + '</pre>';
+        }
+
+        card.innerHTML = status + bodyHtml + actionHtml + remediationHtml;
+        container.appendChild(card);
+      });
+
+      wireActions();
+
+      var ready = !!state.ready;
+      var ov = document.getElementById('overall');
+      ov.className = 'overall ' + (ready ? 'ready' : 'notready');
+      document.getElementById('overall-label').textContent = ready
+        ? 'All systems ready' : 'Setup needed';
+
+      document.getElementById('cta').style.display = ready ? 'block' : 'none';
+      var link = pathPrefix + '/ui/interop/interclaw/interop-editor/index.html';
+      document.getElementById('open-chat').setAttribute('href', link);
+    }
+
+    function wireActions() {
+      document.querySelectorAll('button[data-action]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var action = btn.getAttribute('data-action');
+          if (action === 'openAuth') {
+            window.location.href = pathPrefix + '/ui/interop/interclaw/interop-editor/index.html?authenticate=1';
+          } else if (action === 'openLogin') {
+            window.location.href = pathPrefix + '/ui/interop/interclaw/interop-editor/index.html?login=1';
+          } else if (action === 'startProduction') {
+            btn.textContent = 'Starting...';
+            btn.disabled = true;
+            fetch(pathPrefix + '/api/interclaw/production/start', {
+              method: 'POST', credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: '{}'
+            }).finally(function() {
+              setTimeout(refresh, 1200);
+            });
+          }
+        });
+      });
+    }
+
+    function refresh() {
+      document.getElementById('meta').textContent = 'Last checked ' + new Date().toLocaleTimeString();
+      fetch(pathPrefix + '/api/interclaw/api/diagnostics', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(state) {
+          document.getElementById('ns-code').textContent = state.namespace || namespace;
+          render(state);
+        })
+        .catch(function(err) {
+          document.getElementById('overall-label').textContent = 'Could not reach server';
+          document.getElementById('overall').className = 'overall notready';
+        });
+    }
+
+    document.getElementById('ns-code').textContent = namespace;
+    refresh();
+    // Auto-poll while the page is open so newly completed steps light up.
+    setInterval(refresh, 6000);
+  })();
+  </script>
+</body>
+</html>

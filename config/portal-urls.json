@@ -1,0 +1,388 @@
+{
+  "_about": "Curated Management Portal URL catalog. Each entry is a destination the chatbot's /goto can resolve by fuzzy-matching against slug, title, aliases, and keywords. Templates use {origin}, {pathPrefix}, {namespace}, and {namespaceLower} placeholders. Refresh via scripts/docs/catalog_portal_urls.py.",
+  "_placeholders": {
+    "{origin}": "e.g. http://vmdev1.iscinternal.com",
+    "{pathPrefix}": "e.g. /interclaw-test (leading slash, no trailing)",
+    "{namespace}": "IRIS namespace, UPPERCASE (e.g. INTERCLAW)",
+    "{namespaceLower}": "same namespace, lowercased for csp/healthshare paths"
+  },
+  "_legacyBase": "{origin}{pathPrefix}/ui/interop/interclaw/legacy-ui/index.html#",
+  "_smpBase": "{origin}/csp/sys",
+  "entries": [
+    {
+      "slug": "home",
+      "title": "Management Portal Home",
+      "aliases": ["smp", "management portal", "portal home"],
+      "keywords": ["home", "dashboard", "start"],
+      "category": "system",
+      "url": "{origin}/csp/sys/UtilHome.csp",
+      "description": "Top-level Management Portal landing page."
+    },
+    {
+      "slug": "system-explorer",
+      "title": "System Explorer",
+      "aliases": ["explorer", "sys explorer"],
+      "keywords": ["classes", "sql", "globals", "routines"],
+      "category": "system",
+      "url": "{origin}/csp/sys/exp/UtilExpHome.csp",
+      "description": "Browse classes, routines, globals, and SQL tables."
+    },
+    {
+      "slug": "classes",
+      "title": "Classes",
+      "aliases": ["class browser", "class list"],
+      "keywords": ["classes", "browser"],
+      "category": "system",
+      "url": "{origin}/csp/sys/exp/UtilExpClassList.csp?$NAMESPACE={namespace}",
+      "description": "Browse compiled ObjectScript classes in the current namespace."
+    },
+    {
+      "slug": "sql",
+      "title": "SQL Explorer",
+      "aliases": ["sql explorer", "query tool"],
+      "keywords": ["sql", "query", "tables"],
+      "category": "system",
+      "url": "{origin}/csp/sys/exp/UtilExecuteQuery.csp?$NAMESPACE={namespace}",
+      "description": "Run SQL queries, browse tables and views."
+    },
+    {
+      "slug": "globals",
+      "title": "Globals",
+      "aliases": ["global browser"],
+      "keywords": ["globals", "data"],
+      "category": "system",
+      "url": "{origin}/csp/sys/exp/UtilExpGlobalList.csp?$NAMESPACE={namespace}",
+      "description": "Inspect and edit raw IRIS globals."
+    },
+    {
+      "slug": "routines",
+      "title": "Routines",
+      "aliases": ["routine list"],
+      "keywords": ["routines", "mac", "int"],
+      "category": "system",
+      "url": "{origin}/csp/sys/exp/UtilExpRoutineList.csp?$NAMESPACE={namespace}",
+      "description": "Browse MAC/INT/OBJ routines in the namespace."
+    },
+    {
+      "slug": "namespaces",
+      "title": "Namespaces",
+      "aliases": ["namespace list", "ns list"],
+      "keywords": ["namespace", "config"],
+      "category": "system",
+      "url": "{origin}/csp/sys/mgr/%25CSP.UI.Portal.Namespaces.zen",
+      "description": "List and manage all namespaces on the instance."
+    },
+    {
+      "slug": "databases",
+      "title": "Databases",
+      "aliases": ["database list", "db list"],
+      "keywords": ["database", "storage"],
+      "category": "system",
+      "url": "{origin}/csp/sys/mgr/%25CSP.UI.Portal.Databases.zen",
+      "description": "Physical IRIS.DAT databases and mounts."
+    },
+    {
+      "slug": "web-apps",
+      "title": "Web Applications",
+      "aliases": ["web apps", "csp apps"],
+      "keywords": ["webapp", "csp", "rest", "routes"],
+      "category": "security",
+      "url": "{origin}/csp/sys/sec/%25CSP.UI.Portal.Applications.WebList.zen",
+      "description": "CSP/REST web application registry (path-based routing)."
+    },
+    {
+      "slug": "users",
+      "title": "Users",
+      "aliases": ["user list", "security users"],
+      "keywords": ["users", "security", "accounts"],
+      "category": "security",
+      "url": "{origin}/csp/sys/sec/%25CSP.UI.Portal.Users.zen",
+      "description": "IRIS user accounts."
+    },
+    {
+      "slug": "roles",
+      "title": "Roles",
+      "aliases": ["role list", "security roles"],
+      "keywords": ["roles", "permissions"],
+      "category": "security",
+      "url": "{origin}/csp/sys/sec/%25CSP.UI.Portal.Roles.zen",
+      "description": "Role definitions and assigned resources."
+    },
+    {
+      "slug": "resources",
+      "title": "Resources",
+      "aliases": ["security resources"],
+      "keywords": ["resource", "permission"],
+      "category": "security",
+      "url": "{origin}/csp/sys/sec/%25CSP.UI.Portal.Resources.zen",
+      "description": "Protected resources (DB, service, app) for ACL assignments."
+    },
+    {
+      "slug": "audit",
+      "title": "Audit Log",
+      "aliases": ["audit log", "audit database"],
+      "keywords": ["audit", "security", "history"],
+      "category": "security",
+      "url": "{origin}/csp/sys/sec/%25CSP.UI.Portal.Audit.zen",
+      "description": "Security/system audit events."
+    },
+    {
+      "slug": "processes",
+      "title": "IRIS Processes",
+      "aliases": ["process list", "jobs"],
+      "keywords": ["processes", "jobs", "pid"],
+      "category": "system",
+      "url": "{origin}/csp/sys/op/%25CSP.UI.Portal.ProcessList.zen",
+      "description": "Running IRIS processes with job ids and device info."
+    },
+    {
+      "slug": "locks",
+      "title": "Locks",
+      "aliases": ["lock table"],
+      "keywords": ["lock", "contention"],
+      "category": "system",
+      "url": "{origin}/csp/sys/op/%25CSP.UI.Portal.Locks.zen",
+      "description": "Current IRIS lock table."
+    },
+    {
+      "slug": "system-dashboard",
+      "title": "System Dashboard",
+      "aliases": ["dashboard", "health dashboard"],
+      "keywords": ["dashboard", "health", "monitor"],
+      "category": "system",
+      "url": "{origin}/csp/sys/%25CSP.Portal.Dashboard.cls",
+      "description": "Real-time system health (license, journal, errors, performance)."
+    },
+    {
+      "slug": "journal",
+      "title": "Journal Files",
+      "aliases": ["journals"],
+      "keywords": ["journal", "recovery"],
+      "category": "system",
+      "url": "{origin}/csp/sys/op/%25CSP.UI.Portal.Journal.zen",
+      "description": "Journal files and journal configuration."
+    },
+    {
+      "slug": "tasks",
+      "title": "Task Manager",
+      "aliases": ["task scheduler", "scheduled tasks"],
+      "keywords": ["task", "schedule", "cron"],
+      "category": "system",
+      "url": "{origin}/csp/sys/mgr/%25CSP.UI.Portal.TaskList.zen",
+      "description": "System task schedule (like cron, but IRIS-native)."
+    },
+    {
+      "slug": "production",
+      "title": "Production Configuration",
+      "aliases": ["prod config", "production page"],
+      "keywords": ["production", "config", "ensemble"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.ProductionConfig.zen?$NAMESPACE={namespace}",
+      "description": "Production configuration page (current production for the namespace)."
+    },
+    {
+      "slug": "production-list",
+      "title": "Production List",
+      "aliases": ["production browser", "all productions"],
+      "keywords": ["production", "list"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.ProductionList.zen?$NAMESPACE={namespace}",
+      "description": "Browse every production defined in the namespace."
+    },
+    {
+      "slug": "message-viewer",
+      "title": "Message Viewer",
+      "aliases": ["messages", "message browser", "msg viewer"],
+      "keywords": ["message", "viewer", "traffic"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.MessageViewer.zen?$NAMESPACE={namespace}",
+      "description": "Search/browse all ensemble messages across all sessions."
+    },
+    {
+      "slug": "visual-trace",
+      "title": "Visual Trace",
+      "aliases": ["trace", "visual message trace", "message trace"],
+      "keywords": ["trace", "session", "debug"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.VisualTrace.zen?$NAMESPACE={namespace}",
+      "description": "Per-session visual message flow (pass ?SESSIONID=... to scope)."
+    },
+    {
+      "slug": "event-log",
+      "title": "Event Log",
+      "aliases": ["event log", "errors log", "ensemble log"],
+      "keywords": ["event", "log", "errors"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.EventLog.zen?$NAMESPACE={namespace}",
+      "description": "Per-production event log (info/warning/error/alert)."
+    },
+    {
+      "slug": "business-hosts",
+      "title": "Business Hosts",
+      "aliases": ["hosts", "components", "host list"],
+      "keywords": ["service", "operation", "process", "host"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.BusinessHosts.zen?$NAMESPACE={namespace}",
+      "description": "All business services, processes, and operations in the namespace."
+    },
+    {
+      "slug": "dtl-list",
+      "title": "Data Transformations",
+      "aliases": ["dtl list", "transformations"],
+      "keywords": ["dtl", "transformation", "data"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.DTL.List.zen?$NAMESPACE={namespace}",
+      "description": "Browse all DTL classes in the namespace."
+    },
+    {
+      "slug": "dtl-editor",
+      "title": "DTL Editor",
+      "aliases": ["dtl", "transform editor"],
+      "keywords": ["dtl", "transform", "editor"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.DTLEditor.zen?DT={name}.cls",
+      "description": "Graphical DTL editor. Requires {name}.",
+      "requires": ["name"]
+    },
+    {
+      "slug": "bpl-editor",
+      "title": "BPL Editor",
+      "aliases": ["bpl", "business process editor", "process editor"],
+      "keywords": ["bpl", "business", "process"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.BPLEditor.zen?BP={name}.cls",
+      "description": "Visual BPL business-process editor. Requires {name}.",
+      "requires": ["name"]
+    },
+    {
+      "slug": "rule-editor",
+      "title": "Rule Editor (legacy)",
+      "aliases": ["rule", "routing rule editor zen"],
+      "keywords": ["rule", "routing", "zen"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.RuleEditor.zen?RULE={name}",
+      "description": "Legacy ZEN rule editor. Requires {name}.",
+      "requires": ["name"]
+    },
+    {
+      "slug": "rule-editor-angular",
+      "title": "Rule Editor (Angular)",
+      "aliases": ["rule angular", "new rule editor"],
+      "keywords": ["rule", "angular", "routing"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/ui/interop/rule-editor/index.html?$NAMESPACE={namespace}&rule={name}",
+      "description": "Modern Angular rule editor. Requires {name}.",
+      "requires": ["name"]
+    },
+    {
+      "slug": "lookup-tables",
+      "title": "Lookup Tables",
+      "aliases": ["lookup list", "lookups"],
+      "keywords": ["lookup", "table"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.LookupTables.zen?$NAMESPACE={namespace}",
+      "description": "Browse all ensemble lookup tables."
+    },
+    {
+      "slug": "lookup-table",
+      "title": "Lookup Table Editor",
+      "aliases": ["lookup", "lookup settings"],
+      "keywords": ["lookup", "edit", "lut"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.LookupSettings.zen?LookupTable={name}.lut",
+      "description": "Edit a single lookup table. Requires {name}.",
+      "requires": ["name"]
+    },
+    {
+      "slug": "hl7-schemas",
+      "title": "HL7 Schemas",
+      "aliases": ["hl7 schema list", "schemas"],
+      "keywords": ["hl7", "schema", "message", "structure"],
+      "category": "hl7",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.HL7.SchemaMain.zen?$NAMESPACE={namespace}",
+      "description": "All registered HL7 schema categories."
+    },
+    {
+      "slug": "hl7-schema-structure",
+      "title": "HL7 Schema Structure",
+      "aliases": ["hl7 structure", "schema structure"],
+      "keywords": ["hl7", "structure", "segment"],
+      "category": "hl7",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.HL7.SchemaDocumentStructure.zen?MS={name}",
+      "description": "Full structure view of one HL7 message. Pass {name} like 2.5.1:ADT_A01.",
+      "requires": ["name"]
+    },
+    {
+      "slug": "suspended-messages",
+      "title": "Suspended Messages",
+      "aliases": ["suspended", "suspended queue"],
+      "keywords": ["suspended", "errors", "resubmit"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.SuspendedMsg.zen?$NAMESPACE={namespace}",
+      "description": "Messages held for resubmission or inspection."
+    },
+    {
+      "slug": "queues",
+      "title": "Queues",
+      "aliases": ["queue list", "production queues"],
+      "keywords": ["queue", "backlog"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.Queues.zen?$NAMESPACE={namespace}",
+      "description": "Live queue depths by host."
+    },
+    {
+      "slug": "credentials",
+      "title": "Credentials",
+      "aliases": ["credential list", "cred"],
+      "keywords": ["credentials", "auth"],
+      "category": "interop",
+      "url": "{origin}{pathPrefix}/csp/healthshare/{namespaceLower}/EnsPortal.Credentials.zen?$NAMESPACE={namespace}",
+      "description": "Ens.Config.Credentials entries (username/password pairs for adapters)."
+    },
+    {
+      "slug": "ssl-configs",
+      "title": "SSL/TLS Configurations",
+      "aliases": ["ssl", "tls"],
+      "keywords": ["ssl", "tls", "cert"],
+      "category": "security",
+      "url": "{origin}/csp/sys/sec/%25CSP.UI.Portal.SSLList.zen",
+      "description": "Named SSL/TLS configurations for outbound HTTPS."
+    },
+    {
+      "slug": "healthshare-home",
+      "title": "HealthShare Home",
+      "aliases": ["hs home", "healthshare portal"],
+      "keywords": ["healthshare", "hub", "home"],
+      "category": "healthshare",
+      "url": "{origin}/csp/healthshare/hshome.zen",
+      "description": "HealthShare administrative home."
+    },
+    {
+      "slug": "foundation-install",
+      "title": "HealthShare Foundation Install/Upgrade",
+      "aliases": ["foundation", "hsinstall"],
+      "keywords": ["foundation", "install", "upgrade", "namespace"],
+      "category": "healthshare",
+      "url": "{origin}/csp/healthshare/hslib/HS.Hub.UI.InstallUpgrade.zen",
+      "description": "Install or upgrade a HealthShare Foundation namespace."
+    },
+    {
+      "slug": "interclaw-chat",
+      "title": "InterClaw Chat",
+      "aliases": ["chat", "interclaw chatbot"],
+      "keywords": ["chat", "assistant"],
+      "category": "interclaw",
+      "url": "{origin}{pathPrefix}/ui/interop/interclaw/",
+      "description": "InterClaw chat UI (fullscreen chatbot + editor)."
+    },
+    {
+      "slug": "interclaw-legacy-ui",
+      "title": "InterClaw Legacy UI",
+      "aliases": ["legacy ui", "interclaw portal"],
+      "keywords": ["legacy", "portal"],
+      "category": "interclaw",
+      "url": "{origin}{pathPrefix}/ui/interop/interclaw/legacy-ui/index.html#/csp/healthshare/{namespaceLower}/EnsPortal.ProductionConfig.zen?$NAMESPACE={namespace}",
+      "description": "Legacy portal shell embedded inside the InterClaw chatbot frame."
+    }
+  ]
+}

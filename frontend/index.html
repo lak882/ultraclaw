@@ -1,11 +1,85 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-<script>
-var qs = window.location.search;
-var sep = qs ? qs + '&' : '?';
-window.location.replace('interop-editor/index.html' + sep + 'view=chat');
-</script>
+  <meta charset="utf-8">
+  <title>InterClaw</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <!-- Chat-only path preserved: if ?view=chat is set, redirect to the
+       standalone chat entry so direct links and embeds still work. -->
+  <script>
+  (function() {
+    var qs = window.location.search;
+    var p = new URLSearchParams(qs);
+    if (p.get('view') === 'chat') {
+      var sep = qs ? qs + '&' : '?';
+      window.location.replace('interop-editor/index.html' + sep);
+    }
+  })();
+  </script>
+
+  <!-- Design tokens shared across InterClaw chrome -->
+  <style>
+  :root {
+    --fr-styles-color-primary-hsl: 238, 49%, 39%;
+    --fr-styles-color-primary: hsl(238, 49%, 39%);
+    --fr-styles-color-primary-contrast: hsl(0, 0%, 100%);
+    --fr-styles-color-white: hsl(0, 0%, 100%);
+    --fr-styles-color-near-white: hsl(0, 0%, 98%);
+    --fr-styles-color-very-light-grey: hsl(0, 0%, 95%);
+    --fr-styles-color-light-grey: hsl(0, 0%, 88%);
+    --fr-styles-font-size-sm: 0.875rem;
+    --fr-header-height-toolbar: 40px;
+    --fr-header-border-top-toolbar: 2px;
+    --chatbot-width: 25vw;
+  }
+  @font-face {
+    font-family: 'Noto Sans'; font-style: normal; font-weight: 400;
+    src: local('Noto Sans'), local('NotoSans'),
+         url(noto-sans-v9-latin-regular.dbdd323d86bb9df6.woff2) format('woff2');
+  }
+  @font-face {
+    font-family: 'Noto Sans'; font-style: normal; font-weight: 700;
+    src: local('Noto Sans Bold'), local('NotoSans-Bold'),
+         url(noto-sans-v9-latin-700.2813ebf28ffdbb0b.woff2) format('woff2');
+  }
+  </style>
+
+  <link rel="stylesheet" href="shell.css?v=2">
 </head>
-<body></body>
+<body data-no-auth-gate data-interclaw-shell>
+
+  <!-- Shared header. Reads current tab from shell state, not from pathname. -->
+  <script src="install-config.js"></script>
+  <script src="interclaw-header.js?v=13"></script>
+
+  <!-- Shell view area: one iframe per tab, only the active one is visible. -->
+  <div id="app-root">
+    <div id="shell-viewport">
+      <!-- iframes get src assigned lazily on first activation -->
+      <iframe id="shell-iframe-portal"  class="shell-iframe" data-tab="portal"  title="IRIS Management Portal"></iframe>
+      <iframe id="shell-iframe-traces"  class="shell-iframe" data-tab="traces"  title="Message Traces"></iframe>
+      <iframe id="shell-iframe-skills"  class="shell-iframe" data-tab="skills"  title="Skill Editor"></iframe>
+
+      <div id="shell-auth-overlay" role="dialog" aria-labelledby="shell-auth-title" aria-hidden="true">
+        <div class="shell-auth-card">
+          <svg viewBox="0 0 24 24">
+            <rect x="5" y="11" width="14" height="10" rx="2"/>
+            <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+          </svg>
+          <h2 id="shell-auth-title">Please log in</h2>
+          <p>Sign in with your IRIS credentials in the chatbot on the right to access the Management Portal, Traces, and Skill Editor.</p>
+          <p>Use <code>/login &lt;username&gt; &lt;password&gt;</code> in the chat input.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chatbot — mounted once for the life of the shell -->
+  <script src="interclaw-chatbot.js?v=20"></script>
+
+  <!-- Shell controller: tab switching, hash routing, iframe postMessage bridge -->
+  <script src="shell.js?v=2"></script>
+</body>
 </html>
