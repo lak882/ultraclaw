@@ -588,12 +588,15 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
   opacity: 1 !important;
 }
 
-/* Search input: white like the rail; border alone separates it. Focus
-   does not add an accent ring. */
+/* Search input: inline — no box, no visible border. The search ROW gets
+   restyled below to look like a nav-row (icon + text), not a form field. */
 #ic-chats-sidebar .ic-chats-search-input {
-  background: #ffffff !important;
-  border-color: rgba(13, 13, 13, 0.12) !important;
+  background: transparent !important;
+  border: none !important;
   color: var(--cgpt-sidebar-body) !important;
+  padding: 0 !important;
+  height: 32px !important;
+  box-shadow: none !important;
 }
 #ic-chats-sidebar .ic-chats-search-input::placeholder {
   color: var(--cgpt-sidebar-body-muted) !important;
@@ -711,12 +714,36 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
   color: var(--cgpt-sidebar-body) !important;
 }
 
-/* Scrollbar thumb: slightly darker alpha on the off-white surface */
-#ic-chats-sidebar *::-webkit-scrollbar-thumb {
-  background: rgba(13, 13, 13, 0.15) !important;
+/* Scrollbar — subtle, ChatGPT-style. Thumb is a faint neutral that only
+   darkens on hover; track stays transparent so the rail reads as one
+   surface until the user reaches for it. Applies to both the rail itself
+   (new scroll container) and any inner scrollables. */
+#ic-chats-sidebar,
+#ic-chats-sidebar * {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(13, 13, 13, 0.08) transparent !important;
 }
+#ic-chats-sidebar::-webkit-scrollbar,
+#ic-chats-sidebar *::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  background: transparent !important;
+}
+#ic-chats-sidebar::-webkit-scrollbar-track,
+#ic-chats-sidebar *::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+#ic-chats-sidebar::-webkit-scrollbar-thumb,
+#ic-chats-sidebar *::-webkit-scrollbar-thumb {
+  background: rgba(13, 13, 13, 0.08) !important;
+  border-radius: 999px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+#ic-chats-sidebar::-webkit-scrollbar-thumb:hover,
 #ic-chats-sidebar *::-webkit-scrollbar-thumb:hover {
-  background: rgba(13, 13, 13, 0.25) !important;
+  background: rgba(13, 13, 13, 0.18) !important;
+  background-clip: padding-box !important;
 }
 
 /* ------------------------------------------------------------------------
@@ -744,6 +771,33 @@ body.ic-chat-mode #chatbot-sidebar {
   display: none !important;
   pointer-events: none !important;
   cursor: default !important;
+}
+
+/* ========================================================================
+   Scroll structure — make the WHOLE rail scroll so the scrollbar track
+   starts at the rail's top edge (matches ChatGPT). Header, New-chat row,
+   and search are sticky so they stay visible while the list scrolls
+   underneath. Without this, the list is the only scroll container and
+   the scrollbar visually starts below the search field.
+   ======================================================================== */
+#ic-chats-sidebar {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+#ic-chats-sidebar .ic-chats-header,
+#ic-chats-sidebar .ic-chats-new,
+#ic-chats-sidebar .ic-chats-search {
+  position: sticky !important;
+  background: var(--cgpt-sidebar-surface) !important;
+  z-index: 2 !important;
+}
+#ic-chats-sidebar .ic-chats-header { top: 0 !important; }
+#ic-chats-sidebar .ic-chats-new    { top: 36px !important; }
+#ic-chats-sidebar .ic-chats-search { top: 78px !important; }
+/* The list itself no longer needs its own scroll — the rail scrolls. */
+#ic-chats-sidebar .ic-chats-list {
+  overflow: visible !important;
+  flex: none !important;
 }
 
 /* Reload button in the shared header: icon near-black, matches arrow toggle. */

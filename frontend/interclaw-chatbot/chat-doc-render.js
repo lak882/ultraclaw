@@ -168,14 +168,17 @@
     // transformThinkingToUsage). No duplicate renderer — whatever changes
     // to the live path automatically apply to retrospect too.
     var content = document.getElementById('chatbot-content');
-    // Live state the step functions expect.
+    // Live state the step functions expect. currentSteps is per-bubble
+    // (fresh array) but cc.stepCounter KEEPS growing across turns so
+    // step DOM ids stay unique — sharing an id across turns is how the
+    // "click any tool opens the first tool" bug crept in.
     cc.currentStreamEl = null;
     cc.currentStreamWrap = null;
     cc.currentStepsEl = null;
     cc.currentStepsListEl = null;
     cc.currentSteps = [];
     cc._autoExpandedByType = {};
-    cc.stepCounter = 0;
+    if (typeof cc.stepCounter !== 'number') cc.stepCounter = 0;
     cc._finalAnswerStarted = false;
     // Mount the bubble the live way. showTypingIndicator appends it to
     // #chatbot-content and builds the bubble-thinking-bar we'll shortly
@@ -184,36 +187,34 @@
     // the end DOM state is identical.
     cc.showTypingIndicator();
     // Populate reasoning steps by replaying through the live API.
-    (turn.steps || []).forEach(function(s) {
-      cc.stepCounter++;
-      var step = {
-        id: s.id || ('replay-' + cc.stepCounter),
-        type: s.type || 'tool',
-        title: s.title || '',
-        toolName: s.toolName,
-        content: s.body || '',
-        rawOutput: s.rawOutput || null,
-        status: s.status || 'done',
-        resultCount: s.resultCount || 0
-      };
-      // For tools, re-label via getToolLabel so "run_sql" → "Running SQL"
-      // (same as live). For thinking, keep "Thinking".
-      if (step.type !== 'thinking' && cc.getToolLabel) {
-        step.title = cc.getToolLabel(step.toolName || step.title || '', null);
-      }
-      cc.addReasoningStep(step);
-      cc.updateReasoningStep(step.id, { status: step.status });
-    });
-    // Collapse all auto-expanded step bodies: live does this on `done`
-    // when the final answer arrives, so match that post-state.
-    if (cc.currentSteps && cc.currentSteps.length > 0) {
-      for (var k in cc._autoExpandedByType) {
-        if (cc._autoExpandedByType[k]) {
-          cc.toggleStepContent(cc._autoExpandedByType[k]);
-          cc._autoExpandedByType[k] = null;
+    // Flag the live step fns to skip auto-expansion — matches post-`done`
+    // state where all steps are collapsed and user opens what they want.
+    cc._replayingSteps = true;
+    try {
+      (turn.steps || []).forEach(function(s) {
+        cc.stepCounter++;
+        var step = {
+          id: s.id || ('replay-' + cc.stepCounter),
+          type: s.type || 'tool',
+          title: s.title || '',
+          toolName: s.toolName,
+          content: s.body || '',
+          rawOutput: s.rawOutput || null,
+          status: s.status || 'done',
+          resultCount: s.resultCount || 0
+        };
+        if (step.type !== 'thinking' && cc.getToolLabel) {
+          step.title = cc.getToolLabel(step.toolName || step.title || '', null);
         }
-      }
+        cc.addReasoningStep(step);
+      });
+    } finally {
+      cc._replayingSteps = false;
     }
+    // Live's `done` handler calls collapseReasoningSteps() so the whole
+    // list ends up hidden behind "Show steps". Replay has no done event,
+    // so explicitly match that post-state here.
+    if (cc.collapseReasoningSteps) cc.collapseReasoningSteps();
     // Write the final answer into msg-content the same way live's `done`
     // handler does. Prefer pre-rendered HTML from legacy records;
     // otherwise renderMarkdown the raw text.

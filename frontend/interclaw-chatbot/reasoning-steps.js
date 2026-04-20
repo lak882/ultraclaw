@@ -95,7 +95,9 @@
     // Auto-expand both thinking and tool steps so the user sees the
     // latest of each. Each type keeps its own slot; adding a new step of
     // a type collapses the previous-active of that same type only.
-    if (step.content) {
+    // Retrospect replay sets `cc._replayingSteps = true` to keep all
+    // steps collapsed by default (matches post-`done` live state).
+    if (step.content && !cc._replayingSteps) {
       cc.toggleStepContent(step.id);
       cc._autoExpandedByType[slot] = step.id;
     }
@@ -161,7 +163,8 @@
 
     // Auto-expand the latest step once it has content. Each type has its
     // own slot — thinking steps don't displace tool steps and vice versa.
-    if (updates.content !== undefined && updates.content) {
+    // Skip during retrospect replay — those steps should start collapsed.
+    if (updates.content !== undefined && updates.content && !cc._replayingSteps) {
       if (!cc._autoExpandedByType) cc._autoExpandedByType = {};
       var slot = (step.type === 'thinking') ? 'thinking' : 'tool';
       if (cc._autoExpandedByType[slot] && cc._autoExpandedByType[slot] !== stepId) {
@@ -260,6 +263,17 @@
 
   cc.collapseReasoningSteps = function() {
     if (!cc.currentStepsEl) return;
+    // If the turn never produced any steps, hide the whole wrapper —
+    // don't leave an empty "Show steps" toggle dangling. Applies to both
+    // live (done handler) and retrospect replay, since both call this.
+    if (!cc.currentSteps || cc.currentSteps.length === 0) {
+      if (cc.currentStepsEl.parentNode) {
+        cc.currentStepsEl.parentNode.removeChild(cc.currentStepsEl);
+      }
+      cc.currentStepsEl = null;
+      cc.currentStepsListEl = null;
+      return;
+    }
     var toggle = cc.currentStepsEl.querySelector('.reasoning-toggle');
     if (toggle && toggle._collapseSteps) toggle._collapseSteps();
   };
