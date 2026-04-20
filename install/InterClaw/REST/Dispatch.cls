@@ -1,7 +1,7 @@
 /// InterClaw.REST.Dispatch — control-plane REST for the chatbot sidebar.
 /// Handles config, commands, permissions, auth, uploads, telemetry, feedback,
 /// namespace/model preferences, and the skill index. Chat streaming lives in
-/// InterClaw.V2.RESTAdapter, which owns /api/interclaw/production.
+/// InterClaw.REST.Chat, which owns /api/interclaw/production.
 Class InterClaw.REST.Dispatch Extends %CSP.REST
 {
 
@@ -9,20 +9,12 @@ Parameter HandleCorsRequest = 1;
 
 Parameter CHARSET = "utf-8";
 
-/// Resolve CWD dynamically: ^InterClaw.Config > env var > fallback
+/// Resolve CWD dynamically: ^InterClaw.Config > fallback
 ClassMethod GetCWD() As %String
 {
     set val = $get(^InterClaw.Config("CWD"))
     if val '= "" return val
     return ##class(%File).NormalizeDirectory(##class(%File).SubDirectoryName(##class(%File).SubDirectoryName($system.Util.InstallDirectory(), "csp"), "interclaw"))
-}
-
-/// Resolve CLIHOME dynamically: ^InterClaw.Config > env var > fallback
-ClassMethod GetCLIHome() As %String
-{
-    set val = $get(^InterClaw.Config("CLIHOME"))
-    if val '= "" return val
-    return ##class(%File).NormalizeDirectory(##class(%File).SubDirectoryName(##class(%File).SubDirectoryName($system.Util.InstallDirectory(), "mgr"), "interclaw_home"))
 }
 
 XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
@@ -52,47 +44,6 @@ XData UrlMap [ XMLNamespace = "http://www.intersystems.com/urlmap" ]
 </Routes>
 }
 
-ClassMethod SetupEnv()
-{
-    set cwd = ..GetCWD()
-    set cliHome = ..GetCLIHome()
-
-    // Read credential secret from Ens.Config.Credentials
-    set credSecret = ""
-    try {
-        if ##class(Ens.Config.Credentials).%ExistsId("InterClaw.Bedrock") {
-            set cred = ##class(Ens.Config.Credentials).%OpenId("InterClaw.Bedrock")
-            if cred '= "" set credSecret = cred.Password
-        }
-    } catch ex {}
-
-    do ..SetupEnvPy(cwd, cliHome, credSecret)
-}
-
-ClassMethod SetupEnvPy(cwd As %String, cliHome As %String, walletSecret As %String) [ Language = python ]
-{
-    import os, sys, json
-
-    if not os.environ.get("_INTERCLAW_ENV_LOADED"):
-        if walletSecret:
-            try:
-                data = json.loads(walletSecret)
-                os.environ["ANTHROPIC_API_KEY"] = data.get("key", "")
-                os.environ["CLAUDE_CODE_USE_BEDROCK"] = "1"
-                os.environ["AWS_REGION"] = data.get("region", "us-east-1")
-                os.environ["AWS_BEARER_TOKEN_BEDROCK"] = data.get("key", "")
-            except Exception:
-                pass
-        os.environ["_INTERCLAW_ENV_LOADED"] = "1"
-
-    os.makedirs(cliHome, exist_ok=True)
-    os.environ["HOME"] = cliHome
-    if sys.platform == "win32":
-        os.environ["USERPROFILE"] = cliHome
-    os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
-    os.chdir(cwd)
-}
-
 ClassMethod ReadBody() As %String
 {
     Set body = ""
@@ -101,6 +52,7 @@ ClassMethod ReadBody() As %String
         While 'stream.AtEnd {
             Set body = body _ stream.Read(32000)
         }
+        Set body = $ZConvert(body, "I", "UTF8")
     }
     Return body
 }
@@ -278,11 +230,9 @@ ClassMethod SkillFile() As %Status
         Return $$$OK
     }
 
-    // Build and normalize paths — NormalizeFilename strips trailing /
     Set claudeDir = ##class(%File).NormalizeFilename(..GetCWD() _ ".claude") _ "/"
     Set fullPath = ##class(%File).NormalizeFilename(claudeDir _ path)
 
-    // Path traversal guard: resolved path must start with claudeDir
     If $extract(fullPath, 1, $length(claudeDir)) '= claudeDir {
         Do ..WriteJSON("{""error"":""invalid path""}", 400)
         Return $$$OK
@@ -293,7 +243,6 @@ ClassMethod SkillFile() As %Status
         Return $$$OK
     }
 
-    // Stream the file content back
     Set stream = ##class(%Stream.FileCharacter).%New()
     Set stream.Filename = fullPath
     Set stream.TranslateTable = "UTF8"
@@ -368,9 +317,6 @@ ClassMethod SetPermissionsPy(cwd As %String, body As %String) As %String [ Langu
 
 ClassMethod AuthStatus() As %Status
 {
-    Do ..SetupEnv()
-
-    // Check Bedrock credential from Ens.Config.Credentials (authoritative source)
     set credExists = 0
     set bedrockKey = ""
     set bedrockRegion = "us-east-1"
@@ -391,7 +337,6 @@ ClassMethod AuthStatus() As %Status
         }
     } catch ex {}
 
-    // Check IRIS user login credential
     set loggedIn = 0
     set loginUser = ""
     try {
@@ -431,8 +376,6 @@ ClassMethod AuthStatusPy(credExists As %Boolean, bedrockKey As %String, bedrockR
 ClassMethod Authenticate() As %Status
 {
     set body = ..ReadBody()
-
-    // Parse key and region from JSON body
     set json = ##class(%DynamicObject).%FromJSON(body)
     set key = $zstrip($select($IsObject(json) && (json.key '= ""): json.key, 1: ""), "<>W")
     set region = $zstrip($select($IsObject(json) && (json.region '= ""): json.region, 1: "us-east-1"), "<>W")
@@ -446,7 +389,6 @@ ClassMethod Authenticate() As %Status
         return $$$OK
     }
 
-    // Store in Ens.Config.Credentials (password field holds the JSON secret)
     set credStored = 0
     set credWarning = ""
     try {
@@ -469,10 +411,6 @@ ClassMethod Authenticate() As %Status
         set credWarning = ex.DisplayString()
     }
 
-    // Set env vars via Python so the current process can use the key immediately
-    do ..AuthSetEnvPy(key, region)
-
-    // Build response
     set keyPrefix = $extract(key, 1, 4) _ "..." _ $extract(key, $length(key) - 3, $length(key))
     set result = ##class(%DynamicObject).%New()
     do result.%Set("success", 1, "boolean")
@@ -490,19 +428,8 @@ ClassMethod Authenticate() As %Status
     return $$$OK
 }
 
-ClassMethod AuthSetEnvPy(key As %String, region As %String) [ Language = python ]
-{
-    import os
-    os.environ["ANTHROPIC_API_KEY"] = key
-    os.environ["CLAUDE_CODE_USE_BEDROCK"] = "1"
-    os.environ["AWS_REGION"] = region
-    os.environ["AWS_BEARER_TOKEN_BEDROCK"] = key
-    os.environ["_INTERCLAW_ENV_LOADED"] = ""
-}
-
 ClassMethod Deauthenticate() As %Status
 {
-    // Remove from Ens.Config.Credentials
     set credRemoved = 0
     try {
         if ##class(Ens.Config.Credentials).%ExistsId("InterClaw.Bedrock") {
@@ -511,22 +438,12 @@ ClassMethod Deauthenticate() As %Status
         }
     } catch ex {}
 
-    // Clear env vars
-    do ..AuthClearEnvPy()
-
     set result = ##class(%DynamicObject).%New()
     do result.%Set("success", 1, "boolean")
     do result.%Set("credential_removed", credRemoved, "boolean")
     do result.%Set("message", "API key removed")
     Do ..WriteJSON(result.%ToJSON())
     return $$$OK
-}
-
-ClassMethod AuthClearEnvPy() [ Language = python ]
-{
-    import os
-    for k in ["ANTHROPIC_API_KEY", "CLAUDE_CODE_USE_BEDROCK", "AWS_REGION", "AWS_BEARER_TOKEN_BEDROCK", "_INTERCLAW_ENV_LOADED"]:
-        os.environ.pop(k, None)
 }
 
 ClassMethod Login() As %Status
@@ -545,14 +462,12 @@ ClassMethod Login() As %Status
         return $$$OK
     }
 
-    // Validate credentials against IRIS Security
     set sc = $SYSTEM.Security.Login(username, password)
     if $$$ISERR(sc) {
         Do ..WriteJSON("{""error"":""Invalid credentials""}", 401)
         return $$$OK
     }
 
-    // Store in Ens.Config.Credentials (same pattern as Bedrock key)
     set credStored = 0
     try {
         if ##class(Ens.Config.Credentials).%ExistsId("InterClaw.User") {
@@ -754,7 +669,7 @@ ClassMethod PostFeedbackPy(cwd As %String, body As %String) As %String [ Languag
     first_line = comment.split("\n")[0][:80] if comment else ("Rating " + str(rating) + "/5" if rating else "General feedback")
     title = "[Feedback] " + category + ": " + first_line
     stars = ("+" * (rating or 0)) + ("-" * (5 - (rating or 0))) if rating else "N/A"
-    description = "## Feedback\n\n| Field | Value |\n|-------|-------|\n| **Rating** | " + stars + " (" + str(rating) + "/5) |\n| **Category** | " + category + " |\n| **Namespace** | " + data.get("namespace", "N/A") + " |\n| **Timestamp** | " + datetime.utcnow().isoformat() + "Z |\n\n### Comment\n\n" + (comment or "_No comment._") + "\n\n---\n_Submitted via Agent Orchestrator._"
+    description = "## Feedback\n\n| Field | Value |\n|-------|-------|\n| **Rating** | " + stars + " (" + str(rating) + "/5) |\n| **Category** | " + category + " |\n| **Namespace** | " + data.get("namespace", "N/A") + " |\n| **Timestamp** | " + datetime.utcnow().isoformat() + "Z |\n\n### Comment\n\n" + (comment or "_No comment._") + "\n\n---\n_Submitted via InterClaw._"
     labels = list(gl.get("labels", ["feedback"]))
     if category not in labels:
         labels.append(category)
@@ -841,8 +756,6 @@ ClassMethod Upload() As %Status
         Return $$$OK
     }
     Set filename = mimeData.FileName
-    // Save MIME data to a temp file as binary stream (avoids string corruption
-    // for binary formats like docx/pdf — ObjectScript string concat loses null bytes)
     Set tmpFile = ##class(%File).TempFilename("upload")
     Set fileStream = ##class(%Stream.FileBinary).%New()
     Set sc = fileStream.LinkToFile(tmpFile)
@@ -887,6 +800,5 @@ ClassMethod UploadPy(cwd As %String, tmpPath As %String, filename As %String) As
     shutil.copy2(tmpPath, dest)
     return json.dumps(dict(success=True, path=dest, filename=name, size=file_size))
 }
-
 
 }

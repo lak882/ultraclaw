@@ -20,7 +20,7 @@
 ///   8. Creates Ens.Config.Credentials entry for API key storage
 ///   9. Adds InterClaw pages to Management Portal favorites
 ///  10. Configures environment-specific settings (path prefix)
-///  11. Configures AutoStart for Inteclaw.Production
+///  11. Configures AutoStart for InterClaw.Production
 ///  12. Starts the production
 ///  13. Verifies the deployment
 /// 
@@ -169,7 +169,7 @@ ClassMethod Setup() As %Status
         write "WARNING: Could not configure production settings: ", $system.Status.GetErrorText(sc),!
     }
 
-    // Step 11: Configure AutoStart so IRIS starts Inteclaw.Production on instance boot
+    // Step 11: Configure AutoStart so IRIS starts InterClaw.Production on instance boot
     write !,"[Step 11/", totalSteps, "] Configuring AutoStart...",!
     set sc = ..ConfigureAutoStart()
     if $$$ISERR(sc) {
@@ -194,7 +194,7 @@ ClassMethod Setup() As %Status
     write "================================================================",!
     write "  Frontend:   ", pathPrefix, "/ui/interop/interclaw/interop-editor/index.html",!
     write "  REST API:   ", pathPrefix, "/api/interclaw/api/health",!
-    write "  Production: Inteclaw.Production",!
+    write "  Production: InterClaw.Production",!
     write "================================================================",!
     return $$$OK
 }
@@ -707,15 +707,15 @@ ClassMethod CreateRESTWebApp() As %Status
 
     // --- /api/interclaw/production (chat pipeline dispatch) ---
     // Routes frontend chatbot calls (/api/start, /api/events, /api/approve)
-    // into the Inteclaw native-IRIS pipeline via InterClaw.V2.RESTAdapter.
+    // into the InterClaw native-IRIS pipeline via InterClaw.REST.Chat.
     set pipelineApp = "/api/interclaw/production"
     write "  Checking ", pipelineApp, "...",!
     if '##class(Security.Applications).Exists(pipelineApp) {
         write "  Creating pipeline web app: ", pipelineApp,!
-        write "    DispatchClass: InterClaw.V2.RESTAdapter",!
+        write "    DispatchClass: InterClaw.REST.Chat",!
         kill props
         set props("NameSpace") = namespace
-        set props("DispatchClass") = "InterClaw.V2.RESTAdapter"
+        set props("DispatchClass") = "InterClaw.REST.Chat"
         set props("MatchRoles") = ":%All"
         set props("AutheEnabled") = 64
         set props("IsNameSpaceDefault") = 0
@@ -732,7 +732,7 @@ ClassMethod CreateRESTWebApp() As %Status
         set app = ##class(Security.Applications).%OpenId(pipelineApp)
         if app '= "" {
             write "  Updating pipeline dispatch class and namespace...",!
-            set app.DispatchClass = "InterClaw.V2.RESTAdapter"
+            set app.DispatchClass = "InterClaw.REST.Chat"
             set app.NameSpace = namespace
             do app.%Save()
             write "  [OK] Pipeline dispatch class updated to V2 adapter",!
@@ -1184,19 +1184,19 @@ ClassMethod ConfigureProductionSettings() As %Status
     return $$$OK
 }
 
-/// Configure AutoStart so IRIS starts Inteclaw.Production automatically on instance boot.
+/// Configure AutoStart so IRIS starts InterClaw.Production automatically on instance boot.
 /// Uses Ens.Director.SetAutoStart which persists across restarts.
 ClassMethod ConfigureAutoStart() As %Status
 {
-    write "  Calling Ens.Director.SetAutoStart(""Inteclaw.Production"")...",!
+    write "  Calling Ens.Director.SetAutoStart(""InterClaw.Production"")...",!
     try {
-        set sc = ##class(Ens.Director).SetAutoStart("Inteclaw.Production")
+        set sc = ##class(Ens.Director).SetAutoStart("InterClaw.Production")
         if $$$ISERR(sc) {
             write "  [!!] Failed to set AutoStart: ", $system.Status.GetErrorText(sc),!
             return sc
         }
         write "  [OK] AutoStart configured",!
-        write "  Inteclaw.Production will start automatically on IRIS boot",!
+        write "  InterClaw.Production will start automatically on IRIS boot",!
     } catch ex {
         write "  [!!] Error calling Ens.Director: ", ex.DisplayString(),!
         return ex.AsStatus()
@@ -1204,11 +1204,11 @@ ClassMethod ConfigureAutoStart() As %Status
     return $$$OK
 }
 
-/// Start the Inteclaw.Production interoperability production.
+/// Start the InterClaw.Production interoperability production.
 /// Handles all production states: stopped, suspended, troubled.
 ClassMethod StartProduction() As %Status
 {
-    set target = "Inteclaw.Production"
+    set target = "InterClaw.Production"
     write "  Checking current production state...",!
     try {
         set sc = ##class(Ens.Director).GetProductionStatus(.prodName, .prodState)
@@ -1386,11 +1386,11 @@ ClassMethod Verify()
         set sc = ##class(Ens.Director).GetProductionStatus(.prodName, .prodState)
         write "    Production: ", $get(prodName, "(none)"),!
         write "    State:      ", $get(prodState, 0),!
-        if $get(prodName) = "Inteclaw.Production" && ($get(prodState) = 1) {
-            write "    [OK] Inteclaw.Production is running",!
+        if $get(prodName) = "InterClaw.Production" && ($get(prodState) = 1) {
+            write "    [OK] InterClaw.Production is running",!
             set passed = passed + 1
         } else {
-            write "    [!!] Inteclaw.Production is not running",!
+            write "    [!!] InterClaw.Production is not running",!
             set ok = 0
         }
     } catch ex {
