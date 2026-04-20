@@ -57,6 +57,10 @@
   var _icCfg = (typeof window !== 'undefined' && window._interclawConfig) || {};
   var _installNs = (_icCfg.namespace || 'INTERCLAW').toUpperCase();
   var urlNs = params.get('$NAMESPACE') || params.get('NAMESPACE') || '';
+  // Defensive: some malformed URLs deliver `?$NAMESPACE=INTERCLAW?chat=xxx`
+  // (second `?` from hash-routing leakage). Clip at the first non-ns char
+  // so the label doesn't read "INTERCLAW?CHAT=LOCAL-...".
+  urlNs = urlNs.replace(/[?&#].*$/, '').toUpperCase();
   var namespace = (urlNs || _installNs).toUpperCase();
 
   // API base for namespace endpoints (pathPrefix resolved below)

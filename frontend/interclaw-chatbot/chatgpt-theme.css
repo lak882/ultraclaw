@@ -709,7 +709,7 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
 #ic-chats-sidebar,
 #ic-chats-sidebar * {
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(13, 13, 13, 0.08) transparent !important;
+  scrollbar-color: rgba(13, 13, 13, 0.18) transparent !important;
 }
 #ic-chats-sidebar::-webkit-scrollbar,
 #ic-chats-sidebar *::-webkit-scrollbar {
@@ -723,14 +723,14 @@ body.chatbot-dragging #ic-chats-resize-handle::after {
 }
 #ic-chats-sidebar::-webkit-scrollbar-thumb,
 #ic-chats-sidebar *::-webkit-scrollbar-thumb {
-  background: rgba(13, 13, 13, 0.08) !important;
+  background: rgba(13, 13, 13, 0.18) !important;
   border-radius: 999px !important;
   border: 2px solid transparent !important;
   background-clip: padding-box !important;
 }
 #ic-chats-sidebar::-webkit-scrollbar-thumb:hover,
 #ic-chats-sidebar *::-webkit-scrollbar-thumb:hover {
-  background: rgba(13, 13, 13, 0.18) !important;
+  background: rgba(13, 13, 13, 0.30) !important;
   background-clip: padding-box !important;
 }
 
@@ -762,35 +762,30 @@ body.ic-chat-mode #chatbot-sidebar {
 }
 
 /* ========================================================================
-   Scroll structure — the rail itself scrolls so the scrollbar track spans
-   its full height. `.ic-chats-top` wraps the header + New-chat + search
-   rows as one sticky block with its own background tint, so scrolled list
-   content never shows through between them, and the top zone reads as a
-   distinct surface from the chat list below.
+   Scroll structure — only the chat list scrolls. The top zone (Chats
+   label + New chat + Search) stays fixed at the rail's top, no sticky
+   tricks. Scrollbar track spans only the list's height, matching the
+   area the user actually scrolls through.
    ======================================================================== */
 #ic-chats-sidebar {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
 }
 #ic-chats-sidebar .ic-chats-top {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 2 !important;
+  position: static !important;
+  flex: none !important;
   background: #ffffff !important;
-  padding-bottom: 4px !important;
 }
-/* Rows themselves have transparent backgrounds — the wrapper handles it. */
 #ic-chats-sidebar .ic-chats-top .ic-chats-header,
 #ic-chats-sidebar .ic-chats-top .ic-chats-new,
 #ic-chats-sidebar .ic-chats-top .ic-chats-search {
   position: static !important;
   background: transparent !important;
 }
-/* The list itself no longer needs its own scroll — the rail scrolls. */
 #ic-chats-sidebar .ic-chats-list {
-  overflow: visible !important;
-  flex: none !important;
-  padding-top: 4px !important;
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
 }
 
 /* Reload button in the shared header: icon near-black, matches arrow toggle. */
