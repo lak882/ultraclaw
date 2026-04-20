@@ -276,6 +276,21 @@
       try { cc.showWelcomeMessage(); } catch (_) {}
     }
     if (!doc || !Array.isArray(doc.turns)) return;
+    // Rebuild the session-level token / cost accumulators from the doc so
+    // the header counter reflects total-chat state after reload, not 0.
+    var totalTok = 0, totalIn = 0, totalOut = 0, totalCost = 0;
+    doc.turns.forEach(function(t) {
+      if (t && t.usage) {
+        totalIn += +t.usage.inputTokens || 0;
+        totalOut += +t.usage.outputTokens || 0;
+        totalCost += +t.usage.costUsd || 0;
+      }
+    });
+    totalTok = totalIn + totalOut;
+    cc.totalTokensAccum = totalTok;
+    cc.lastInputTokens = totalIn;
+    cc.lastOutputTokens = totalOut;
+    if (cc.updateTokenCounter) cc.updateTokenCounter(totalTok);
     doc.turns.forEach(function(t) {
       var node = renderTurn(t);
       if (node) content.appendChild(node);

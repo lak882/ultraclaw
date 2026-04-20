@@ -66,8 +66,24 @@ body.chatbot-auth-gate #chatbot-toggle { display: none !important; }
 </style>
 </head>
 <body>
+<script>
+  // When embedded in the shell (?chrome=none) OR inside any iframe that
+  // already hosts the InterClaw chrome, skip header + chatbot injection —
+  // otherwise reloading the embedded page nests a second copy of the UI.
+  window._interclawChromeNone =
+    new URLSearchParams(location.search).get('chrome') === 'none'
+    || (window.parent !== window);
+</script>
 <script src="../install-config.js"></script>
-<script src="../interclaw-header.js?v=18"></script>
-<script src="../interclaw-chatbot.js?v=21"></script>
+<script>
+  if (!window._interclawChromeNone) {
+    var _s = document.createElement('script');
+    _s.src = '../interclaw-header.js?v=18';
+    document.head.appendChild(_s);
+    var _c = document.createElement('script');
+    _c.src = '../interclaw-chatbot.js?v=21';
+    document.body.appendChild(_c);
+  }
+</script>
 </body>
 </html>

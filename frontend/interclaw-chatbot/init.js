@@ -120,6 +120,29 @@
       if (e.detail) updateContextIndicator(e.detail);
     });
 
+    // Universal scroll-to-bottom. Any caller that changes the chat pane's
+    // content (opening an existing chat, leaving chat mode for the portal,
+    // etc.) can call cc.scrollChatToBottom() and the latest message lands
+    // in view. Double-fires across rAF to catch late-rendered bubbles.
+    cc.scrollChatToBottom = function() {
+      var content = document.getElementById('chatbot-content');
+      if (content) content.scrollTop = content.scrollHeight;
+      requestAnimationFrame(function() {
+        var c2 = document.getElementById('chatbot-content');
+        if (c2) c2.scrollTop = c2.scrollHeight;
+      });
+    };
+    // Shell tab change: park chat at the end whenever we're leaving it.
+    window.addEventListener('interclaw-shell-tab-change', function(e) {
+      if (!e.detail || !e.detail.tab) return;
+      if (e.detail.tab === 'chat') return;
+      cc.scrollChatToBottom();
+    });
+    // Opening an existing chat: scroll to bottom after the render settles.
+    window.addEventListener('interclaw-chat-opened', function() {
+      cc.scrollChatToBottom();
+    });
+
     // Expose functions referenced by inline onclick handlers to global scope
     window.toggleChatbot = cc.toggleChatbot;
     window.toggleFullscreen = cc.toggleFullscreen;

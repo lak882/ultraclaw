@@ -105,7 +105,13 @@ html, body {
   // When embedded in the shell (?chrome=none), skip header + chatbot injection.
   // The shell hosts both for the whole wrapper so nested copies would duplicate
   // the UI and create competing namespace/model state.
-  window._interclawChromeNone = new URLSearchParams(location.search).get('chrome') === 'none';
+  // Skip header+chatbot injection when we're embedded (either ?chrome=none
+   // or any iframe context). Reloading an iframe inherits its own src but
+   // drops nothing; treating every framed load as chrome=none prevents the
+   // second copy of the InterClaw chrome from appearing inside the iframe.
+  window._interclawChromeNone =
+    new URLSearchParams(location.search).get('chrome') === 'none'
+    || (window.parent !== window);
 </script>
 <script src="../install-config.js"></script>
 <script>

@@ -291,16 +291,18 @@
     var sidebar = document.createElement('aside');
     sidebar.id = 'ic-chats-sidebar';
     sidebar.innerHTML =
-      '<div class="ic-chats-header">' +
-        '<span class="ic-chats-brand">Chats</span>' +
-      '</div>' +
-      '<a class="ic-chats-new" id="ic-chats-new" role="button" tabindex="0">' +
-        '<span class="ic-chats-new-icon">' + ICON_NEW_CHAT + '</span>' +
-        '<span class="ic-chats-new-label">New chat</span>' +
-      '</a>' +
-      '<div class="ic-chats-search">' +
-        '<span class="ic-chats-search-icon">' + ICON_SEARCH + '</span>' +
-        '<input type="search" id="ic-chats-search-input" class="ic-chats-search-input" placeholder="Search chats" autocomplete="off" spellcheck="false">' +
+      '<div class="ic-chats-top" id="ic-chats-top">' +
+        '<div class="ic-chats-header">' +
+          '<span class="ic-chats-brand">Chats</span>' +
+        '</div>' +
+        '<a class="ic-chats-new" id="ic-chats-new" role="button" tabindex="0">' +
+          '<span class="ic-chats-new-icon">' + ICON_NEW_CHAT + '</span>' +
+          '<span class="ic-chats-new-label">New chat</span>' +
+        '</a>' +
+        '<div class="ic-chats-search">' +
+          '<svg class="ic-chats-search-glass" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>' +
+          '<input type="search" id="ic-chats-search-input" class="ic-chats-search-input" placeholder="Search chats" autocomplete="off" spellcheck="false">' +
+        '</div>' +
       '</div>' +
       '<div class="ic-chats-list" id="ic-chats-list"></div>' +
       // Same chatbot-resize-handle pattern used on the right chat panel:
@@ -728,6 +730,7 @@
           if (doc.status === 'running' && doc.bridgeId && cc.attachBridge) {
             cc.attachBridge(doc.bridgeId, 0);
           }
+          try { window.dispatchEvent(new CustomEvent('interclaw-chat-opened', { detail: { id: id } })); } catch (_) {}
           return;
         }
         // Fallback: legacy path.
@@ -742,6 +745,7 @@
             if (chat.status === 'running' && chat.bridgeId && cc.attachBridge) {
               cc.attachBridge(chat.bridgeId, +chat.lastSeq || 0);
             }
+            try { window.dispatchEvent(new CustomEvent('interclaw-chat-opened', { detail: { id: id } })); } catch (_) {}
           });
       })
       .catch(function(err) { console.warn('[interclaw] openChat failed:', err); });

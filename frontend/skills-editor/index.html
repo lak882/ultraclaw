@@ -638,8 +638,12 @@ html, body {
 </head>
 <body data-no-auth-gate>
 <script>
-  // When embedded in the shell (?chrome=none), skip header + chatbot injection.
-  window._interclawChromeNone = new URLSearchParams(location.search).get('chrome') === 'none';
+  // When embedded in the shell (?chrome=none) OR inside any iframe, skip
+  // header + chatbot injection — otherwise reloading the embedded page
+  // nests a second copy of the InterClaw chrome.
+  window._interclawChromeNone =
+    new URLSearchParams(location.search).get('chrome') === 'none'
+    || (window.parent !== window);
 </script>
 <script src="../install-config.js"></script>
 <script>
