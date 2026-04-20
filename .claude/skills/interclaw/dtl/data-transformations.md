@@ -15,37 +15,21 @@ Ens.DataTransform
 
 **Always pull the HL7 schemas from IRIS before creating a DTL.** This gives you the full segment/field structure so you know exactly what paths are available to map.
 
-Use `get_schema.py` to explore schemas:
+Use the `get_schema` tool to explore schemas. All calls take a JSON argument with a `mode` plus `category`, `message`, or `segment` as required:
 
-```bash
-# List available HL7 versions
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py \
-  --server myserver --namespace HSLIB --list-categories
+| Task | `get_schema` call |
+|------|---|
+| List HL7 versions | `{"mode":"list_categories"}` |
+| List messages in a version | `{"mode":"list_messages","category":"2.5.1"}` |
+| List segments in a version | `{"mode":"list_segments","category":"2.5.1"}` |
+| View segment fields | `{"mode":"segment_fields","category":"2.5.1","segment":"PID"}` |
+| View full message structure | `{"mode":"message","category":"2.5.1","message":"VXU_V04"}` |
 
-# List message structures in a version
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py \
-  --server myserver --namespace HSLIB --list-messages 2.5.1
+For any DTL, pull the schemas for **both** the source and target segments you plan to map. Example, before a VXU facility-lookup DTL:
 
-# View segment fields (top-level only, numbered)
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py \
-  --server myserver --namespace HSLIB --segment 2.5.1:PID --fields
-
-# View segment with all subcomponents
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py \
-  --server myserver --namespace HSLIB --segment 2.5.1:ORC
-
-# View message structure info
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py \
-  --server myserver --namespace HSLIB --message 2.5.1:VXU_V04
 ```
-
-For any DTL, pull the schemas for **both** the source and target segments you plan to map. For example, before writing a VXU facility lookup DTL:
-```bash
-# Pull ORC and RXA schemas to see available fields
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py \
-  --server myserver --namespace HSLIB --segment 2.5.1:ORC --fields
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py \
-  --server myserver --namespace HSLIB --segment 2.5.1:RXA --fields
+get_schema {"mode":"segment_fields","category":"2.5.1","segment":"ORC"}
+get_schema {"mode":"segment_fields","category":"2.5.1","segment":"RXA"}
 ```
 
 This step is critical — never guess at field paths. The schema shows you every segment, field, component, and subcomponent available for mapping.
@@ -209,7 +193,7 @@ Use `create='new'` when you need to **output only specific segments**. The targe
 
 **When to use**: When the spec says something like "Only send MSH, EVN, PID, PV1, PD1, DRG, OBX" — that is a segment filtering requirement and you must use `create='new'`.
 
-**CRITICAL: Copy ALL segments from the schema.** When using `create='new'`, pull the schema structure with `get_schema.py --message` and copy EVERY group and segment from source to target — not just the obvious ones. For example, ORU_R01 has: MSH, SFT, DSC, PIDgrpgrp (containing PIDgrp with PID/PV1grp), ORCgrp (containing ORC, OBR, NTE, TQ1grp, CTD, FT1, CTI, SPMgrp, OBXgrp with NTE). Missing segments are **silently lost** — the output will be valid HL7 but missing data.
+**CRITICAL: Copy ALL segments from the schema.** When using `create='new'`, pull the schema structure with ``get_schema` tool (mode=message)` and copy EVERY group and segment from source to target — not just the obvious ones. For example, ORU_R01 has: MSH, SFT, DSC, PIDgrpgrp (containing PIDgrp with PID/PV1grp), ORCgrp (containing ORC, OBR, NTE, TQ1grp, CTD, FT1, CTI, SPMgrp, OBXgrp with NTE). Missing segments are **silently lost** — the output will be valid HL7 but missing data.
 
 ```xml
 <transform sourceClass='EnsLib.HL7.Message' targetClass='EnsLib.HL7.Message'
@@ -534,14 +518,10 @@ Improvement: Direct property access, but field numbers require documentation loo
 
 #### Discovering Named Paths
 
-Use `get_schema.py` to find named field paths:
+Use ``get_schema` tool` to find named field paths:
 
 ```bash
-# Get all fields for a segment
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py --server myserver --namespace HSLIB --segment 2.5.1:PID --fields
-
-# Get full message structure with groups
-<python> .claude/skills/interclaw/scripts/hl7/get_schema.py --server myserver --namespace HSLIB --message 2.5.1:VXU_V04
+(use the equivalent tool; see the surrounding text)
 ```
 
 Output shows: `PID:3 PatientIdentifierList` → Use `PID:PatientIdentifierList`
@@ -752,7 +732,7 @@ source.{OBX(k1):ObservationResultStatus}          OBX-11: F, P, etc.
 - ✓ Always use named property paths: `source.{PID:PatientName.FamilyName}`
 - ✓ Use k1, k2, k3 to indicate nesting level (k1 = first level, k2 = nested in k1, etc.)
 - ✓ Reuse keys after loops end: After `</foreach>` with k1, you can start a new `<foreach key='k1'>`
-- ✓ Run `get_schema.py --fields` to discover correct named paths
+- ✓ Run ``get_schema` tool (mode=segment_fields)` to discover correct named paths
 - ✓ Use `source.{OBX(*)}` to count repeating segments
 - ✓ Keep DTL assign statements simple (no code blocks unless explicitly required)
 
@@ -796,7 +776,7 @@ source.{PIDgrp(1).PIDgrpgrp.PV1grp.PV1:3.1}   <!-- WRONG: doubled name on inner 
 
 **Rule**: When schema shows `GroupName > GroupName` (same name nested), use `GroupNamegrp()` for the outer one, `GroupName` for the inner one.
 
-Use `get_schema.py --message <cat:msg>` to see the group structure and determine correct paths.
+Use ``get_schema` tool (mode=message)` to see the group structure and determine correct paths.
 
 ## Example: HL7 ADT A01 to A08 Transform
 
@@ -998,7 +978,7 @@ HL7 field names in IRIS schemas are case-sensitive. A single wrong letter -- upp
 |-------|-------|
 | `NameofCodingSystem` | `NameOfCodingSystem` |
 
-The difference is the capital "O" in "Of". The schema output from `get_schema.py` shows the exact casing. Copy field names character-for-character from the schema output -- never type them from memory.
+The difference is the capital "O" in "Of". The schema output from ``get_schema` tool` shows the exact casing. Copy field names character-for-character from the schema output -- never type them from memory.
 
 Other commonly miscased fields:
 
@@ -1052,7 +1032,7 @@ Before writing any DTL, follow this exact workflow:
 
 1. **Pull the segment schema with field names:**
    ```bash
-   <python> .claude/skills/interclaw/scripts/hl7/get_schema.py \
+   <python> .claude/skills/interclaw/scripts/hl7/`get_schema` tool \
      --server myserver --namespace HSLIB --segment 2.5.1:OBX --fields
    ```
 
@@ -1071,7 +1051,7 @@ Before writing any DTL, follow this exact workflow:
 
 4. **Build the full path:** `OBX:ObservationIdentifier.NameOfCodingSystem`
 
-5. **Verify with test_dtl.py --diff after pushing.** If the field does not appear in the diff output, the path is wrong -- re-check casing against the schema.
+5. **Verify with `test_dtl` tool after pushing.** If the field does not appear in the diff output, the path is wrong -- re-check casing against the schema.
 
 ### Positional Number Validation
 

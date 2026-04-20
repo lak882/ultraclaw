@@ -1344,14 +1344,14 @@ This applies to `<assign>`, `<if condition>`, `<switch>/<case>`, `<trace>`, and 
 
 ### Verify Spec Field Numbers Against Schema
 
-When a spec references fields by positional number (e.g., "PV1:18", "SCH:7.2", "OBR:4"), **always pull the segment schema** with `get_schema.py --segment <SEG>` and verify the positional number maps to the correct named path before using it.
+When a spec references fields by positional number (e.g., "PV1:18", "SCH:7.2", "OBR:4"), **always pull the segment schema** with ``get_schema` tool --segment <SEG>` and verify the positional number maps to the correct named path before using it.
 
 **Why**: Specs often use positional numbers, but agents must use named paths. Mismatches are common:
 - PV1:18 = `PatientType`, NOT `PreadmitNumber` (which is PV1:5)
 - PV1:19 = `VisitNumber`, NOT `PatientType`
 - SCH:7.2 = `AppointmentReason.Text`, NOT `AppointmentReason.Identifier` (which is SCH:7.1)
 
-**Workflow**: Spec says "store ORC:2" → run `get_schema.py --segment ORC --fields` → confirm field 2 = `PlacerOrderNumber` → use `ORC:PlacerOrderNumber.EntityIdentifier` in BPL.
+**Workflow**: Spec says "store ORC:2" → run ``get_schema` tool --segment ORC --fields` → confirm field 2 = `PlacerOrderNumber` → use `ORC:PlacerOrderNumber.EntityIdentifier` in BPL.
 
 **Never assume** a positional number matches a field name that "sounds right." Always verify with the schema output.
 
@@ -1400,14 +1400,13 @@ Only fall back to utility class + `<code>` when `<sql>` truly cannot express the
 
 ### BPL Compilation via Atelier API
 
-The Atelier REST API's compile operation (`put_doc.py --compile`) may not fully generate BPL code classes (Thread1, Context) in all IRIS versions. If the BPL compiles but fails at runtime with missing class errors, use `$system.OBJ.Compile()` as a fallback:
+The Atelier REST API's compile operation (``put_class` tool`) may not fully generate BPL code classes (Thread1, Context) in all IRIS versions. If the BPL compiles but fails at runtime with missing class errors, use `$system.OBJ.Compile()` as a fallback:
 
 ```bash
-<python> .claude/skills/interclaw/scripts/lib/iris_terminal.py --server <s> --namespace <ns> \
-  --code 'do $system.OBJ.Compile("MyPkg.BPL.ProcessName","ck")'
+(use the equivalent tool; see the surrounding text)
 ```
 
-This is the one legitimate exception to the "never use iris_terminal.py" rule — BPL compilation sometimes requires the full ObjectScript compiler.
+This is the one legitimate exception to the "never use `exec` tool" rule — BPL compilation sometimes requires the full ObjectScript compiler.
 
 ### `<call>` Request/Response Assignment — ALWAYS Use `<assign>` for HL7
 
@@ -1460,17 +1459,17 @@ A BPL process suspends (saves state and releases its thread) at:
 
 ### Workflow
 
-1. **Push and compile** the BPL class using `put_doc.py --compile`
-2. **Start the production** with `manage_production.py --start <Production> --stop-first`
-3. **Send a test message** using `send_hl7.py` (for HL7) or `send_json.py` (for JSON)
+1. **Push and compile** the BPL class using ``put_class` tool`
+2. **Start the production** with `an `exec` call to `##class(Ens.Director).StartProduction(<Production>)` after stopping the current one`
+3. **Send a test message** using ``exec` tool (HTTP POST to the CSP HL7 service URL)` (for HL7) or ``exec` tool (HTTP POST to the JSON service URL)` (for JSON)
 4. **Check the trace** to verify the BPL execution path:
    ```bash
-   <python> .claude/skills/interclaw/scripts/documents/run_query.py --server <server> --namespace <ns> \
+   <python> .claude/skills/interclaw/scripts/documents/`run_sql` tool --server <server> --namespace <ns> \
      --sql "SELECT TOP 5 ID, TimeCreated, SessionId, SourceConfigName, TargetConfigName, MessageBodyClassName FROM Ens.MessageHeader ORDER BY ID DESC"
    ```
 5. **Check the event log** for trace messages and errors:
    ```bash
-   <python> .claude/skills/interclaw/scripts/documents/run_query.py --server <server> --namespace <ns> \
+   <python> .claude/skills/interclaw/scripts/documents/`run_sql` tool --server <server> --namespace <ns> \
      --sql "SELECT TOP 10 ID, TimeLogged, Type, SourceClass, Text FROM Ens_Util.Log ORDER BY ID DESC"
    ```
 

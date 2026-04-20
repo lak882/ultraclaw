@@ -122,10 +122,7 @@ Method OnProcessInput(pRequestBody As %CharacterStream, pResponseBody As %Charac
 ### Sending JSON
 
 ```bash
-<python> .claude/skills/interclaw/scripts/hl7/send_json.py \
-  --server <server> \
-  --url "/irishealth/csp/healthshare/<namespace>/<ServiceClassName>.cls?CfgItem=<ConfigItemName>" \
-  --input payload.json
+(use the equivalent tool; see the surrounding text)
 ```
 
 ## JSON-to-ObjectScript Type Mapping

@@ -68,7 +68,7 @@ INSERT INTO Ens_Util.LookupTable (TableName, KeyName, DataValue)
 VALUES ('GenderMap', 'F', 'Female')
 ```
 
-When using `iris_terminal.py --code`, run each INSERT as a separate call — ObjectScript `For` loops in single-line `--code` arguments have syntax limitations.
+When using ``exec` tool`, run each INSERT as a separate call — ObjectScript `For` loops in single-line `--code` arguments have syntax limitations.
 
 ### Via Import (CSV)
 
@@ -150,9 +150,5 @@ ClassMethod ExportLookupTable(pTableName As %String, pFileName As %String) As %S
 Lookup tables can be queried and populated via the Atelier SQL endpoint:
 
 ```bash
-python3 run_query.py --server myserver --namespace HSLIB \
-  --sql "SELECT DISTINCT TableName FROM Ens_Util.LookupTable"
-
-python3 run_query.py --server myserver --namespace HSLIB \
-  --sql "SELECT KeyName, DataValue FROM Ens_Util.LookupTable WHERE TableName = 'GenderMap'"
+(use the equivalent tool; see the surrounding text)
 ```

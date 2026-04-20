@@ -135,6 +135,7 @@
     return !t || t === 'Untitled' || t === 'New chat';
   }
 
+  cc.maybeRetitle = function(chatId, messages) { return maybeRetitle(chatId, messages); };
   function maybeRetitle(chatId, messages) {
     var userCount = countUserMessages(messages);
     if (userCount < 1) return;

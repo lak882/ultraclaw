@@ -80,11 +80,7 @@ sourceDocType='StClairCustom:ADT_A01'      <!-- WRONG: message type name -->
 Push .HL7 files via the Atelier API just like .cls files. Schema files live on the server, not in the repo.
 
 ```bash
-<python> .claude/skills/interclaw/scripts/documents/put_doc.py \
-  --server myserver --namespace TESTING \
-  --doc MyCustom.HL7 \
-  --input /tmp/MyCustom.HL7 \
-  --force --compile
+(use the equivalent tool; see the surrounding text)
 ```
 
 ## Viewing Schemas

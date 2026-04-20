@@ -511,7 +511,40 @@
           cc.sessionId = data.session_id;
         }
         cc.sessionReady = true;
+        // Clear bridgePolling BEFORE saveState so persistChat doesn't bail
+        // out (persistChat returns early while bridgePolling is true).
+        // bridge.js will set it to false again when its poll loop exits;
+        // the double-assign is a harmless no-op.
+        cc.bridgePolling = false;
         cc.saveState();
+        // Fire a Haiku retitle on every turn completion, bypassing the
+        // gates in persistChat (bridgePolling/suppressPersist). The
+        // maybeRetitle helper is cadence-gated internally and fast-paths
+        // the first-turn-with-placeholder case, so this is cheap and
+        // correct to call unconditionally.
+        try {
+          if (cc.sessionId && cc.maybeRetitle) {
+            var paneMsgs = (function() {
+              var out = [];
+              var content = document.getElementById('chatbot-content');
+              if (!content) return out;
+              var kids = content.children;
+              for (var i = 0; i < kids.length; i++) {
+                var el = kids[i];
+                var msgEl = el.classList && el.classList.contains('chatbot-msg-wrap')
+                  ? el.querySelector('.chatbot-message') : el;
+                if (!msgEl || !msgEl.classList) continue;
+                var type = 'assistant';
+                if (msgEl.classList.contains('chatbot-message-user')) type = 'user';
+                else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
+                else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
+                out.push({ type: type, html: msgEl.innerHTML });
+              }
+              return out;
+            })();
+            setTimeout(function() { cc.maybeRetitle(cc.sessionId, paneMsgs); }, 300);
+          }
+        } catch (_) {}
         cc.totalTokensAccum += cc.lastTurnTokens;
         if (cc.lastTurnTokens > 0) cc.updateTokenCounter(cc.totalTokensAccum);
         cc.transformThinkingToUsage();

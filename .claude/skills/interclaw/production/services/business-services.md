@@ -185,12 +185,9 @@ Receive HL7 messages via HTTP POST and write them to files on the IRIS server. B
 </Item>
 ```
 
-Send from Python using `send_hl7.py`:
+Send from Python using ``exec` tool (HTTP POST to the CSP HL7 service URL)`:
 ```bash
-<python> .claude/skills/interclaw/scripts/hl7/send_hl7.py \
-  --server myserver \
-  --url /irishealth/csp/healthshare/hslib/EnsLib.HL7.Service.HTTPService \
-  --input message.hl7
+(use the equivalent tool; see the surrounding text)
 ```
 
 The HTTP service returns a synchronous HL7 ACK (MSA|AA = accepted, MSA|AE = error).
