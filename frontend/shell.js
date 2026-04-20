@@ -567,6 +567,16 @@
     // subsequent reload). Only `/portal/csp/...` is a valid zen target.
     if (!/^#\/portal\/csp\//.test(outerHash)) return;
 
+    // Preserve any `&chat=<id>` suffix the chatbot wrote to the outer hash —
+    // otherwise the iframe's zen-URL mirror would wipe the chat id and
+    // reloads would start a fresh chat.
+    var prevHash = window.location.hash || '';
+    var prevChatMatch = prevHash.match(/[?&]chat=([^&]+)/);
+    if (prevChatMatch && prevChatMatch[1] && outerHash.indexOf('chat=') === -1) {
+      var sep = outerHash.indexOf('?') !== -1 ? '&' : '?';
+      outerHash += sep + 'chat=' + prevChatMatch[1];
+    }
+
     if (window.location.hash !== outerHash) {
       history.replaceState(null, '', window.location.pathname + window.location.search + outerHash);
     }
