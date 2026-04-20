@@ -193,7 +193,7 @@
   };
 
   function buildPersistPayload(chatId) {
-    // Phase 2: the BP owns all message persistence via ^Inteclaw.ChatDoc.
+    // Phase 2: the BP owns all message persistence via ^InterClaw.ChatDoc.
     // The frontend still derives a title from the user's first message
     // the BP can't reliably guess — we send only that metadata. No
     // messages array in the body.

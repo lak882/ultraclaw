@@ -1,5 +1,5 @@
 # InterClaw Python dependencies
-# Installed by InterClaw.Installer::InstallPythonDeps() via irispython -m pip
-claude-agent-sdk>=0.1.56
-python-docx>=1.0.0
-pywin32>=306; sys_platform == 'win32'
+# Used by docx-to-md and pdf-to-md conversion in the chatbot upload flow.
+# Installed by InterClaw.Installer.InstallPythonDeps() via irispython -m pip.
+pdfplumber>=0.11
+python-docx>=1.0

@@ -27,7 +27,7 @@
   cc.fontSizeCodeMap = {'3xs':'3xs','2xs':'3xs','xs':'3xs','sm':'2xs','base':'xs'};
 
   // Model state — labels match the actual Bedrock inference profiles
-  // resolved in InterClaw.V2.RESTAdapter.ResolveModelAlias.
+  // resolved in InterClaw.REST.Chat.ResolveModelAlias.
   cc.modelLabels = { opus: 'Claude Opus 4.7', sonnet: 'Claude Sonnet 4.6', haiku: 'Claude Haiku 4.5' };
   cc.currentModel = 'opus';
 
@@ -125,7 +125,7 @@
     // Skill + Agent (kept — slash commands and sub-agent dispatch map to these)
     Skill: 'Using skill',
     Agent: 'Running agent task',
-    // Inteclaw IRIS-native tools
+    // InterClaw IRIS-native tools
     put_class: 'Pushing class',
     compile_class: 'Compiling class',
     test_dtl: 'Testing DTL',

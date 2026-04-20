@@ -273,7 +273,7 @@
           cc._currentThinkingStepText = '';
         }
 
-        // Only show action tools. Inteclaw IRIS-native tools + Skill (slash
+        // Only show action tools. InterClaw IRIS-native tools + Skill (slash
         // commands) + Agent (sub-agent dispatch). No Bash / Edit / Write /
         // Web* — those were Claude Code paths we no longer run.
         // Hide routine lookup tools (get_doc, get_schema, list_docs,

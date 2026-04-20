@@ -3,8 +3,8 @@
   <Document name="interclaw.ZPM">
     <Module>
       <Name>interclaw</Name>
-      <Version>0.0.7</Version>
-      <Description>InterClaw — AI-powered interoperability skill for InterSystems IRIS. Native IRIS agent pipeline (Inteclaw) with streaming Bedrock/Anthropic provider, typed tools (run_sql, get_doc, put_class, compile_class, test_dtl, exec, spawn_agent, plan-mode), Angular chatbot frontend, and Python skill scripts.</Description>
+      <Version>0.1.0</Version>
+      <Description>InterClaw — AI-powered interoperability copilot for InterSystems IRIS. Native IRIS agent pipeline with streaming Bedrock/Anthropic provider, typed tools (run_sql, get_doc, put_class, compile_class, test_dtl, exec, spawn_agent, plan-mode), Angular chatbot frontend, and Python skill scripts.</Description>
       <Keywords>claude,interoperability,ai,chatbot,hl7,production,dtl</Keywords>
       <Author>
         <Person>Louis Kabelka</Person>
@@ -14,25 +14,8 @@
       <Packaging>module</Packaging>
 
       <!--
-        Use durable %SYS CSP root when running in a container with ISC_DATA_DIRECTORY.
-        Otherwise fall back to the normal install tree CSP root.
-
-        Durable root:
-          $SYSTEM.Util.GetEnviron("ISC_DATA_DIRECTORY")_"/csp"
-
-        Non-container / non-durable fallback:
-          $SYSTEM.Util.InstallDirectory()_"csp"
-      -->
-
-      <!--
-        README.md, module.xml, and requirements.txt are intentionally omitted
-        from <FileCopy> because %File.CopyFile returns -17 when the source and
-        destination resolve to the same path — which happens whenever the
-        project is loaded in-place via `zpm load /absolute/path` (the deploy
-        root is the source). Directory FileCopy entries handle the same case
-        gracefully because they short-circuit on equal paths inside CopyDir.
-        For tarball installs IPM stages the archive into a temp dir first, so
-        these files land via the package tarball rather than a FileCopy step.
+        Use the durable %SYS CSP root when ISC_DATA_DIRECTORY is set (container
+        installs). Otherwise fall back to ${installdir}csp/.
       -->
 
       <FileCopy
@@ -44,10 +27,6 @@
         Name=".claude/"
         Overlay="1"
         InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/.claude/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/.claude/&quot;)}" />
-<!-- 
-      <FileCopy
-        Name="config/commands.json"
-        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/config/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/config/&quot;)}" /> -->
 
       <FileCopy
         Name="config/"
@@ -59,19 +38,6 @@
         Overlay="1"
         InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/install/InterClaw/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/install/InterClaw/&quot;)}" />
 
-      <FileCopy
-        Name="install/Inteclaw/"
-        Overlay="1"
-        InstallDirectory="#{$select($SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)'=&quot;&quot;:$SYSTEM.Util.GetEnviron(&quot;ISC_DATA_DIRECTORY&quot;)_&quot;/csp/interclaw/install/Inteclaw/&quot;,1:$SYSTEM.Util.InstallDirectory()_&quot;csp/interclaw/install/Inteclaw/&quot;)}" />
-
-      <!--
-        Use documented WebApplication attributes:
-          Directory = physical CSP directory
-          Path      = path within that directory exposed by the app
-
-        Keep the app rooted at /ui/interop/interclaw and serve files from
-        the copied frontend directory.
-      -->
       <WebApplication
         Name="/ui/interop/interclaw"
         NameSpace="{$namespace}"
@@ -87,7 +53,6 @@
 
       <SourcesRoot>install</SourcesRoot>
       <Resource Name="InterClaw.PKG"/>
-      <Resource Name="Inteclaw.PKG"/>
 
       <Invokes>
         <Invoke Class="InterClaw.Installer" Method="Setup" />
