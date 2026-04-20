@@ -75,6 +75,11 @@
     return out;
   }
 
+  // Words/phrases too generic to anchor a title on. If the first real user
+  // message is just one of these, fall through to the next message so the
+  // sidebar doesn't end up with dozens of chats all titled "hello".
+  var TRIVIAL_OPENERS = /^(hi|hey|hello|yo|sup|howdy|test|testing|ping|ok|okay|thanks|thx|cool|nice|good|meow|uhm|uh|hm|hmm)\W*$/i;
+
   function deriveTitle(messages) {
     for (var i = 0; i < messages.length; i++) {
       if (messages[i].type !== 'user') continue;
@@ -82,12 +87,11 @@
       tmp.innerHTML = messages[i].html || '';
       var text = (tmp.textContent || '').trim();
       if (!text) continue;
-      if (text.charAt(0) === '/') {
-        var parts = text.split(/\s+/);
-        parts.shift();
-        text = parts.join(' ').trim();
-        if (!text) continue;
-      }
+      // Slash commands are directives, not conversation topics. Skip them
+      // entirely — don't promote the argument to a title (`/list cls` must
+      // not become "cls"). Haiku's retitle will surface the real subject.
+      if (text.charAt(0) === '/') continue;
+      if (TRIVIAL_OPENERS.test(text)) continue;
       if (text.length > 60) {
         var cut = text.substring(0, 60);
         var sp = cut.lastIndexOf(' ');
@@ -96,7 +100,7 @@
       }
       return text;
     }
-    return 'Untitled';
+    return 'New chat';
   }
 
   function upsertChat(entry) {
@@ -111,8 +115,12 @@
   // REHIT_MIN), ask the backend to summarize the last 10 messages into a
   // fresh title. Firing lives in persistChat's PUT-success handler so we
   // only evaluate after the server has the latest transcript on disk.
-  var RETITLE_MIN_USER_MSGS = 3;   // don't retitle very short chats
-  var RETITLE_EVERY = 4;            // retitle cadence in user-message turns
+  // Fire Haiku retitle early and often: by the 2nd user turn the heuristic
+  // title (derived from the first prompt) is usually stale, so we want the
+  // LLM summary to take over fast. Every 2 turns keeps sidebar labels in
+  // sync with topic drift without burning a Haiku call on every message.
+  var RETITLE_MIN_USER_MSGS = 2;
+  var RETITLE_EVERY = 2;
   var _lastRetitledAt = Object.create(null);  // chatId -> user msg count at last retitle
 
   function countUserMessages(messages) {
@@ -193,8 +201,13 @@
     if (!messages.length) return null;
     var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
     var body = {};
-    if (!chat || !chat.title || chat.title === 'Untitled') {
-      body.title = deriveTitle(messages);
+    // Treat placeholder titles ("", "Untitled", "New chat") as unset so a
+    // fresh derive runs once the first real user turn arrives.
+    var curTitle = chat && chat.title ? chat.title : '';
+    var isPlaceholder = !curTitle || curTitle === 'Untitled' || curTitle === 'New chat';
+    if (isPlaceholder) {
+      var derived = deriveTitle(messages);
+      if (derived && derived !== 'New chat') body.title = derived;
     }
     if (!Object.keys(body).length) return null;
     return { body: body, messages: messages };

@@ -88,7 +88,6 @@ ClassMethod Read(user As %String, id As %String) As %DynamicObject
     If '##class(%File).Exists(path) Return ""
 
     Set stream = ##class(%Stream.FileCharacter).%New()
-    Set stream.TranslateTable = "UTF8"
     Set stream.Filename = path
     Set raw = ""
     While 'stream.AtEnd { Set raw = raw _ stream.Read(32000) }
@@ -114,7 +113,6 @@ ClassMethod List(user As %String) As %DynamicArray
         If id = "" Continue
 
         Set stream = ##class(%Stream.FileCharacter).%New()
-        Set stream.TranslateTable = "UTF8"
         Set stream.Filename = path
         Set raw = ""
         While 'stream.AtEnd { Set raw = raw _ stream.Read(32000) }
@@ -126,10 +124,7 @@ ClassMethod List(user As %String) As %DynamicArray
         Set title = obj.%Get("title")
         If title = "" Set title = "Untitled"
         Set updatedAt = +obj.%Get("updatedAt")
-        Set favorite = ''obj.%Get("favorite")
-        Set status = obj.%Get("status")
-        Set bridgeId = obj.%Get("bridgeId")
-        Set items(updatedAt, id) = $ListBuild(id, title, updatedAt, favorite, status, bridgeId)
+        Set items(updatedAt, id) = $ListBuild(id, title, updatedAt)
     }
     Do rs.Close()
 
@@ -148,12 +143,6 @@ ClassMethod List(user As %String) As %DynamicArray
             Do row.%Set("id", $ListGet(entry, 1))
             Do row.%Set("title", $ListGet(entry, 2))
             Do row.%Set("updatedAt", $ListGet(entry, 3), "number")
-            Do row.%Set("favorite", ''$ListGet(entry, 4), "boolean")
-            // status: "running" | "completed" | "stopped" | "" (never streamed)
-            Set rowStatus = $ListGet(entry, 5)
-            If rowStatus '= "" Do row.%Set("status", rowStatus)
-            Set rowBridge = $ListGet(entry, 6)
-            If rowBridge '= "" Do row.%Set("bridgeId", rowBridge)
             Do arr.%Push(row)
         }
     }
@@ -187,18 +176,11 @@ ClassMethod Put(user As %String, id As %String, input As %DynamicObject) As %Dyn
         If input.%IsDefined("messages") {
             Do existing.%Set("messages", input.%Get("messages"))
         }
-        If input.%IsDefined("favorite") {
-            Do existing.%Set("favorite", ''input.%Get("favorite"), "boolean")
-        }
         If input.%IsDefined("titleLocked") {
             Do existing.%Set("titleLocked", ''input.%Get("titleLocked"), "boolean")
         }
         If input.%IsDefined("model") Do existing.%Set("model", input.%Get("model"))
         If input.%IsDefined("namespace") Do existing.%Set("namespace", input.%Get("namespace"))
-        If input.%IsDefined("bridgeId") Do existing.%Set("bridgeId", input.%Get("bridgeId"))
-        If input.%IsDefined("status") Do existing.%Set("status", input.%Get("status"))
-        If input.%IsDefined("lastSeq") Do existing.%Set("lastSeq", +input.%Get("lastSeq"), "number")
-        If input.%IsDefined("turnStartedAt") Do existing.%Set("turnStartedAt", +input.%Get("turnStartedAt"), "number")
     }
     Do existing.%Set("updatedAt", ..NowMs(), "number")
     Do existing.%Set("id", safeId)
@@ -206,36 +188,6 @@ ClassMethod Put(user As %String, id As %String, input As %DynamicObject) As %Dyn
     // Write atomically: write to .tmp then rename over the final path.
     Set tmp = path _ ".tmp"
     Set stream = ##class(%Stream.FileCharacter).%New()
-    Set stream.TranslateTable = "UTF8"
-    Set stream.Filename = tmp
-    Do stream.Write(existing.%ToJSON())
-    Do stream.%Save()
-    Do stream.%Close()
-    If ##class(%File).Exists(path) Do ##class(%File).Delete(path)
-    Do ##class(%File).Rename(tmp, path)
-    Return existing
-}
-
-/// Narrow status update that merges { bridgeId, status, lastSeq } without
-/// touching messages or bumping updatedAt to a full save. Used by the REST
-/// adapter to mark a chat running/completed/stopped around each bridge run.
-/// Returns the merged object, or "" if the id doesn't sanitize or the record
-/// is missing (callers should have created it via Put first).
-ClassMethod SetStatus(user As %String, id As %String, bridgeId As %String = "", status As %String = "", lastSeq As %Integer = -1) As %DynamicObject
-{
-    Set safeId = ..SafeId(id)
-    If safeId = "" Return ""
-    Set existing = ..Read(user, id)
-    If '$IsObject(existing) Return ""
-    If bridgeId '= "" Do existing.%Set("bridgeId", bridgeId)
-    If status '= "" Do existing.%Set("status", status)
-    If lastSeq >= 0 Do existing.%Set("lastSeq", lastSeq, "number")
-    Do existing.%Set("id", safeId)
-
-    Set path = ..UserDir(user) _ safeId _ ".json"
-    Set tmp = path _ ".tmp"
-    Set stream = ##class(%Stream.FileCharacter).%New()
-    Set stream.TranslateTable = "UTF8"
     Set stream.Filename = tmp
     Do stream.Write(existing.%ToJSON())
     Do stream.%Save()
@@ -283,6 +235,7 @@ ClassMethod Retitle(user As %String, id As %String) As %String
 {
     Set existing = ..Read(user, id)
     If '$IsObject(existing) Return ""
+    // Respect manual renames — once a user sets a title, auto-retitle is off.
     If ''existing.%Get("titleLocked") Return ""
     Set msgs = existing.%Get("messages")
     If '$IsObject(msgs) Return ""
@@ -305,6 +258,10 @@ ClassMethod Retitle(user As %String, id As %String) As %String
     Return newTitle
 }
 
+/// Python helper: build a compact prompt from the last 10 messages, call
+/// Bedrock Haiku via the Anthropic Messages API, and return the raw
+/// short-title string. Returns "" on any failure (logged server-side
+/// but never raises — title remains unchanged on the caller).
 ClassMethod SummarizeTitle(messagesJSON As %String, currentTitle As %String = "") As %String [ Language = python ]
 {
     import json, urllib.request, urllib.error, re
@@ -313,11 +270,14 @@ ClassMethod SummarizeTitle(messagesJSON As %String, currentTitle As %String = ""
     except Exception:
         return ""
 
+    # Read Bedrock credential directly — GetCredentialSecret is a BO
+    # instance method and we can't easily instantiate the BO here.
+    # Note: IRIS object proxies don't expose __bool__, so `if cred else ""`
+    # raises AttributeError — use `cred is not None` instead.
     try:
         if not iris.cls("Ens.Config.Credentials")._ExistsId("Inteclaw.Bedrock"):
             return ""
         cred = iris.cls("Ens.Config.Credentials")._OpenId("Inteclaw.Bedrock")
-        # IRIS object proxies don't expose __bool__; use `is not None`.
         secret = str(cred.Password) if cred is not None else ""
     except Exception:
         return ""
@@ -332,6 +292,8 @@ ClassMethod SummarizeTitle(messagesJSON As %String, currentTitle As %String = ""
     if not key:
         return ""
 
+    # Parse messages list and strip HTML to plain text. Skip tool/system/
+    # error turns — noise for title summarization.
     try:
         messages = json.loads(str(messagesJSON)) if messagesJSON else []
     except Exception:
@@ -357,15 +319,27 @@ ClassMethod SummarizeTitle(messagesJSON As %String, currentTitle As %String = ""
     convo = "\n\n".join(recent)
     current = str(currentTitle) if currentTitle else ""
     system = (
-        "You write short chat titles. Return 3-6 words that describe the "
-        "current topic. No quotes, no trailing punctuation, no emojis, no "
-        "explanations. Title Case. If the conversation covers multiple "
-        "topics, title the most recent one."
+        "You label IRIS/HealthShare chat sessions with short, specific "
+        "titles for a sidebar. Rules:\n"
+        "- 3 to 6 words, Title Case.\n"
+        "- Focus on the concrete work or subject (a class name, a "
+        "production, an HL7 message type, a bug being chased, an error "
+        "being diagnosed). Prefer domain nouns over generic verbs.\n"
+        "- Ignore conversational filler. Never title a chat 'Hello', "
+        "'Greeting', 'Test', 'Question', 'Conversation', 'Casual Chat', "
+        "or similar. If the only content is a greeting with no real "
+        "request yet, return 'New Chat'.\n"
+        "- Ignore slash-command syntax as a topic. '/list cls' is a "
+        "directive, not a subject. If everything the user did was run "
+        "slash commands, describe what they were exploring or changing.\n"
+        "- No quotes, emojis, trailing punctuation, or explanations.\n"
+        "- When the conversation covers multiple topics, title the most "
+        "recent one."
     )
     user_msg = (
         f"Current title: {current or '(none)'}\n\n"
         f"Last {len(recent)} messages:\n{convo}\n\n"
-        "Return only the new title."
+        "Return ONLY the new title on a single line."
     )
     payload = {
         "anthropic_version": "bedrock-2023-05-31",
@@ -392,10 +366,15 @@ ClassMethod SummarizeTitle(messagesJSON As %String, currentTitle As %String = ""
         if isinstance(b, dict) and b.get("type") == "text":
             out += b.get("text", "")
     out = out.strip().strip('"').strip("'").strip()
+    # Sanitize: strip trailing punctuation, cap at 80 chars, single line.
     out = re.sub(r"\s+", " ", out).strip()
     out = out.rstrip(".!?,:;")
     if len(out) > 80:
         out = out[:80].rstrip()
+    # Reject low-signal titles Haiku sometimes produces despite the
+    # instructions — let the caller keep the previous title.
+    if re.match(r"^(new chat|untitled|greeting|greetings|hello|hi|casual\s+chat|conversation|test|testing)$", out, re.I):
+        return ""
     return out
 }
 

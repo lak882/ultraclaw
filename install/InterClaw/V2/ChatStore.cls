@@ -319,15 +319,27 @@ ClassMethod SummarizeTitle(messagesJSON As %String, currentTitle As %String = ""
     convo = "\n\n".join(recent)
     current = str(currentTitle) if currentTitle else ""
     system = (
-        "You write short chat titles. Return 3-6 words that describe the "
-        "current topic. No quotes, no trailing punctuation, no emojis, no "
-        "explanations. Title Case. If the conversation covers multiple "
-        "topics, title the most recent one."
+        "You label IRIS/HealthShare chat sessions with short, specific "
+        "titles for a sidebar. Rules:\n"
+        "- 3 to 6 words, Title Case.\n"
+        "- Focus on the concrete work or subject (a class name, a "
+        "production, an HL7 message type, a bug being chased, an error "
+        "being diagnosed). Prefer domain nouns over generic verbs.\n"
+        "- Ignore conversational filler. Never title a chat 'Hello', "
+        "'Greeting', 'Test', 'Question', 'Conversation', 'Casual Chat', "
+        "or similar. If the only content is a greeting with no real "
+        "request yet, return 'New Chat'.\n"
+        "- Ignore slash-command syntax as a topic. '/list cls' is a "
+        "directive, not a subject. If everything the user did was run "
+        "slash commands, describe what they were exploring or changing.\n"
+        "- No quotes, emojis, trailing punctuation, or explanations.\n"
+        "- When the conversation covers multiple topics, title the most "
+        "recent one."
     )
     user_msg = (
         f"Current title: {current or '(none)'}\n\n"
         f"Last {len(recent)} messages:\n{convo}\n\n"
-        "Return only the new title."
+        "Return ONLY the new title on a single line."
     )
     payload = {
         "anthropic_version": "bedrock-2023-05-31",
@@ -359,6 +371,10 @@ ClassMethod SummarizeTitle(messagesJSON As %String, currentTitle As %String = ""
     out = out.rstrip(".!?,:;")
     if len(out) > 80:
         out = out[:80].rstrip()
+    # Reject low-signal titles Haiku sometimes produces despite the
+    # instructions — let the caller keep the previous title.
+    if re.match(r"^(new chat|untitled|greeting|greetings|hello|hi|casual\s+chat|conversation|test|testing)$", out, re.I):
+        return ""
     return out
 }
 

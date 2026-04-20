@@ -113,7 +113,7 @@
     text = text.replace(/\[(?:View|Open) in Portal\]\([^)]+\)[ \t]*/gi, '');
     text = text.replace(/^PORTAL_URL:.*$/gm, '');
     text = text.replace(/^OPEN:\s.*$/gm, '');
-    text = text.replace(/^\/goto(?:-reload)?(?:\s.*)?$/gm, '');
+    text = text.replace(/^\/goto(?:-reload)?\s.*$/gm, '');
     text = text.replace(/^\/skill(?:-goto)?\s.*$/gm, '');
     text = text.replace(/^\/(?:switch-)?namespace\s.*$/gm, '');
     text = text.replace(/^\/auto-navigate\s.*$/gm, '');

@@ -294,8 +294,6 @@
               cc.saveState();
               return;
             }
-            // Other plausible hits get listed so the user can pick alternatives
-            // without having to retype a completely different query.
             var lines = ['Opening **' + top.entry.title + '** (' + top.entry.slug + ').'];
             if (hits.length > 1) {
               lines.push('');
@@ -334,7 +332,7 @@
         var zenPath = portalLink.url;
         if (pfx && zenPath.indexOf(pfx) === 0) zenPath = zenPath.substring(pfx.length);
         var legacyUrl = pfx + '/ui/interop/interclaw/legacy-ui/index.html#' + zenPath;
-        cc.addMessage('system', 'Opening `' + componentName + '` in ' + portalLink.label + '.\n\n[' + componentName + ' — ' + portalLink.label + '](' + legacyUrl + ')');
+        cc.addMessage('system', 'Opening `' + componentName + '` in ' + portalLink.label + '.');
         cc.saveState();
         cc.navigateLegacyUi(legacyUrl);
         return;
@@ -370,32 +368,7 @@
       return;
     }
 
-    // Editor-type only (no component name): open the blank editor page for
-    // that type. E.g. `/goto dtl` → DTL editor blank page. This lets the
-    // user (or the model) say "open the rule editor" without needing a
-    // class name up front.
-    if (!componentName && editorType && editorType !== 'trace') {
-      var ns = cc.detectNamespace();
-      var pfx = cc.pathPrefix || '';
-      var zenByType = {
-        dtl:        'EnsPortal.DTLEditor.zen',
-        rule:       'EnsPortal.RuleEditor.zen',
-        bpl:        'EnsPortal.BPLEditor.zen',
-        production: 'EnsPortal.ProductionConfig.zen'
-      };
-      var zen = zenByType[editorType];
-      if (zen) {
-        var zenPath = '/csp/healthshare/' + ns.toLowerCase() + '/' + zen + '?$NAMESPACE=' + ns;
-        var legacyUrl = pfx + '/ui/interop/interclaw/legacy-ui/index.html#' + zenPath;
-        var label = editorType.charAt(0).toUpperCase() + editorType.slice(1) + ' editor';
-        cc.addMessage('system', 'Opening the ' + label + '.\n\n[' + label + '](' + legacyUrl + ')');
-        cc.saveState();
-        cc.navigateLegacyUi(legacyUrl);
-        return;
-      }
-    }
-
-    // Non-trace gotos with nothing to work with: no-op.
+    // Non-trace gotos: nothing to do (navigation links removed from chat UI)
   };
 
   // ===== /find — fuzzy search over all classes in the namespace =====
