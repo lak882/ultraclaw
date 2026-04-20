@@ -300,14 +300,27 @@
   })();
 
   // ── Reload button: reload the active shell iframe when inside the shell,
-  //    otherwise reload the current page. Spin the icon briefly on click. ──
+  //    otherwise reload the current page. Only enabled on the Portal tab —
+  //    the chat pane has nothing reloadable, and the Skills Editor manages
+  //    its own refresh affordance. ──
   (function() {
     var reloadBtn = document.getElementById('ic-header-reload-btn');
     if (!reloadBtn) return;
+
+    function setReloadEnabled(tab) {
+      var on = (tab === 'portal' || tab === 'traces');
+      reloadBtn.disabled = !on;
+      reloadBtn.classList.toggle('disabled', !on);
+    }
+    setReloadEnabled(currentTab);
+    window.addEventListener('interclaw-shell-tab-change', function(e) {
+      var t = e && e.detail && e.detail.tab;
+      if (t) setReloadEnabled(t);
+    });
+
     reloadBtn.addEventListener('click', function(e) {
       e.stopPropagation();
-      reloadBtn.classList.add('spinning');
-      setTimeout(function() { reloadBtn.classList.remove('spinning'); }, 600);
+      if (reloadBtn.disabled) return;
 
       // Shell context: reload the currently active iframe — preserve its
       // CURRENT URL (not its initial src). Assigning `.src` to its initial

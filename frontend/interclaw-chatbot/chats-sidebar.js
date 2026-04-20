@@ -382,9 +382,8 @@
     cc.refreshChatsList().then(function() {
       // If the URL has `#/chat/<id>`, auto-open that chat. Runs once on
       // first sidebar paint so deep-link reloads land on the right chat.
-      var m = (window.location.hash || '').match(/^#\/chat\/([^?]+)/);
-      if (m && m[1]) {
-        var urlChatId = decodeURIComponent(m[1]);
+      var urlChatId = cc.readChatIdFromUrl && cc.readChatIdFromUrl();
+      if (urlChatId) {
         // Verify the id exists in the list before opening — silent no-op
         // on stale links.
         var exists = (cc.chatsStore.chats || []).some(function(c) { return c.id === urlChatId; });
@@ -681,17 +680,51 @@
   // messages, calls cc.navigateLegacyUi(chat.portalUrl) if set. Keep the
   // restore best-effort: if the referenced component no longer exists, fall
   // back to Production Config.
-  // Write `#/chat/<id>` to the outer URL so the current chat is
-  // deep-linkable and shareable. Uses replaceState to avoid polluting
-  // browser back-button history with every chat switch.
+  // Write the chat id into the URL so the current chat follows the user
+  // across tabs. Two forms depending on which tab is active:
+  //   #/chat/<id>               — chat tab: id in path (canonical deep link)
+  //   #/portal/...?chat=<id>    — portal/traces/skills: id in query param
+  function stripChatParam(s) {
+    if (!s) return '';
+    var out = s.replace(/([?&])chat=[^&]*&?/g, function(_, lead) { return lead; });
+    if (out === '?' || out === '&') return '';
+    return out.replace(/\?&/, '?').replace(/&$/, '').replace(/\?$/, '');
+  }
+  function setChatParam(hash, id) {
+    var stripped = stripChatParam(hash);
+    var sep = stripped.indexOf('?') !== -1 ? '&' : '?';
+    return stripped + sep + 'chat=' + encodeURIComponent(id);
+  }
   function writeChatUrl(id) {
     try {
-      var target = '#/chat' + (id ? '/' + encodeURIComponent(id) : '');
-      if (window.location.hash !== target) {
+      var hash = window.location.hash || '';
+      var target;
+      if (!id) {
+        target = stripChatParam(hash.replace(/^#\/chat\/[^?]+/, '#/chat'));
+        if (!target) target = '#/chat';
+      } else if (/^#\/chat(?:\/[^?]+)?(?:$|\?)/.test(hash)) {
+        var qIdx = hash.indexOf('?');
+        var qs = qIdx !== -1 ? hash.substring(qIdx) : '';
+        qs = stripChatParam(qs);
+        target = '#/chat/' + encodeURIComponent(id) + qs;
+      } else {
+        target = setChatParam(hash, id);
+      }
+      if (hash !== target) {
         history.replaceState(null, '', window.location.pathname + window.location.search + target);
       }
     } catch (_) {}
   }
+
+  // Read the chat id from either URL form. Used on page load and on
+  // shell tab switches (shell.js calls this to restore the open chat).
+  cc.readChatIdFromUrl = function() {
+    var h = window.location.hash || '';
+    var m = h.match(/^#\/chat\/([^?]+)/);
+    if (m) return decodeURIComponent(m[1]);
+    var q = h.match(/[?&]chat=([^&]+)/);
+    return q ? decodeURIComponent(q[1]) : null;
+  };
 
   cc.openChat = function(id) {
     cc.chatsStore.activeId = id;

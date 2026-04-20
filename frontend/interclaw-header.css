@@ -240,21 +240,23 @@
   background: none; border: none; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
   padding: 4px; margin-left: 8px;
-  color: #1a1a2e; opacity: 0.55;
+  color: #0d0d0d;
   border-radius: 4px;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: background 0.15s ease;
 }
-.ic-header-reload-btn:hover { opacity: 0.9; background: #f2f2f5; }
+.ic-header-reload-btn:hover { background: #f2f2f5; }
 .ic-header-reload-btn:focus { outline: none; }
 .ic-header-reload-btn svg { display: block; }
-.ic-header-reload-btn.spinning svg {
-  animation: ic-header-reload-spin 0.6s linear;
-  transform-origin: 50% 50%;
+/* Greyed-out on tabs where there's nothing to reload (chat, skills). */
+.ic-header-reload-btn.disabled,
+.ic-header-reload-btn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
 }
-@keyframes ic-header-reload-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(-360deg); }
-}
+/* Spin animation intentionally disabled; .spinning class kept as a JS hook
+   but renders as a no-op so clicking reload doesn't rotate the icon. */
+.ic-header-reload-btn.spinning svg { animation: none; }
 
 /* ── Header namespace selector ── */
 .ic-header-ns-selector { display: block; position: relative; }

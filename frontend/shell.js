@@ -412,6 +412,15 @@
     // /csp/healthshare/{ns}/ encodes it too). Duplicating it to the outer
     // hash just produces stale-vs-current mismatches when the user
     // switches namespace inside the iframe.
+    // Preserve the currently-open chatbot session across tabs. The user
+    // gets portal/traces/skills URLs that carry `?chat=<id>` so reload
+    // or share lands on the same chat. Chat tab has its own path form
+    // (`#/chat/<id>`) and is built elsewhere.
+    var chatId = window._cc && window._cc.sessionId;
+    if (chatId && outerTab !== 'chat') {
+      var sep = h.indexOf('?') !== -1 ? '&' : '?';
+      h += sep + 'chat=' + encodeURIComponent(chatId);
+    }
     return h;
   }
 
