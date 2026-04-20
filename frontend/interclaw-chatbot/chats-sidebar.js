@@ -43,12 +43,12 @@
   };
 
   // Periodic sidebar refresh. Picks up status changes from chats started
-  // in other tabs/windows (the dot lights up there too), and catches
-  // completion timing that the bridgeSend's finally-refresh might miss.
-  // Cheap: a single GET /api/chats every 5s while the page is open.
+  // in other tabs/windows. 30s is a compromise — frequent enough to be
+  // current, infrequent enough not to re-render the sidebar while the
+  // user is actively using it.
   setInterval(function() {
     try { cc.refreshChatsList(); } catch (_) {}
-  }, 5000);
+  }, 30000);
 
   // ── Persistence (M3) ────────────────────────────────────────────────────
   // The chat id == cc.sessionId (set by the 'session' event from the
@@ -219,6 +219,11 @@
     // is already authoritative, so echoing it back creates phantom empty
     // entries (an empty chat file per reload/switch).
     if (cc._suppressPersist) return;
+    // During an active stream every tool_use/tool_result event triggers
+    // saveState → persistChat. The BP is writing ChatDoc authoritatively
+    // anyway; the frontend serialize+PUT is pure overhead. Skip while
+    // we're polling.
+    if (cc.bridgePolling) return;
     // Only persist once the user has actually typed something. Otherwise
     // every page load (welcome message, system bubbles) would mint a chat.
     // `ensureChatId(true)` returns null until a real user turn exists.
