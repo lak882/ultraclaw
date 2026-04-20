@@ -34,6 +34,11 @@
       var startData = await startResp.json();
       cc.currentBridgeId = startData.bridge_id;
       console.log('[bridge] started:', cc.currentBridgeId);
+      // Push the chat id into the URL the moment the bridge starts.
+      // Works on every tab (chat → path form, portal/traces/skills →
+      // `?chat=<id>` query param), so the first message immediately
+      // makes the URL shareable.
+      if (cc.sessionId && cc.writeChatUrl) cc.writeChatUrl(cc.sessionId);
       // Optimistic: flip the active chat's status to running locally so
       // the sidebar dot lights up instantly, before the refreshChatsList
       // fetch returns. The server already wrote status:'running' inside

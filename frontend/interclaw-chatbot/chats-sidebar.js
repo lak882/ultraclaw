@@ -686,9 +686,16 @@
   //   #/portal/...?chat=<id>    — portal/traces/skills: id in query param
   function stripChatParam(s) {
     if (!s) return '';
-    var out = s.replace(/([?&])chat=[^&]*&?/g, function(_, lead) { return lead; });
-    if (out === '?' || out === '&') return '';
-    return out.replace(/\?&/, '?').replace(/&$/, '').replace(/\?$/, '');
+    // Rebuild the query string without any chat= params. Regex-based
+    // replace mis-handled consecutive `&chat=` runs (the classic
+    // overlapping-lookbehind trap), so split/filter/join instead.
+    var qIdx = s.indexOf('?');
+    if (qIdx === -1) return s;
+    var before = s.substring(0, qIdx);
+    var parts = s.substring(qIdx + 1).split('&').filter(function(p) {
+      return p && p.indexOf('chat=') !== 0;
+    });
+    return parts.length ? before + '?' + parts.join('&') : before;
   }
   function setChatParam(hash, id) {
     var stripped = stripChatParam(hash);
@@ -725,6 +732,10 @@
     var q = h.match(/[?&]chat=([^&]+)/);
     return q ? decodeURIComponent(q[1]) : null;
   };
+
+  // Expose writeChatUrl globally so other modules (bridgeSend, stream's
+  // session event) can nudge the URL without going through ensureChatId.
+  cc.writeChatUrl = writeChatUrl;
 
   cc.openChat = function(id) {
     cc.chatsStore.activeId = id;

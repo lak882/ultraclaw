@@ -401,21 +401,28 @@
   // 'traces' is not a URL-level tab — it's a Zen page inside /portal.
   // The header highlight still shows "Traces" when the portal iframe is on
   // MessageViewer/VisualTrace, but the outer URL stays on /portal.
+  function stripChatFromHash(h) {
+    if (!h) return '';
+    var qIdx = h.indexOf('?');
+    if (qIdx === -1) return h;
+    var before = h.substring(0, qIdx);
+    var parts = h.substring(qIdx + 1).split('&').filter(function(p) {
+      return p && p.indexOf('chat=') !== 0;
+    });
+    return parts.length ? before + '?' + parts.join('&') : before;
+  }
+
   function buildOuterHash(tabId, innerHash) {
     // Collapse the traces alias for URL purposes.
     var outerTab = (tabId === 'traces') ? 'portal' : tabId;
     var h = '#/' + outerTab;
     if (innerHash && innerHash.indexOf('#') === 0) innerHash = innerHash.substring(1);
     if (innerHash) h += innerHash;
-    // Do NOT inject a separate NAMESPACE= param — the iframe's inner zen
-    // hash already carries `$NAMESPACE=` (and the path segment
-    // /csp/healthshare/{ns}/ encodes it too). Duplicating it to the outer
-    // hash just produces stale-vs-current mismatches when the user
-    // switches namespace inside the iframe.
-    // Preserve the currently-open chatbot session across tabs. The user
-    // gets portal/traces/skills URLs that carry `?chat=<id>` so reload
-    // or share lands on the same chat. Chat tab has its own path form
-    // (`#/chat/<id>`) and is built elsewhere.
+    // Strip any stray `chat=` that may have leaked in from the iframe
+    // hash (or a previous buildOuterHash pass). Then append exactly one
+    // if we have a session. Belt-and-suspenders: on every call the URL
+    // ends up with at most one chat param.
+    h = stripChatFromHash(h);
     var chatId = window._cc && window._cc.sessionId;
     if (chatId && outerTab !== 'chat') {
       var sep = h.indexOf('?') !== -1 ? '&' : '?';
