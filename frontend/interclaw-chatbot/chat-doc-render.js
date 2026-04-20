@@ -83,6 +83,14 @@
     var list = document.createElement('div');
     list.className = 'reasoning-list';
     list.style.display = 'none';
+    // Live adds a .reasoning-connector div as the first child of
+    // .reasoning-list once a second step arrives. Match that here so the
+    // retrospect view has the same vertical line between step rows.
+    if (steps.length >= 2) {
+      var connector = document.createElement('div');
+      connector.className = 'reasoning-connector';
+      list.appendChild(connector);
+    }
     steps.forEach(function(s) { list.appendChild(renderStepRow(s)); });
     toggle.onclick = function(e) {
       e.stopPropagation();
@@ -155,26 +163,101 @@
       return wrap;
     }
 
-    // Assistant
-    var bubble = document.createElement('div');
-    bubble.className = 'chatbot-message';
-    var stepsEl = renderSteps(turn.steps);
-    if (stepsEl) bubble.appendChild(stepsEl);
-    var content = document.createElement('div');
-    content.className = 'msg-content';
-    // Prefer pre-rendered HTML from legacy records (preserves tables,
-    // code blocks, lists). Fall back to renderMarkdown for doc-native
-    // turns that only carry text.
-    if (turn.html) {
-      content.innerHTML = turn.html;
-    } else if (turn.text) {
-      content.innerHTML = cc.renderMarkdown(turn.text);
+    // Assistant turn: build the bubble via the SAME live functions the
+    // event stream uses (showTypingIndicator + addReasoningStep +
+    // transformThinkingToUsage). No duplicate renderer — whatever changes
+    // to the live path automatically apply to retrospect too.
+    var content = document.getElementById('chatbot-content');
+    // Live state the step functions expect.
+    cc.currentStreamEl = null;
+    cc.currentStreamWrap = null;
+    cc.currentStepsEl = null;
+    cc.currentStepsListEl = null;
+    cc.currentSteps = [];
+    cc._autoExpandedByType = {};
+    cc.stepCounter = 0;
+    cc._finalAnswerStarted = false;
+    // Mount the bubble the live way. showTypingIndicator appends it to
+    // #chatbot-content and builds the bubble-thinking-bar we'll shortly
+    // convert to the usage bar. This is the one small divergence from
+    // live (we append immediately rather than when the user sends), but
+    // the end DOM state is identical.
+    cc.showTypingIndicator();
+    // Populate reasoning steps by replaying through the live API.
+    (turn.steps || []).forEach(function(s) {
+      cc.stepCounter++;
+      var step = {
+        id: s.id || ('replay-' + cc.stepCounter),
+        type: s.type || 'tool',
+        title: s.title || '',
+        toolName: s.toolName,
+        content: s.body || '',
+        rawOutput: s.rawOutput || null,
+        status: s.status || 'done',
+        resultCount: s.resultCount || 0
+      };
+      // For tools, re-label via getToolLabel so "run_sql" → "Running SQL"
+      // (same as live). For thinking, keep "Thinking".
+      if (step.type !== 'thinking' && cc.getToolLabel) {
+        step.title = cc.getToolLabel(step.toolName || step.title || '', null);
+      }
+      cc.addReasoningStep(step);
+      cc.updateReasoningStep(step.id, { status: step.status });
+    });
+    // Collapse all auto-expanded step bodies: live does this on `done`
+    // when the final answer arrives, so match that post-state.
+    if (cc.currentSteps && cc.currentSteps.length > 0) {
+      for (var k in cc._autoExpandedByType) {
+        if (cc._autoExpandedByType[k]) {
+          cc.toggleStepContent(cc._autoExpandedByType[k]);
+          cc._autoExpandedByType[k] = null;
+        }
+      }
     }
-    bubble.appendChild(content);
-    var usageEl = renderUsage(turn.usage);
-    if (usageEl) bubble.appendChild(usageEl);
-    wrap.appendChild(bubble);
-    return wrap;
+    // Write the final answer into msg-content the same way live's `done`
+    // handler does. Prefer pre-rendered HTML from legacy records;
+    // otherwise renderMarkdown the raw text.
+    if (cc.currentStreamEl) {
+      var mc = cc.currentStreamEl.querySelector('.msg-content');
+      if (mc) {
+        if (turn.html) mc.innerHTML = turn.html;
+        else if (turn.text) mc.innerHTML = cc.renderMarkdown(turn.text);
+      }
+      // Transform the live thinking-bar into the post-turn usage-bar so
+      // the same '.bubble-usage-bar' DOM exists as after live done.
+      if (turn.usage) {
+        var parts = [];
+        var u = turn.usage;
+        if (u.summary) {
+          cc.lastUsageText = u.summary;
+        } else {
+          if (u.elapsedMs != null) {
+            var s = u.elapsedMs / 1000;
+            parts.push(s >= 60 ? Math.floor(s / 60) + 'm ' + Math.round(s % 60) + 's' : s.toFixed(1) + 's');
+          }
+          if (u.costUsd != null) parts.push('$' + (+u.costUsd).toFixed(2));
+          if (u.inputTokens != null) parts.push((u.inputTokens / 1000).toFixed(1) + 'k tokens in');
+          if (u.outputTokens != null) parts.push((u.outputTokens / 1000).toFixed(1) + 'k tokens out');
+          cc.lastUsageText = parts.join(' \u00b7 ');
+        }
+        cc.transformThinkingToUsage();
+      } else {
+        // No usage on this turn — just drop the thinking-bar.
+        cc.removeBubbleThinkingBar();
+      }
+    }
+    // Detach from "current" state so the next live turn starts clean.
+    var detachedWrap = cc.currentStreamWrap;
+    cc.currentStreamEl = null;
+    cc.currentStreamWrap = null;
+    cc.currentStepsEl = null;
+    cc.currentStepsListEl = null;
+    cc.currentSteps = [];
+    cc._autoExpandedByType = {};
+    cc._finalAnswerStarted = false;
+    // The caller's wrap is ignored — the live mount path already put the
+    // bubble into #chatbot-content. Return null to skip re-appending.
+    return null;
   }
 
   // Public: build the entire pane from a doc. Clears existing content first,

@@ -546,6 +546,11 @@
       return;
     }
 
+    // Guard: never mirror a URL that would make the shell load itself as
+    // the inner page (which produces "InterClaw within InterClaw" on a
+    // subsequent reload). Only `/portal/csp/...` is a valid zen target.
+    if (!/^#\/portal\/csp\//.test(outerHash)) return;
+
     if (window.location.hash !== outerHash) {
       history.replaceState(null, '', window.location.pathname + window.location.search + outerHash);
     }
@@ -705,8 +710,13 @@
     // portal or traces: portal iframe gets the zen hash.
     var portalFrame = document.getElementById('shell-iframe-portal');
     if (!portalFrame) return false;
-    if (rest) {
-      portalFrame.src = legacyBase + '#' + rest;
+    // Only accept zen hashes that look like `/csp/...` — anything else
+    // (e.g. a stale outer hash pointing at the shell's own page, or a
+    // malformed URL after a double-wrap) gets replaced with the default
+    // so we don't re-embed the shell into its own portal iframe.
+    var restPath = rest.charAt(0) === '?' ? '' : rest;
+    if (restPath && /^\/csp\//.test(restPath)) {
+      portalFrame.src = legacyBase + '#' + restPath;
     } else {
       portalFrame.src = (tabId === 'traces' ? sources.traces : sources.portal).frameSrc;
     }
