@@ -208,7 +208,12 @@ Run `permissions.py --check <operation>` before destructive ops. Exit 0 = no con
 
 ### Navigation
 
-- Never output `/goto` text in responses. `put_doc.py` emits it on stdout; backend detects automatically.
+- Don't output `/goto` text as incidental narration (e.g. "now use /goto Foo to see it"). `put_doc.py` emits `/goto` on stdout automatically after writes, and the backend picks it up. BUT: when the USER explicitly asks you to navigate to a page or component (e.g. "go to rule editor", "open DTL editor", "show me the queues page"), emit `/goto <target>` on its own line — the frontend scanner in `stream.js` routes it to `cc.executeGoto`, which opens the Portal tab on that page. Include a short confirmation sentence before the directive ("Opening the Rule Editor."). Forms:
+  - `/goto <ClassName>` — open the right editor for a class (DTL / Rule / BPL / Production auto-detected)
+  - `/goto --dtl <Name>` / `--rule` / `--bpl` / `--production` — force a specific editor
+  - `/goto dtl` / `rule` / `bpl` / `production` — open the editor's blank page
+  - `/goto <plain-english>` — fuzzy-matched against `config/portal-urls.json` (e.g. `/goto queues`, `/goto message viewer`)
+  - `/goto --trace` — open the current session's trace
 - For manual navigation: `/goto <name>` (auto-detects editor type). Traces: `/trace-view [sessionID]`.
 - **Namespace switch directive**: when the active namespace changes during a turn (e.g. after `/connect <server> <ns>` or any script that swaps `$Namespace`), emit a single line `/namespace <NS>` on its own — the frontend stream scanner in `stream.js` picks it up and dispatches `interclaw-namespace-change`. Without this the top-right label + Portal iframe stay on the old namespace. Omit when the turn does not switch namespaces.
 - **When the user asks to switch namespaces** (e.g. "switch to TESTING", "use the FOO namespace", "work in BAR now"): run `/switch-namespace <NS>`. That command emits the `/namespace <NS>` directive, which causes the frontend to update the selector and the Portal iframe, and makes the next prompt arrive with `Namespace=<NS>` on its context line. Do NOT reply "I can't change the namespace from my side" — the directive IS the mechanism. Uppercase the namespace name before emitting.
@@ -259,7 +264,7 @@ Example output at end of response (substitute `{origin}` from context line, `{pa
 - `EnableStandardRequests` is a **HOST** setting, not Adapter. Using `Target="Adapter"` causes silent HTTP 500. Always `Target="Host"`, default `EnableStandardRequests=1` with `PoolSize=0`.
 
 ### Code Display and Push Workflow
-- **Do NOT output `/goto` as visible text.** `put_doc.py` emits it on stdout; backend detects automatically.
+- **Do NOT output `/goto` as incidental narration** (e.g. "use /goto Foo to view it"). `put_doc.py` emits it on stdout after writes. BUT DO emit `/goto <target>` when the USER asks to navigate — the frontend scanner routes it to `cc.executeGoto`. See the full list of forms in the Navigation section above.
 - **Links appear only at the end of the response** using the ZEN Editor URL Formats table. `put_doc.py` no longer emits separate link directives.
 - **Auto-test after push is MANDATORY.** DTLs -- `test_dtl.py --diff`. Productions -- start + send + trace.
 - **Always pull trace after sending.** Never assume success without checking.

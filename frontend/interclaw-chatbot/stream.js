@@ -606,17 +606,21 @@
                 found = true;
                 break;
               } else if (doneLine.indexOf('/auto-navigate ') === 0) {
-                // Toggle the auto-nav flag. When ON, linkifyComponents +
-                // chatbotRenderer.link in markdown.js auto-fire the click
-                // handler so the Portal iframe jumps to the target without
-                // user interaction.
+                // Toggle the auto-nav flag. When ON, the post-render block
+                // below auto-clicks the first Portal link in the bubble,
+                // taking the user straight to the target. Uses the same
+                // `'true' | 'false'` key the settings-gear checkbox has
+                // always used (localStorage['interclaw-auto-navigate']),
+                // so the directive and the existing UI toggle stay in sync.
                 var navArg = doneLine.substring(15).trim().toLowerCase().replace(/[.,;:!?`]+$/, '');
                 var navOn = (navArg === 'enable' || navArg === 'on' || navArg === 'true');
-                try { localStorage.setItem('interclaw-auto-navigate', navOn ? 'on' : 'off'); } catch (_) {}
+                try { localStorage.setItem('interclaw-auto-navigate', navOn ? 'true' : 'false'); } catch (_) {}
+                var checkbox = document.getElementById('ic-setting-auto-navigate');
+                if (checkbox) checkbox.checked = navOn;
                 window.dispatchEvent(new CustomEvent('interclaw-auto-navigate-change', {
                   detail: { enabled: navOn }
                 }));
-                console.log('[auto-navigate] set to', navOn ? 'on' : 'off');
+                console.log('[auto-navigate] set to', navOn ? 'true' : 'false');
                 // Don't set found=true — other directives on later lines
                 // should still be processed.
               } else if (doneLine.indexOf('/namespace ') === 0 || doneLine.indexOf('/switch-namespace ') === 0) {
@@ -645,8 +649,14 @@
         // the just-rendered bubble. The link's onclick already routes through
         // cc.openInPortalTab, which exits chat mode + swaps the Portal iframe.
         try {
-          if (localStorage.getItem('interclaw-auto-navigate') === 'on'
-              && cc.currentStreamEl) {
+          // Match the same key/value the settings-gear checkbox has always
+          // used: `'true'` for on, anything else (including `null` on first
+          // load, matching the checkbox's default-checked behavior) for off.
+          // The checkbox defaults to CHECKED when the key is absent, so we
+          // treat `null` as on too to match that behavior.
+          var autoNavRaw = localStorage.getItem('interclaw-auto-navigate');
+          var autoNavOn = (autoNavRaw === null || autoNavRaw === 'true');
+          if (autoNavOn && cc.currentStreamEl) {
             var firstLink = cc.currentStreamEl.querySelector('.chatbot-link');
             if (firstLink) {
               setTimeout(function() {
