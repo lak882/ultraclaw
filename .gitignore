@@ -1,10 +1,43 @@
+# Python build artifacts
 __pycache__/
 *.pyc
-.env
+*.pyo
 
-# Runtime logs
+# Secrets
+config/.env
+
+# Runtime logs and scratch
 sync.log
-
-# Editor backup/scratch files
 *.bak
 *.current
+.claudeignore
+
+# Runtime state (populated by the installer / live use, not source)
+filedrop/
+data/
+uploads/
+logs/
+
+# Dev-only source that never ships and doesn't belong in the mirror
+src/CLAUDE/
+src/HSLIB/
+src/TESTING/
+src/ADTFEED/
+src/INTERCLAW/
+src/interclaw/
+docs/
+references/
+research/
+architecture/
+roadmap/
+checkpoints/
+demos/
+changelog/
+audit_log/
+devlogs/
+CLAUDE.local.md
+
+# Dev-only Claude Code config (hooks, local settings, session checkpoints)
+.claude/context/
+.claude/hooks/
+.claude/settings.local.json
