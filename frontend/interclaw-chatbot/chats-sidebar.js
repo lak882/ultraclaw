@@ -111,15 +111,14 @@
     chats.push(entry);
   }
 
-  // Cadence-gated LLM retitle: every REHIT_EVERY user turns (starting at
-  // REHIT_MIN), ask the backend to summarize the last 10 messages into a
-  // fresh title. Firing lives in persistChat's PUT-success handler so we
-  // only evaluate after the server has the latest transcript on disk.
-  // Fire Haiku retitle early and often: by the 2nd user turn the heuristic
-  // title (derived from the first prompt) is usually stale, so we want the
-  // LLM summary to take over fast. Every 2 turns keeps sidebar labels in
-  // sync with topic drift without burning a Haiku call on every message.
-  var RETITLE_MIN_USER_MSGS = 2;
+  // Cadence-gated LLM retitle. Two forcing functions:
+  //   1. Fire on the FIRST user turn if the chat still reads as a placeholder
+  //      title ("New chat", "Untitled", ""). The derive-from-first-prompt
+  //      heuristic skips slash commands, so a chat that opens with `/goto ...`
+  //      never gets a title from that path — we have to fall back to Haiku.
+  //   2. After that, fire every RETITLE_EVERY user turns so the sidebar
+  //      tracks topic drift. Keep it small — the cost is one Haiku call per
+  //      firing, and the UX win of a correct sidebar label is large.
   var RETITLE_EVERY = 2;
   var _lastRetitledAt = Object.create(null);  // chatId -> user msg count at last retitle
 
@@ -129,11 +128,22 @@
     return n;
   }
 
+  function currentChatIsPlaceholder(chatId) {
+    var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
+    if (!chat) return true;
+    var t = (chat.title || '').trim();
+    return !t || t === 'Untitled' || t === 'New chat';
+  }
+
   function maybeRetitle(chatId, messages) {
     var userCount = countUserMessages(messages);
-    if (userCount < RETITLE_MIN_USER_MSGS) return;
+    if (userCount < 1) return;
     var last = _lastRetitledAt[chatId] || 0;
-    if ((userCount - last) < RETITLE_EVERY) return;
+    // Always retitle on the first user turn if the sidebar still reads as a
+    // placeholder — otherwise chats that started with a slash command stay
+    // on "New chat" forever.
+    var needImmediate = (last === 0 && currentChatIsPlaceholder(chatId));
+    if (!needImmediate && (userCount - last) < RETITLE_EVERY) return;
     _lastRetitledAt[chatId] = userCount;
     fetch(chatsUrl('/' + encodeURIComponent(chatId) + '/retitle'), {
       method: 'POST',
@@ -233,22 +243,34 @@
     _persistTimer = setTimeout(function() {
       _persistTimer = null;
       var payload = buildPersistPayload(chatId);
-      if (!payload) return;
-      fetch(chatsUrl('/' + encodeURIComponent(chatId)), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify(payload.body)
-      })
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(data) {
-        if (!data) return;
-        cc.chatsStore.activeId = data.id;
-        upsertChat({ id: data.id, title: data.title || 'Untitled', updatedAt: data.updatedAt || Date.now() });
-        cc.renderChatsSidebar();
-        maybeRetitle(data.id, payload.messages);
-      })
-      .catch(function(err) { console.warn('[interclaw] persistChat failed:', err); });
+      var pendingMessages = payload && payload.messages;
+
+      // Title payload flow: if buildPersistPayload returned a body, it's
+      // because we're promoting a placeholder ("New chat") to a derived
+      // title from the user's first prompt. PUT it.
+      if (payload) {
+        fetch(chatsUrl('/' + encodeURIComponent(chatId)), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify(payload.body)
+        })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (!data) return;
+          cc.chatsStore.activeId = data.id;
+          upsertChat({ id: data.id, title: data.title || 'Untitled', updatedAt: data.updatedAt || Date.now() });
+          cc.renderChatsSidebar();
+          maybeRetitle(data.id, pendingMessages);
+        })
+        .catch(function(err) { console.warn('[interclaw] persistChat failed:', err); });
+      } else {
+        // No PUT needed — but still evaluate the Haiku retitle cadence so
+        // chat titles follow topic drift across subsequent turns. Without
+        // this, retitle only fired once on the placeholder→derived hop.
+        var messages = serializeCurrentPane();
+        if (messages.length) maybeRetitle(chatId, messages);
+      }
     }, 500);
   };
 
