@@ -559,7 +559,31 @@
               var doneLine = msgLines[dli].replace(/[^\x20-\x7E]/g, '').trim().replace(/^`+|`+$/g, '').trim();
               if (doneLine.startsWith('/') || doneLine.startsWith('OPEN:')) console.log('[goto-detect] found command line:', JSON.stringify(doneLine));
 
-              if (doneLine.startsWith('/skill-goto ') || doneLine.startsWith('/skill ')) {
+              if (doneLine.indexOf('/goto ') === 0 || doneLine === '/goto' || doneLine === '/goto --trace' || doneLine.indexOf('/goto-reload ') === 0) {
+                // Model-emitted /goto — route through the same handler the
+                // user's /goto command uses. Accepts bare names, --dtl/--rule/
+                // --bpl/--production/--trace flag forms.
+                var gotoRest = (doneLine.indexOf('/goto-reload ') === 0)
+                  ? doneLine.substring(13)
+                  : (doneLine === '/goto' || doneLine === '/goto --trace')
+                      ? (doneLine === '/goto --trace' ? '--trace' : '')
+                      : doneLine.substring(6);
+                gotoRest = gotoRest.trim().replace(/`/g, '').replace(/[.,;:!?`]+$/, '').trim();
+                var gotoType = null;
+                var gotoName = gotoRest;
+                if (gotoRest.indexOf('--dtl ') === 0)              { gotoType = 'dtl';        gotoName = gotoRest.substring(6).trim(); }
+                else if (gotoRest.indexOf('--rule ') === 0)        { gotoType = 'rule';       gotoName = gotoRest.substring(7).trim(); }
+                else if (gotoRest.indexOf('--bpl ') === 0)         { gotoType = 'bpl';        gotoName = gotoRest.substring(6).trim(); }
+                else if (gotoRest.indexOf('--production ') === 0)  { gotoType = 'production'; gotoName = gotoRest.substring(13).trim(); }
+                else if (gotoRest === '--trace' || gotoRest.indexOf('--trace ') === 0) { gotoType = 'trace'; gotoName = gotoRest === '--trace' ? null : gotoRest.substring(8).trim(); }
+                else if (/^(dtl|rule|bpl|production|trace)$/i.test(gotoRest)) { gotoType = gotoRest.toLowerCase(); gotoName = null; }
+                if (cc.executeGoto) {
+                  console.log('[goto-directive] executeGoto', gotoName, gotoType);
+                  (function(n, t) { setTimeout(function() { cc.executeGoto(n, t); }, 400); })(gotoName, gotoType);
+                }
+                found = true;
+                break;
+              } else if (doneLine.startsWith('/skill-goto ') || doneLine.startsWith('/skill ')) {
                 var isSkillGoto = doneLine.startsWith('/skill-goto ');
                 var skillPath = doneLine.substring(isSkillGoto ? 12 : 7).trim().replace(/`/g, '').replace(/[.,;:!?`]+$/, '').trim();
                 if (skillPath) {
