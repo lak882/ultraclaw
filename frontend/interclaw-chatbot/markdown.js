@@ -115,6 +115,8 @@
     text = text.replace(/^OPEN:\s.*$/gm, '');
     text = text.replace(/^\/goto(?:-reload)?\s.*$/gm, '');
     text = text.replace(/^\/skill(?:-goto)?\s.*$/gm, '');
+    text = text.replace(/^\/(?:switch-)?namespace\s.*$/gm, '');
+    text = text.replace(/^\/auto-navigate\s.*$/gm, '');
     text = text.replace(/^Token usage:.*$/gm, '');
     text = text.replace(/^Co-Authored-By:.*$/gm, '');
     text = text.replace(/\n{3,}/g, '\n\n');

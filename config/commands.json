@@ -340,6 +340,20 @@
       "category": "git",
       "handler": "remote",
       "mutates": true
+    },
+    {
+      "name": "switch-namespace",
+      "description": "Switch active namespace — /switch-namespace <NS>",
+      "category": "connection",
+      "handler": "remote",
+      "mutates": false
+    },
+    {
+      "name": "auto-navigate",
+      "description": "Toggle auto-nav of chat links — /auto-navigate enable|disable",
+      "category": "session",
+      "handler": "remote",
+      "mutates": false
     }
   ],
   "categories": {

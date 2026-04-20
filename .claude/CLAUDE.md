@@ -89,6 +89,8 @@ Use `/login <username> <password>` to authenticate with IRIS credentials. Use `/
 | Command | Purpose |
 |---------|---------|
 | `/connect` | Connect to a server, switch namespace |
+| `/switch-namespace` | Switch active namespace — emits `/namespace <NS>` directive so the UI follows |
+| `/auto-navigate` | Toggle auto-navigation — `/auto-navigate enable` makes goto targets open in the Portal iframe automatically |
 | `/list` | Browse classes, routines, includes |
 | `/pull` | Read a class from the server |
 | `/push` | Deploy and compile a local class |
@@ -208,6 +210,8 @@ Run `permissions.py --check <operation>` before destructive ops. Exit 0 = no con
 
 - Never output `/goto` text in responses. `put_doc.py` emits it on stdout; backend detects automatically.
 - For manual navigation: `/goto <name>` (auto-detects editor type). Traces: `/trace-view [sessionID]`.
+- **Namespace switch directive**: when the active namespace changes during a turn (e.g. after `/connect <server> <ns>` or any script that swaps `$Namespace`), emit a single line `/namespace <NS>` on its own — the frontend stream scanner in `stream.js` picks it up and dispatches `interclaw-namespace-change`. Without this the top-right label + Portal iframe stay on the old namespace. Omit when the turn does not switch namespaces.
+- **When the user asks to switch namespaces** (e.g. "switch to TESTING", "use the FOO namespace", "work in BAR now"): run `/switch-namespace <NS>`. That command emits the `/namespace <NS>` directive, which causes the frontend to update the selector and the Portal iframe, and makes the next prompt arrive with `Namespace=<NS>` on its context line. Do NOT reply "I can't change the namespace from my side" — the directive IS the mechanism. Uppercase the namespace name before emitting.
 - `/goto` resolution order: (1) explicit flag (`--dtl`, `--rule`, `--bpl`, `--production`, `--trace`); (2) server `%Dictionary` lookup on the class name; (3) naming heuristic on the package segment; (4) fuzzy match against the Management Portal catalog at `config/portal-urls.json`. Fallback matches accept plain English like `/goto audit`, `/goto message viewer`, `/goto queues`.
 
 #### ZEN Editor URL Formats

@@ -581,10 +581,58 @@
                 setTimeout(function() { window.location.reload(); }, 500);
                 found = true;
                 break;
+              } else if (doneLine.indexOf('/auto-navigate ') === 0) {
+                // Toggle the auto-nav flag. When ON, linkifyComponents +
+                // chatbotRenderer.link in markdown.js auto-fire the click
+                // handler so the Portal iframe jumps to the target without
+                // user interaction.
+                var navArg = doneLine.substring(15).trim().toLowerCase().replace(/[.,;:!?`]+$/, '');
+                var navOn = (navArg === 'enable' || navArg === 'on' || navArg === 'true');
+                try { localStorage.setItem('interclaw-auto-navigate', navOn ? 'on' : 'off'); } catch (_) {}
+                window.dispatchEvent(new CustomEvent('interclaw-auto-navigate-change', {
+                  detail: { enabled: navOn }
+                }));
+                console.log('[auto-navigate] set to', navOn ? 'on' : 'off');
+                // Don't set found=true — other directives on later lines
+                // should still be processed.
+              } else if (doneLine.indexOf('/namespace ') === 0 || doneLine.indexOf('/switch-namespace ') === 0) {
+                // Backend tells us the working namespace has changed (e.g.
+                // after a /connect or terminal-level $Namespace switch).
+                // Dispatch the same event interclaw-header.js + shell.js
+                // already listen for — they'll update the label + reload
+                // iframes under the new namespace.
+                var nsTok = doneLine.indexOf('/namespace ') === 0
+                  ? doneLine.substring(11)
+                  : doneLine.substring(18);
+                var newNs = nsTok.trim().replace(/`/g, '').replace(/[.,;:!?`]+$/, '').toUpperCase();
+                if (newNs && /^[A-Z][A-Z0-9_-]*$/.test(newNs)) {
+                  console.log('[namespace-directive] switching to', newNs);
+                  try { sessionStorage.setItem('interclaw-namespace', newNs); } catch (_) {}
+                  if (cc) { cc.currentNamespace = newNs; cc._apiNamespace = newNs; }
+                  window.dispatchEvent(new CustomEvent('interclaw-namespace-change', { detail: { namespace: newNs } }));
+                }
+                // Don't set found=true — other directives on later lines
+                // should still be processed.
               }
             }
           }
         })();
+        // Auto-navigation: if the flag is on, click the first Portal link in
+        // the just-rendered bubble. The link's onclick already routes through
+        // cc.openInPortalTab, which exits chat mode + swaps the Portal iframe.
+        try {
+          if (localStorage.getItem('interclaw-auto-navigate') === 'on'
+              && cc.currentStreamEl) {
+            var firstLink = cc.currentStreamEl.querySelector('.chatbot-link');
+            if (firstLink) {
+              setTimeout(function() {
+                if (cc.openInPortalTab && firstLink.href) {
+                  cc.openInPortalTab(firstLink.href);
+                }
+              }, 400);
+            }
+          }
+        } catch (_) {}
         // Capture response text before clearing (needed for plan detection)
         var _doneResponseText = cc.currentStreamText || '';
         cc.currentStreamEl = null;
