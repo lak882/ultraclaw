@@ -19,7 +19,7 @@ Sanford.Build2.DTL.ORUTransform    Sanford.Build2.BO.ORUOutput
 ```
 The production class itself remains `<Pkg>.Production`, shared across exercises.
 
-**Default naming when no name is given**: package `Demo`. Derive the class name by concatenating source and target data types with `To`, stripping all special characters (dots, colons, underscores, hyphens, spaces). **If the resulting name starts with a digit, prepend `V`** — ObjectScript class names cannot begin with a number. If the resulting class already exists, append `2`.
+**Default naming when no name is given**: package `Demo`. Derive the class name by concatenating source and target data types with `To`, stripping all special characters (dots, colons, underscores, hyphens, spaces). **If the resulting name starts with a digit, prepend `V`** � ObjectScript class names cannot begin with a number. If the resulting class already exists, append `2`.
 
 | Source | Target | Name |
 |--------|--------|------|
@@ -34,13 +34,14 @@ The production class itself remains `<Pkg>.Production`, shared across exercises.
 
 ## Skills Catalog
 
-Skills live at `.agent/skills/<name>/SKILL.md` (or `<name>/<sub>/SKILL.md` for nested). Every turn's system prompt carries the `<available_skills>` block with each skill's name, one-line description, and absolute filesystem path. Load a skill by calling `read_file` on its `<path>` — not by name.
+Skills live at `.agent/skills/<name>/SKILL.md` (or `<name>/<sub>/SKILL.md` for nested). Every turn's system prompt carries the `<available_skills>` block with each skill's name, one-line description, and absolute filesystem path. Load a skill by calling `read_file` on its `<path>` � not by name.
 
 | Skill | Scope |
 |---|---|
 | `dtl` | Authoring and editing DTL transforms. HL7 schema lookup, named field paths, utility functions, foreach/conditionals/lookups, custom Z-structure handling, common compile-error gotchas. |
 | `rule` | Authoring and editing HL7 routing rules. Constraint vs condition syntax, `<when>` expression operators, `RuleAssistClass` parameter, fan-out and catch-all patterns. |
 | `record-map` | Parsing and creating fixed-width or delimited flat files. `name` vs `targetClassname`, delimited vs fixed-width attributes, File/FTP/Batch service and operation wiring. |
+| `complex-record-map` | Composing RecordMap classes into hierarchical files with optional header/trailer, nested `<RecordSequence>`, and multi-record-type dispatch via `LeadingData`. Generation via `EnsLib.RecordMap.ComplexGenerator.Generate`. |
 | `production` | Creating production classes, business services, processes, operations, and message classes. XData production format, adapter selection, BPL defaults, package naming. |
 | `manage-production` | Running-production operations: start/stop/restart/update via `Ens.Director`, event-log error queries, message traces, lookup-table CRUD via `Ens.Util.LookupTable`. |
 | `iris-sql` | The `run_sql` tool contract and IRIS SQL dialect. Call arguments and return shape, TOP vs LIMIT, `%STARTSWITH`/`%INLIST`/`%EXTERNAL`, `$Horolog`+DATEADD, class-to-table mapping, canonical system-table queries. |
@@ -58,13 +59,14 @@ Before certain tool calls, always `read_file` the corresponding skill body at th
 | `create_class` / `write_class` on a DTL | `dtl` |
 | `create_class` / `write_class` on a routing rule | `rule` |
 | `create_class` / `write_class` on a RecordMap | `record-map` |
+| `create_class` / `write_class` on a ComplexMap, or calling `EnsLib.RecordMap.ComplexGenerator.Generate` | `complex-record-map` |
 | Any `Ens.Director` call (start/stop/restart/update) | `manage-production` |
 | Building a production class, service, process, or operation | `production` |
 | Running a DTL `Transform` for testing | `test` |
 | Generating a sample HL7 message | `sample` |
 | Auditing, editing, or rewriting an existing skill | `improving-skills` |
 
-Skills are free to load — their bodies are small and the `<available_skills>` block gives you the absolute path. Do not guess field paths, column types, SQL dialect quirks, or workflow ordering without first loading the relevant skill.
+Skills are free to load � their bodies are small and the `<available_skills>` block gives you the absolute path. Do not guess field paths, column types, SQL dialect quirks, or workflow ordering without first loading the relevant skill.
 
 ## Pushed-File Links
 
@@ -80,9 +82,13 @@ The system prompt carries a `<link_base>` element with the legacy-ui base URL, f
 | Production | `EnsPortal.ProductionConfig.zen?PRODUCTION={class}` | Production |
 | HL7 Schema | `EnsPortal.HL7.SchemaDocumentStructure.zen?MS={category}:{structure}` | HL7 Schema |
 | Lookup Table | `EnsPortal.LookupSettings.zen?LookupTable={name}.lut` | Lookup Table |
+| RecordMap | `EnsPortal.RecordMapper.cls?MAP={class}` | RecordMap Editor |
+| Complex RecordMap | `EnsPortal.ComplexRecordMapper.zen?COMPLEXMAP={class}` | Complex RecordMap Editor |
 | BS / BO / BP / MSG (no native editor) | `EnsPortal.ProductionConfig.zen?PRODUCTION={production-class}` | Production Config |
 
-Detect the component type from the class name's package segment: `Pkg.DTL.*` → DTL; `Pkg.Rule.*RoutingRule` or `Pkg.Rule.*` → Routing Rule; `Pkg.BPL.*` → BPL; `Pkg.Production` → Production; `.HL7` doc → HL7 Schema; `.lut` → Lookup Table; otherwise Production Config.
+Note the `{class}` placeholder is the bare dotted class name with **no `.cls` suffix** for RecordMap (`MAP=Demo.RecordMap.Foo`), Complex RecordMap (`COMPLEXMAP=Demo.RecordMap.Foo`), Routing Rule, and Production. DTL and BPL are the exceptions: their query params require the `.cls` suffix (`DT=Demo.DTL.Foo.cls`, `BP=Demo.BPL.Foo.cls`) because those editors load the document by filename rather than class name.
+
+Detect the component type from the class name's package segment: `Pkg.DTL.*` � DTL; `Pkg.Rule.*RoutingRule` or `Pkg.Rule.*` � Routing Rule; `Pkg.BPL.*` � BPL; `Pkg.Production` � Production; `.HL7` doc � HL7 Schema; `.lut` � Lookup Table; otherwise Production Config. For RecordMap classes (package convention `Pkg.RecordMap.*`), read the `Extends` clause to distinguish: `EnsLib.RecordMap.RecordMap` � RecordMap Editor; `EnsLib.RecordMap.ComplexMap` � Complex RecordMap Editor. The generated target class (`Pkg.Record.*`) has no native editor; link to Production Config if anywhere.
 
 ### Format
 
@@ -90,8 +96,8 @@ End the response with a horizontal rule, then one markdown link per pushed file:
 
 ```
 ---
-[Demo.DTL.ADTToADT — DTL Editor]({link_base}#/csp/healthshare/ULTRACLAW/EnsPortal.DTLEditor.zen?DT=Demo.DTL.ADTToADT.cls)
-[Demo.Rule.ADTRoutingRule — Rule Editor]({link_base}#/csp/healthshare/ULTRACLAW/EnsPortal.RuleEditor.zen?RULE=Demo.Rule.ADTRoutingRule)
+[Demo.DTL.ADTToADT � DTL Editor]({link_base}#/csp/healthshare/ULTRACLAW/EnsPortal.DTLEditor.zen?DT=Demo.DTL.ADTToADT.cls)
+[Demo.Rule.ADTRoutingRule � Rule Editor]({link_base}#/csp/healthshare/ULTRACLAW/EnsPortal.RuleEditor.zen?RULE=Demo.Rule.ADTRoutingRule)
 ```
 
-Substitute the `{link_base}` value from the `<link_base>` element in the system prompt. Do not emit `/goto` text; the markdown links are the navigation mechanism. Do not include links for classes that were read but not written. Do not include links for message classes or utility classes that have no native editor — link to the Production Config page for those if anywhere.
+Substitute the `{link_base}` value from the `<link_base>` element in the system prompt. Do not emit `/goto` text; the markdown links are the navigation mechanism. Do not include links for classes that were read but not written. Do not include links for message classes or utility classes that have no native editor � link to the Production Config page for those if anywhere.

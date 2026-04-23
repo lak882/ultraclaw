@@ -19,11 +19,10 @@ For starting, stopping, checking state, or debugging a running production, use t
 
 | Goal | How |
 |---|---|
-| Read an existing class | `read_class` â€” pass `classname` |
-| Create a new class | `create_class` â€” pass full UDL body; compiles by default |
-| Update an existing class | `write_class` â€” pass full UDL body; compiles by default |
+| Read an existing class | `read_class` â pass `classname` |
+| Create a new class | `create_class` â pass full UDL body; compiles by default |
+| Update an existing class | `write_class` â pass full UDL body; compiles by default |
 | List classes in a package | `run_sql`: `SELECT Name FROM %Dictionary.ClassDefinition WHERE Name %STARTSWITH 'Pkg.' ORDER BY Name` |
-| Verify class compiled | `run_sql`: `SELECT Name FROM %Dictionary.CompiledClass WHERE Name IN ('Pkg.A','Pkg.B')` |
 | Reload production config after edits | `exec:` `Set sc=##class(Ens.Director).UpdateProduction() Set %result=$System.Status.GetErrorText(sc)` |
 
 ## References
@@ -35,7 +34,7 @@ For starting, stopping, checking state, or debugging a running production, use t
 | `references/operations.md` | Business operation hierarchy, MessageMap XDATA, retry/error handling |
 | `references/processes.md` | Business process and BPL reference, BPL vs code-based decision |
 | `references/messages.md` | Request/response message class structure, property types, HL7 virtual document paths |
-| `references/pitfalls.md` | Production-specific gotchas â€” load during review |
+| `references/pitfalls.md` | Production-specific gotchas â load during review |
 
 Load via `read_file` with the absolute path: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/production/references/<name>.md`.
 
@@ -46,7 +45,7 @@ Load via `read_file` with the absolute path: `/usr/local/InterSystems/INTERCLAW-
 | `templates/production.cls.template` | Starter production class with XDATA shell |
 | `templates/service.cls.template` | Custom business service stub |
 | `templates/operation.cls.template` | Custom business operation stub with MessageMap |
-| `templates/process.cls.template` | Code-based business process stub (rare â€” prefer BPL) |
+| `templates/process.cls.template` | Code-based business process stub (rare â prefer BPL) |
 | `templates/message-request.cls.template` | Request message class stub |
 | `templates/message-response.cls.template` | Response message class stub |
 
