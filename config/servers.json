@@ -18,8 +18,8 @@
                 "port": 80,
                 "pathPrefix": "/interclaw-test"
             },
-            "username": "superuser",
-            "password": ""
+            "username": "SuperUser",
+            "password": "SYS"
         },
         "interclaw-prod": {
             "webServer": {

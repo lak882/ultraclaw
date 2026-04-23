@@ -1,0 +1,25 @@
+/// Code-based business process. Only use when BPL is genuinely insufficient — see processes reference.
+Class {{PACKAGE}}.BP.{{NAME}}Process Extends Ens.BusinessProcess
+{
+
+Method OnRequest(pRequest As {{REQUEST_CLASS}}, Output pResponse As {{RESPONSE_CLASS}}) As %Status
+{
+    Set tSC = $$$OK
+
+    // TODO: transform, route, or enrich pRequest
+    // Set tSC = ..SendRequestSync("TargetOperation", pRequest, .tResponse)
+
+    Return tSC
+}
+
+Method OnResponse(request As %Library.Persistent, ByRef response As %Library.Persistent, callrequest As %Library.Persistent, callresponse As %Library.Persistent, pCompletionKey As %String) As %Status
+{
+    Return $$$OK
+}
+
+Method OnComplete(request As %Library.Persistent, ByRef response As %Library.Persistent) As %Status
+{
+    Return $$$OK
+}
+
+}

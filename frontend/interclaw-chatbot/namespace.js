@@ -112,15 +112,21 @@
       ctx.activeType = lastType.toLowerCase();
     }
 
-    // Detect current page type from URL path
+    // Detect current page type from URL path — check own path first, then parent's
+    // (chatbot runs as a sidebar iframe; the shell URL has the actual page type).
     var path = window.location.pathname;
-    if (path.indexOf('/interop-editor/') !== -1) ctx.page = 'interop-editor';
-    else if (path.indexOf('/dtl-editor/') !== -1) ctx.page = 'dtl-editor';
-    else if (path.indexOf('/rule-editor/') !== -1) ctx.page = 'rule-editor';
-    else if (path.indexOf('/bpl-editor/') !== -1) ctx.page = 'bpl-editor';
-    else if (path.indexOf('/message-viewer/') !== -1) ctx.page = 'message-viewer';
-    else if (path.indexOf('/skills-editor/') !== -1) ctx.page = 'skills-editor';
-    else if (path.indexOf('/legacy-ui/') !== -1) ctx.page = 'legacy-ui';
+    var parentPath = '';
+    try {
+      if (window.parent && window.parent !== window) parentPath = window.parent.location.pathname;
+    } catch(e) {}
+    var effectivePath = path + ' ' + parentPath;
+    if (effectivePath.indexOf('/interop-editor/') !== -1) ctx.page = 'interop-editor';
+    else if (effectivePath.indexOf('/dtl-editor/') !== -1) ctx.page = 'dtl-editor';
+    else if (effectivePath.indexOf('/rule-editor/') !== -1) ctx.page = 'rule-editor';
+    else if (effectivePath.indexOf('/bpl-editor/') !== -1) ctx.page = 'bpl-editor';
+    else if (effectivePath.indexOf('/message-viewer/') !== -1) ctx.page = 'message-viewer';
+    else if (effectivePath.indexOf('/skills-editor/') !== -1) ctx.page = 'skills-editor';
+    else if (effectivePath.indexOf('/legacy-ui/') !== -1) ctx.page = 'legacy-ui';
     else ctx.page = 'other';
 
     // Full page URL (path + search + hash) for backend context
@@ -134,22 +140,25 @@
       } catch(e) { /* cross-origin or no frame */ }
     }
 
-    // For legacy-ui: parse hash to extract the Zen page class being viewed
+    // Parse hash to extract the active Zen page and component.
+    // Applies on legacy-ui pages (hash = #/csp/...) AND on the main shell
+    // (hash = #/portal/csp/... or #/traces/csp/...) — both embed an EnsPortal path.
     var hash = window.location.hash;
-    if (hash && ctx.page === 'legacy-ui') {
-      // Hash format: #/csp/healthshare/<ns>/EnsPortal.DTLEditor.zen?DT=Some.DTL.cls
-      var zenMatch = hash.match(/EnsPortal\.(\w+)\.zen/);
+    if (hash && hash.indexOf('EnsPortal') !== -1) {
+      var zenMatch = hash.match(/EnsPortal\.([^.?&/#]+(?:\.[^.?&/#]+)?)\.zen/);
       if (zenMatch) ctx.zenPage = zenMatch[1];
-      var dtMatch = hash.match(/[?&]DT=([^&]+)/);
+      var dtMatch = hash.match(/[?&]DT=([^&#+]+)/);
       if (dtMatch) { ctx.active = decodeURIComponent(dtMatch[1]).replace(/\.cls$/, ''); ctx.activeType = 'dtl'; }
-      var ruleMatch = hash.match(/[?&]RULE=([^&]+)/);
+      var ruleMatch = hash.match(/[?&]RULE=([^&#+]+)/);
       if (ruleMatch) { ctx.active = decodeURIComponent(ruleMatch[1]); ctx.activeType = 'rule'; }
-      var bpMatch = hash.match(/[?&]BP=([^&]+)/);
+      var bpMatch = hash.match(/[?&]BP=([^&#+]+)/);
       if (bpMatch) { ctx.active = decodeURIComponent(bpMatch[1]).replace(/\.cls$/, ''); ctx.activeType = 'bpl'; }
-      var prodMatch = hash.match(/[?&]PRODUCTION=([^&]+)/);
+      var prodMatch = hash.match(/[?&]PRODUCTION=([^&#+]+)/);
       if (prodMatch) { ctx.active = decodeURIComponent(prodMatch[1]); ctx.activeType = 'production'; }
-      var msMatch = hash.match(/[?&]MS=([^&]+)/);
+      var msMatch = hash.match(/[?&]MS=([^&#+]+)/);
       if (msMatch) { ctx.active = decodeURIComponent(msMatch[1]); ctx.activeType = 'schema'; }
+      var lutMatch = hash.match(/[?&]LookupTable=([^&#+]+)/);
+      if (lutMatch) { ctx.active = decodeURIComponent(lutMatch[1]).replace(/\.lut$/, ''); ctx.activeType = 'lookup'; }
     }
 
     ctx.origin = window.location.origin;
@@ -157,8 +166,235 @@
     return ctx;
   }
 
+  // Scrape the portal iframe DOM for context when the URL alone doesn't
+  // tell us what the user is looking at. Works because legacy-ui and the
+  // Zen pages are same-origin.
+  //
+  // Returns an object: { active, activeType, zenDetail } or null.
+  function scrapeIframeContext() {
+    try {
+      // The chatbot runs as a sidebar inside the shell page — look in the
+      // parent/top document for shell-iframe-portal, not our own document.
+      var shellDoc = (window.parent && window.parent !== window)
+        ? window.parent.document
+        : document;
+      var portalFrame = shellDoc.getElementById('shell-iframe-portal');
+      if (!portalFrame || !portalFrame.contentWindow) return null;
+
+      var portalHref = '';
+      try { portalHref = portalFrame.contentWindow.location.href || ''; } catch(e) {}
+
+      if (portalHref.indexOf('rule-editor') !== -1) {
+        try {
+          var ruleDoc = portalFrame.contentDocument;
+          var ruleH2 = ruleDoc ? (ruleDoc.querySelector('h2.rule-name.ng-star-inserted') || ruleDoc.querySelector('h2.rule-name')) : null;
+          if (ruleH2) {
+            var ruleRawText = '';
+            for (var ni = 0; ni < ruleH2.childNodes.length; ni++) {
+              if (ruleH2.childNodes[ni].nodeType === 3) ruleRawText += ruleH2.childNodes[ni].nodeValue;
+            }
+            ruleRawText = ruleRawText.trim();
+            if (ruleRawText) return { active: ruleRawText, activeType: 'rule', zenDetail: null };
+          }
+          return { active: null, activeType: 'rule', zenDetail: 'Rule Editor' };
+        } catch(e) {}
+        return { active: null, activeType: 'rule', zenDetail: 'Rule Editor' };
+      }
+
+      // The Zen page lives inside a nested #viewer-frame inside legacy-ui.
+      var zenDoc = null;
+      var zenHref = '';
+      try {
+        var viewerFrame = portalFrame.contentDocument
+          ? portalFrame.contentDocument.getElementById('viewer-frame')
+          : null;
+        if (viewerFrame && viewerFrame.contentWindow) {
+          zenDoc = viewerFrame.contentDocument;
+          zenHref = viewerFrame.contentWindow.location.href || '';
+        }
+      } catch(e) {}
+
+      // Fallback: the portal iframe itself may be the Zen page (no wrapper).
+      if (!zenDoc) {
+        try {
+          zenDoc = portalFrame.contentDocument;
+          zenHref = portalFrame.contentWindow.location.href || '';
+        } catch(e) {}
+      }
+
+      if (!zenDoc) return null;
+
+      // Re-parse URL from the actual iframe href — more reliable than outer hash.
+      if (zenHref) {
+        var urlActive = null, urlType = null;
+        var dtM = zenHref.match(/[?&]DT=([^&#+]+)/);
+        if (dtM) { urlActive = decodeURIComponent(dtM[1]).replace(/\.cls$/, ''); urlType = 'dtl'; }
+        var ruM = zenHref.match(/[?&]RULE=([^&#+]+)/);
+        if (ruM) { urlActive = decodeURIComponent(ruM[1]); urlType = 'rule'; }
+        var ruM2 = zenHref.match(/[?&]rule=([^&#+]+)/);
+        if (ruM2) { urlActive = decodeURIComponent(ruM2[1]); urlType = 'rule'; }
+        var bpM = zenHref.match(/[?&]BP=([^&#+]+)/);
+        if (bpM) { urlActive = decodeURIComponent(bpM[1]).replace(/\.cls$/, ''); urlType = 'bpl'; }
+        var prM = zenHref.match(/[?&]PRODUCTION=([^&#+]+)/);
+        if (prM) { urlActive = decodeURIComponent(prM[1]); urlType = 'production'; }
+        var msM = zenHref.match(/[?&]MS=([^&#+]+)/);
+        if (msM) { urlActive = decodeURIComponent(msM[1]); urlType = 'schema'; }
+        var luM = zenHref.match(/[?&]LookupTable=([^&#+]+)/);
+        if (luM) { urlActive = decodeURIComponent(luM[1]).replace(/\.lut$/, ''); urlType = 'lookup'; }
+        if (urlActive && urlType) {
+          return { active: urlActive, activeType: urlType, zenDetail: null };
+        }
+      }
+
+      // DOM scraping for pages with no component in the URL.
+      // Each Zen page renders its title/breadcrumb in well-known elements.
+
+      // DTL Editor: try #pageTitleText and #target-class-name, then fall back to <title>.
+      if (zenHref && zenHref.indexOf('DTLEditor') !== -1) {
+        var dtlNameEl = zenDoc.getElementById('pageTitleText') || zenDoc.getElementById('target-class-name');
+        if (dtlNameEl) {
+          var dtlNameText = (dtlNameEl.textContent || dtlNameEl.innerText || '').trim();
+          if (dtlNameText) return { active: dtlNameText.replace(/\.cls$/, ''), activeType: 'dtl', zenDetail: null };
+        }
+      }
+      var title = zenDoc.title || '';
+      var dtlMatch = title.match(/DTL[:\s]+([A-Za-z][A-Za-z0-9._]+)/);
+      if (dtlMatch) return { active: dtlMatch[1].replace(/\.cls$/, ''), activeType: 'dtl', zenDetail: null };
+
+      // Rule Editor (Angular): h2.rule-name present in zenDoc regardless of URL.
+      var ruleH2 = zenDoc.querySelector('h2.rule-name.ng-star-inserted') || zenDoc.querySelector('h2.rule-name');
+      if (ruleH2) {
+        var ruleRawText = '';
+        for (var ni = 0; ni < ruleH2.childNodes.length; ni++) {
+          if (ruleH2.childNodes[ni].nodeType === 3) ruleRawText += ruleH2.childNodes[ni].nodeValue;
+        }
+        ruleRawText = ruleRawText.trim();
+        if (ruleRawText) return { active: ruleRawText, activeType: 'rule', zenDetail: null };
+        return { active: null, activeType: 'rule', zenDetail: 'Rule Editor' };
+      }
+
+      // Rule Editor (ZEN fallback): try #pageTitleText.
+      if (zenHref && zenHref.indexOf('RuleEditor') !== -1) {
+        var ruleNameEl = zenDoc.getElementById('pageTitleText');
+        if (ruleNameEl) {
+          var ruleNameText = (ruleNameEl.textContent || ruleNameEl.innerText || '').trim();
+          if (ruleNameText) return { active: ruleNameText, activeType: 'rule', zenDetail: null };
+        }
+      }
+
+      // BPL Editor: try #pageTitleText, then #top-class-name.
+      if (zenHref && zenHref.indexOf('BPLEditor') !== -1) {
+        var bplNameEl = zenDoc.getElementById('pageTitleText') || zenDoc.getElementById('top-class-name');
+        if (bplNameEl) {
+          var bplNameText = (bplNameEl.textContent || bplNameEl.innerText || '').trim();
+          if (bplNameText) return { active: bplNameText.replace(/\.cls$/, ''), activeType: 'bpl', zenDetail: null };
+        }
+      }
+
+      // Production Config: try #pageTitleText, then the element with class "align-self" or "alignSelf".
+      if (zenHref && zenHref.indexOf('ProductionConfig') !== -1) {
+        var prodNameEl = zenDoc.getElementById('pageTitleText');
+        if (!prodNameEl) prodNameEl = zenDoc.querySelector('.align-self, [class*="alignSelf"]');
+        if (prodNameEl) {
+          var prodNameText = (prodNameEl.textContent || prodNameEl.innerText || '').trim();
+          if (prodNameText) return { active: prodNameText.replace(/\.cls$/, ''), activeType: 'production', zenDetail: null };
+        }
+      }
+
+      // Visual Trace: extract session ID + host names from the trace table.
+      var traceTable = zenDoc.querySelector('table.TraceData, table[id*="trace"], .EnsTraceTable');
+      var sessionEl = zenDoc.querySelector('[id*="SessionId"], .sessionId, td.sessionId');
+      var sessionId = sessionEl ? (sessionEl.textContent || '').trim() : null;
+      if (!sessionId) {
+        var sessMatch = (zenHref || '').match(/[?&]SessionId=([0-9]+)/);
+        if (sessMatch) sessionId = sessMatch[1];
+      }
+      if (sessionId && zenHref && zenHref.indexOf('VisualTrace') !== -1) {
+        // Collect host names from the trace column headers.
+        var hostEls = zenDoc.querySelectorAll('th.hostLabel, th[id*="host"], .traceHost');
+        var hosts = [];
+        for (var i = 0; i < hostEls.length; i++) {
+          var h = (hostEls[i].textContent || '').trim();
+          if (h) hosts.push(h);
+        }
+        var detail = 'Session ' + sessionId;
+        if (hosts.length) detail += ', hosts: ' + hosts.slice(0, 4).join(', ');
+        return { active: null, activeType: 'trace', zenDetail: detail };
+      }
+
+      // Message Viewer: selected message header row.
+      var selectedRow = zenDoc.querySelector('tr.selected, tr.EnsSelectedRow, tr[selected]');
+      if (!selectedRow && zenHref && zenHref.indexOf('MessageViewer') !== -1) {
+        selectedRow = zenDoc.querySelector('tr.listItem:first-of-type, tbody tr:first-child');
+      }
+      if (selectedRow && zenHref && zenHref.indexOf('MessageViewer') !== -1) {
+        var cells = selectedRow.querySelectorAll('td');
+        var detail = '';
+        // Typical columns: ID, TimeCreated, Session, Status, Error, Source, Target, ...
+        if (cells.length >= 6) {
+          var src = (cells[5] ? cells[5].textContent : '').trim();
+          var tgt = (cells[6] ? cells[6].textContent : '').trim();
+          if (src || tgt) detail = (src || '?') + ' → ' + (tgt || '?');
+        }
+        if (!detail) {
+          var sessionCell = cells[2] ? (cells[2].textContent || '').trim() : '';
+          if (sessionCell) detail = 'Session ' + sessionCell;
+        }
+        return { active: null, activeType: 'viewer', zenDetail: detail || null };
+      }
+
+      // Event Log: extract top error text from first visible row.
+      if (zenHref && zenHref.indexOf('EventLog') !== -1) {
+        var errRow = zenDoc.querySelector('tr.EnsErrRow, tr.listItem');
+        if (errRow) {
+          var errCells = errRow.querySelectorAll('td');
+          var errText = errCells.length >= 5 ? (errCells[4] ? errCells[4].textContent : '').trim() : '';
+          if (errText) return { active: null, activeType: 'eventlog', zenDetail: errText.substring(0, 120) };
+        }
+        return { active: null, activeType: 'eventlog', zenDetail: null };
+      }
+
+    } catch(e) {}
+    return null;
+  }
+
   cc.getEditorContext = function() {
     parseEditorContext();
+
+    // Always scrape for DOM-only sources (rule editor class name comes from Angular DOM,
+    // not the URL). For other pages, only scrape when URL parsing didn't yield a class.
+    var needsScrape = !cc._editorContext.active;
+    if (!needsScrape) {
+      try {
+        var ph = '';
+        var pf = document.getElementById('shell-iframe-portal');
+        if (pf && pf.contentWindow) try { ph = pf.contentWindow.location.href || ''; } catch(e) {}
+        if (!ph) {
+          var sd = (window.parent && window.parent !== window) ? window.parent.document : document;
+          var pf2 = sd.getElementById('shell-iframe-portal');
+          if (pf2 && pf2.contentWindow) try { ph = pf2.contentWindow.location.href || ''; } catch(e) {}
+        }
+        if (ph.indexOf('rule-editor') !== -1) needsScrape = true;
+      } catch(e) {}
+    }
+
+    if (needsScrape) {
+      try {
+        var scraped = scrapeIframeContext();
+        if (scraped) {
+          if (scraped.active) {
+            cc._editorContext.active = scraped.active;
+            cc._editorContext.activeType = scraped.activeType;
+          } else if (scraped.zenDetail) {
+            cc._editorContext.zenDetail = scraped.zenDetail;
+            if (scraped.activeType && !cc._editorContext.activeType) {
+              cc._editorContext.activeType = scraped.activeType;
+            }
+          }
+        }
+      } catch(e) {}
+    }
+
     try {
       var sel = localStorage.getItem('interclaw-tree-selection');
       if (sel) {
@@ -242,5 +478,24 @@
     }, 1000);
     setTimeout(function() { clearInterval(retryInterval); }, 30000);
   })();
+
+  // Build a human-readable page context string from an editor context object.
+  // Returns empty string when nothing useful is open.
+  cc.buildPageContext = function(ec) {
+    if (!ec) return '';
+    var labels = {
+      dtl: 'DTL Editor', rule: 'Rule Editor', bpl: 'BPL Editor',
+      production: 'Production Config', schema: 'HL7 Schema Browser',
+      lookup: 'Lookup Table Editor', trace: 'Visual Trace',
+      viewer: 'Message Viewer', eventlog: 'Event Log'
+    };
+    if (ec.active && ec.activeType) {
+      return (labels[ec.activeType] || ec.activeType) + ': ' + ec.active;
+    }
+    if (ec.zenDetail && ec.activeType) {
+      return (labels[ec.activeType] || ec.activeType) + ': ' + ec.zenDetail;
+    }
+    return '';
+  };
 
 })(window._cc);

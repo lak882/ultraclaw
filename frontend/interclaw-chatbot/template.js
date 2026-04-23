@@ -18,6 +18,7 @@
 
       </div>
       <div style="display:flex;align-items:center;gap:2px">
+        <button id="ic-header-model-label" title="Click to change model" style="background:none;border:1px solid var(--chatbot-border,#e5e7eb);border-radius:4px;padding:2px 7px;font-size:var(--fr-styles-font-size-2xs,11px);cursor:pointer;color:inherit;white-space:nowrap">Sonnet</button>
       </div>
     </div>
 

@@ -4,7 +4,7 @@
 ///
 /// Uses SendRequestSync to the ProviderOperation and the ToolOperation
 /// so the loop can be written as straight-line code instead of BPL state.
-/// Events are streamed via EventWriter so frontends can poll ^Inteclaw.ChatEvents.
+/// Events are streamed via EventWriter so frontends can poll ^InterClaw.ChatEvents.
 Class InterClaw.BP.ChatProcess Extends Ens.BusinessProcess
 {
 
@@ -31,7 +31,7 @@ Method Emit(bridgeId As %String, type As %String, payload As %DynamicObject)
     // the moment OnRequest returns, even if the async EventWriter job is
     // backed up. Prevents "final answer rendered but bridge hangs" races.
     If type = "done" {
-        Set ^Inteclaw.ChatEvents(bridgeId, "done") = 1
+        Set ^InterClaw.ChatEvents(bridgeId, "done") = 1
     }
 }
 
@@ -227,7 +227,7 @@ Method OnRequest(pRequest As InterClaw.Msg.ChatRequest, Output pResponse As Inte
             Set session = ##class(InterClaw.Session).OpenOrCreate(sessionId)
             Set permCtx = ##class(InterClaw.Tools.Permissions).Context(session)
             Set permCtxJSON = permCtx.%ToJSON()
-            Set ^Inteclaw.PlanTrace($I(^Inteclaw.PlanTrace)) = "dispatch tool=" _ tu.%Get("name") _ " plan=" _ session.PlanMode _ " deny=" _ session.DenyTools _ " ctx=" _ permCtxJSON
+            Set ^InterClaw.PlanTrace($I(^InterClaw.PlanTrace)) = "dispatch tool=" _ tu.%Get("name") _ " plan=" _ session.PlanMode _ " deny=" _ session.DenyTools _ " ctx=" _ permCtxJSON
 
             Set tcall = ##class(InterClaw.Msg.ToolCall).%New()
             Set tcall.BridgeId = bridgeId
@@ -286,7 +286,7 @@ Method OnRequest(pRequest As InterClaw.Msg.ChatRequest, Output pResponse As Inte
     }
     // Safety belt: set the flag directly too, in case Emit's async delivery
     // hasn't reached the EventWriter yet.
-    Set ^Inteclaw.ChatEvents(bridgeId, "done") = 1
+    Set ^InterClaw.ChatEvents(bridgeId, "done") = 1
     Return $$$OK
 }
 

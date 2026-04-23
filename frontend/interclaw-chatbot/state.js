@@ -29,7 +29,7 @@
   // Model state — labels match the actual Bedrock inference profiles
   // resolved in InterClaw.REST.Chat.ResolveModelAlias.
   cc.modelLabels = { opus: 'Claude Opus 4.7', sonnet: 'Claude Sonnet 4.6', haiku: 'Claude Haiku 4.5' };
-  cc.currentModel = 'opus';
+  cc.currentModel = 'sonnet';
 
   // Effort state — low/medium/high. Sent as the `effort` field on
   // /api/start, mapped to Bedrock adaptive-thinking output_config.effort.

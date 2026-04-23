@@ -27,7 +27,12 @@
   cc.chatsSearchQuery = cc.chatsSearchQuery || '';
 
   function chatsUrl(suffix) {
-    return (cc.chatApiBase || '/api/interclaw/production') + '/api/chats' + (suffix || '');
+    var base = (cc.chatApiBase || '/api/interclaw/production') + '/api/chats' + (suffix || '');
+    // Always pass the stored username so ResolveUser() on the backend
+    // doesn't fall back to $Username (UnknownUser in unauthenticated sessions).
+    var u = (cc.chatsStore && cc.chatsStore.user) || (cc._lastKnownUser) || 'superuser';
+    if (!suffix || suffix === '') base += '?user=' + encodeURIComponent(u);
+    return base;
   }
 
   cc.refreshChatsList = function() {
@@ -75,92 +80,12 @@
     return out;
   }
 
-  // Words/phrases too generic to anchor a title on. If the first real user
-  // message is just one of these, fall through to the next message so the
-  // sidebar doesn't end up with dozens of chats all titled "hello".
-  var TRIVIAL_OPENERS = /^(hi|hey|hello|yo|sup|howdy|test|testing|ping|ok|okay|thanks|thx|cool|nice|good|meow|uhm|uh|hm|hmm)\W*$/i;
-
-  function deriveTitle(messages) {
-    for (var i = 0; i < messages.length; i++) {
-      if (messages[i].type !== 'user') continue;
-      var tmp = document.createElement('div');
-      tmp.innerHTML = messages[i].html || '';
-      var text = (tmp.textContent || '').trim();
-      if (!text) continue;
-      // Slash commands are directives, not conversation topics. Skip them
-      // entirely — don't promote the argument to a title (`/list cls` must
-      // not become "cls"). Haiku's retitle will surface the real subject.
-      if (text.charAt(0) === '/') continue;
-      if (TRIVIAL_OPENERS.test(text)) continue;
-      if (text.length > 60) {
-        var cut = text.substring(0, 60);
-        var sp = cut.lastIndexOf(' ');
-        if (sp >= 40) cut = cut.substring(0, sp);
-        text = cut + '...';
-      }
-      return text;
-    }
-    return 'New chat';
-  }
-
   function upsertChat(entry) {
     var chats = cc.chatsStore.chats || (cc.chatsStore.chats = []);
     for (var i = 0; i < chats.length; i++) {
       if (chats[i].id === entry.id) { chats[i] = entry; return; }
     }
     chats.push(entry);
-  }
-
-  // Cadence-gated LLM retitle. Two forcing functions:
-  //   1. Fire on the FIRST user turn if the chat still reads as a placeholder
-  //      title ("New chat", "Untitled", ""). The derive-from-first-prompt
-  //      heuristic skips slash commands, so a chat that opens with `/goto ...`
-  //      never gets a title from that path — we have to fall back to Haiku.
-  //   2. After that, fire every RETITLE_EVERY user turns so the sidebar
-  //      tracks topic drift. Keep it small — the cost is one Haiku call per
-  //      firing, and the UX win of a correct sidebar label is large.
-  var RETITLE_EVERY = 2;
-  var _lastRetitledAt = Object.create(null);  // chatId -> user msg count at last retitle
-
-  function countUserMessages(messages) {
-    var n = 0;
-    for (var i = 0; i < messages.length; i++) if (messages[i].type === 'user') n++;
-    return n;
-  }
-
-  function currentChatIsPlaceholder(chatId) {
-    var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
-    if (!chat) return true;
-    var t = (chat.title || '').trim();
-    return !t || t === 'Untitled' || t === 'New chat';
-  }
-
-  cc.maybeRetitle = function(chatId, messages) { return maybeRetitle(chatId, messages); };
-  function maybeRetitle(chatId, messages) {
-    var userCount = countUserMessages(messages);
-    if (userCount < 1) return;
-    var last = _lastRetitledAt[chatId] || 0;
-    // Always retitle on the first user turn if the sidebar still reads as a
-    // placeholder — otherwise chats that started with a slash command stay
-    // on "New chat" forever.
-    var needImmediate = (last === 0 && currentChatIsPlaceholder(chatId));
-    if (!needImmediate && (userCount - last) < RETITLE_EVERY) return;
-    _lastRetitledAt[chatId] = userCount;
-    fetch(chatsUrl('/' + encodeURIComponent(chatId) + '/retitle'), {
-      method: 'POST',
-      credentials: 'same-origin'
-    })
-    .then(function(r) { return r.ok ? r.json() : null; })
-    .then(function(data) {
-      if (!data || !data.title) return;
-      var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
-      if (!chat) return;
-      if (chat.title === data.title) return;
-      chat.title = data.title;
-      chat.updatedAt = Date.now();
-      cc.renderChatsSidebar();
-    })
-    .catch(function(err) { console.warn('[interclaw] retitle failed:', err); });
   }
 
   // Client-minted chat id, used when the user sends their first message
@@ -203,115 +128,24 @@
     return cc.sessionId;
   };
 
-  function buildPersistPayload(chatId) {
-    // Phase 2: the BP owns all message persistence via ^InterClaw.ChatDoc.
-    // The frontend still derives a title from the user's first message
-    // the BP can't reliably guess — we send only that metadata. No
-    // messages array in the body.
-    var messages = serializeCurrentPane();
-    if (!messages.length) return null;
-    var chat = (cc.chatsStore.chats || []).filter(function(c) { return c.id === chatId; })[0];
-    var body = {};
-    // Treat placeholder titles ("", "Untitled", "New chat") as unset so a
-    // fresh derive runs once the first real user turn arrives.
-    var curTitle = chat && chat.title ? chat.title : '';
-    var isPlaceholder = !curTitle || curTitle === 'Untitled' || curTitle === 'New chat';
-    if (isPlaceholder) {
-      var derived = deriveTitle(messages);
-      if (derived && derived !== 'New chat') body.title = derived;
-    }
-    if (!Object.keys(body).length) return null;
-    return { body: body, messages: messages };
-  }
-
   var _persistTimer = null;
   cc.persistChat = function() {
-    // Suppressed during openChat's rehydrate path — the doc on the server
-    // is already authoritative, so echoing it back creates phantom empty
-    // entries (an empty chat file per reload/switch).
     if (cc._suppressPersist) return;
-    // During an active stream every tool_use/tool_result event triggers
-    // saveState → persistChat. The BP is writing ChatDoc authoritatively
-    // anyway; the frontend serialize+PUT is pure overhead. Skip while
-    // we're polling.
     if (cc.bridgePolling) return;
-    // Only persist once the user has actually typed something. Otherwise
-    // every page load (welcome message, system bubbles) would mint a chat.
-    // `ensureChatId(true)` returns null until a real user turn exists.
+    // Mint a chat id on first real user send so the sidebar can track this
+    // session. Title derivation is owned entirely by the server (Haiku call
+    // after the first response lands); the frontend does not PUT titles.
     var chatId = cc.ensureChatId(true);
     if (!chatId) return;
     if (_persistTimer) clearTimeout(_persistTimer);
     _persistTimer = setTimeout(function() {
       _persistTimer = null;
-      var payload = buildPersistPayload(chatId);
-      var pendingMessages = payload && payload.messages;
-
-      // Title payload flow: if buildPersistPayload returned a body, it's
-      // because we're promoting a placeholder ("New chat") to a derived
-      // title from the user's first prompt. PUT it.
-      if (payload) {
-        fetch(chatsUrl('/' + encodeURIComponent(chatId)), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload.body)
-        })
-        .then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(data) {
-          if (!data) return;
-          cc.chatsStore.activeId = data.id;
-          upsertChat({ id: data.id, title: data.title || 'Untitled', updatedAt: data.updatedAt || Date.now() });
-          cc.renderChatsSidebar();
-          maybeRetitle(data.id, pendingMessages);
-        })
-        .catch(function(err) { console.warn('[interclaw] persistChat failed:', err); });
-      } else {
-        // No PUT needed — but still evaluate the Haiku retitle cadence so
-        // chat titles follow topic drift across subsequent turns. Without
-        // this, retitle only fired once on the placeholder→derived hop.
-        var messages = serializeCurrentPane();
-        if (messages.length) maybeRetitle(chatId, messages);
-      }
     }, 500);
   };
 
-  // Synchronous flush for beforeunload / pagehide: bypasses the 500ms
-  // debounce and ships via sendBeacon so the browser allows the request to
-  // complete after the page starts tearing down. Without this, closing the
-  // tab within ~500ms of sending a prompt loses the user's message.
-  cc.flushPersistChat = function() {
-    // Same suppression as persistChat — don't flush during render/reload.
-    if (cc._suppressPersist) return;
-    // Only flush for chats the user has actually started/touched in this
-    // tab. `cc.sessionId` being set means either the user sent something
-    // or openChat adopted an existing chat. In both cases the chat
-    // already exists server-side; the flush is a safety belt, not a
-    // mint point. If there's no sessionId yet, skip — a reload with
-    // nothing unsaved shouldn't create phantom chat files.
-    if (!cc.sessionId) return;
-    var chatId = cc.sessionId;
-    if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
-    var payload = buildPersistPayload(chatId);
-    if (!payload) return;
-    var url = chatsUrl('/' + encodeURIComponent(chatId));
-    var json = JSON.stringify(payload.body);
-    // sendBeacon only supports POST, but the backend ChatsPut route is PUT.
-    // Use fetch with keepalive:true, the modern equivalent for PUT-on-unload.
-    try {
-      fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: json,
-        keepalive: true
-      });
-    } catch (e) {
-      // Last resort if keepalive isn't supported — a best-effort beacon
-      // to a no-op route at least keeps the connection alive long enough
-      // for in-flight PUTs to leave the socket. Silent on failure.
-      try { navigator.sendBeacon && navigator.sendBeacon(url); } catch (_) {}
-    }
-  };
+  // No-op flush kept for call-site compatibility (init.js may call this on
+  // beforeunload). Title/message persistence is server-owned; nothing to flush.
+  cc.flushPersistChat = function() {};
 
   // Wrap saveState so every DOM change triggers a debounced server PUT.
   // Guard against double-wrapping if the module is re-evaluated.
@@ -323,6 +157,61 @@
       return r;
     };
     cc.saveState._m3Wrapped = true;
+  }
+
+  // ── Confirm modal ────────────────────────────────────────────────────────
+  var WARN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+
+  function buildConfirmModal() {
+    if (document.getElementById('ic-confirm-modal')) return;
+    var el = document.createElement('div');
+    el.id = 'ic-confirm-modal';
+    el.className = 'ic-confirm-modal';
+    el.innerHTML =
+      '<div class="ic-confirm-modal-card">' +
+        '<div class="ic-confirm-modal-header">' +
+          WARN_ICON +
+          '<span id="ic-confirm-modal-title">Confirm deletion</span>' +
+        '</div>' +
+        '<div class="ic-confirm-modal-body" id="ic-confirm-modal-body">' +
+          'Are you sure you want to delete <strong id="ic-confirm-modal-item"></strong>?' +
+        '</div>' +
+        '<div class="ic-confirm-modal-footer">' +
+          '<button class="ic-confirm-modal-btn" id="ic-confirm-modal-cancel">Cancel</button>' +
+          '<button class="ic-confirm-modal-btn danger" id="ic-confirm-modal-confirm">Delete</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(el);
+
+    document.getElementById('ic-confirm-modal-cancel').addEventListener('click', function() {
+      closeConfirmModal();
+    });
+    el.addEventListener('click', function(e) {
+      if (e.target === el) closeConfirmModal();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && el.classList.contains('show')) closeConfirmModal();
+    });
+  }
+
+  function closeConfirmModal() {
+    var el = document.getElementById('ic-confirm-modal');
+    if (el) el.classList.remove('show');
+    var btn = document.getElementById('ic-confirm-modal-confirm');
+    if (btn) btn.onclick = null;
+  }
+
+  function openConfirmModal(title, bodyHtml, onConfirm) {
+    buildConfirmModal();
+    document.getElementById('ic-confirm-modal-title').textContent = title;
+    document.getElementById('ic-confirm-modal-body').innerHTML = bodyHtml;
+    var confirmBtn = document.getElementById('ic-confirm-modal-confirm');
+    confirmBtn.onclick = function() {
+      closeConfirmModal();
+      onConfirm();
+    };
+    document.getElementById('ic-confirm-modal').classList.add('show');
+    confirmBtn.focus();
   }
 
   // ── DOM construction ────────────────────────────────────────────────────
@@ -884,7 +773,106 @@
       else if (m.type === 'system') msg.className += ' chatbot-message-system';
       else if (m.type === 'error') msg.className += ' chatbot-message-error';
       else if (m.type === 'tool') msg.className += ' chatbot-message-tool';
-      msg.innerHTML = m.html || '';
+      // New server-side messages carry `text` (raw); legacy persisted messages carry `html`.
+      if (m.text !== undefined) {
+        if (m.type === 'assistant') {
+          msg.innerHTML = '<div class="msg-content">' + (cc.renderMarkdown ? cc.renderMarkdown(m.text) : cc.escapeHtml(m.text)) + '</div>';
+          // Render tool call steps from historical data.
+          if (m.tools && m.tools.length > 0) {
+            var stepsEl = document.createElement('div');
+            stepsEl.className = 'reasoning-steps';
+            var toggle = document.createElement('button');
+            toggle.className = 'reasoning-toggle';
+            var listEl = document.createElement('div');
+            listEl.className = 'reasoning-list';
+            listEl.style.display = 'none';
+            m.tools.forEach(function(t) {
+              var toolName = t.name || '';
+              var label = cc.getToolLabel ? cc.getToolLabel(toolName, typeof t.input === 'string' ? t.input : JSON.stringify(t.input)) : toolName;
+              var inputStr = typeof t.input === 'string' ? t.input : JSON.stringify(t.input || {}, null, 2);
+              var outputStr = typeof t.output === 'string' ? t.output : JSON.stringify(t.output || '', null, 2);
+              // Extract readable content from input fields.
+              var content = inputStr;
+              try {
+                var parsed = JSON.parse(inputStr);
+                if (parsed.code) content = parsed.code;
+                else if (parsed.sql) content = parsed.sql;
+                else if (parsed.source) content = parsed.source.substring(0, 2000);
+                else if (parsed.dtl) content = parsed.dtl;
+                else if (parsed.plan) content = parsed.plan;
+              } catch(e) {}
+              var combined = content ? content + '\n\n--- Result ---\n' + outputStr.split('\n').slice(0, 20).join('\n') : outputStr.split('\n').slice(0, 20).join('\n');
+              var stepEl = document.createElement('div');
+              stepEl.className = 'reasoning-step';
+              stepEl.dataset.stepType = 'tool';
+              stepEl.dataset.content = combined;
+              stepEl.dataset.rawOutput = outputStr;
+              var icon = cc.getToolIcon ? cc.getToolIcon(toolName) : '';
+              var status = t.isError ? 'error' : 'success';
+              stepEl.innerHTML =
+                '<div class="reasoning-step-row">' +
+                  '<div class="reasoning-step-icon reasoning-tool-icon">' + icon + '</div>' +
+                  '<button class="reasoning-step-label clickable">' +
+                    '<span style="flex:1">' + (cc.escapeHtml ? cc.escapeHtml(label) : label) + '</span>' +
+                    '<span class="reasoning-chevron-step">' + (cc.CHEVRON_SVG || '') + '</span>' +
+                  '</button>' +
+                '</div>';
+              // Wire expand/collapse on the step button.
+              (function(el, combinedContent) {
+                var btn = el.querySelector('.reasoning-step-label');
+                var expanded = false;
+                if (btn) btn.addEventListener('click', function(e) {
+                  e.stopPropagation();
+                  var existing = el.querySelector('.reasoning-step-content');
+                  if (existing) { el.removeChild(existing); expanded = false; return; }
+                  expanded = true;
+                  var contentEl = document.createElement('pre');
+                  contentEl.className = 'reasoning-step-content';
+                  contentEl.style.cssText = 'white-space:pre-wrap;font-size:12px;margin:4px 0 0 24px;padding:8px;background:var(--bg-secondary,#f5f5f5);border-radius:4px;max-height:300px;overflow-y:auto';
+                  contentEl.textContent = combinedContent;
+                  el.appendChild(contentEl);
+                });
+              })(stepEl, combined);
+              listEl.appendChild(stepEl);
+            });
+            toggle.innerHTML = '<span class="chevron-icon">' + (cc.CHEVRON_SVG || '') + '</span> Show steps (' + m.tools.length + ')';
+            toggle.onclick = function(e) {
+              e.stopPropagation();
+              var hidden = listEl.style.display === 'none';
+              listEl.style.display = hidden ? '' : 'none';
+              toggle.innerHTML = '<span class="chevron-icon' + (hidden ? ' open' : '') + '">' + (cc.CHEVRON_SVG || '') + '</span> ' + (hidden ? 'Hide steps' : 'Show steps (' + m.tools.length + ')');
+            };
+            stepsEl.appendChild(toggle);
+            stepsEl.appendChild(listEl);
+            msg.insertBefore(stepsEl, msg.querySelector('.msg-content'));
+          }
+          // Render per-turn usage footer if the server returned token/cost data.
+          if (m.usage) {
+            var u = m.usage;
+            var inTok = (u.input_tokens || 0) + (u.cache_read_tokens || 0);
+            var outTok = u.output_tokens || 0;
+            var inK = (inTok / 1000).toFixed(1);
+            var outK = (outTok / 1000).toFixed(1);
+            var costStr = u.cost != null ? '$' + parseFloat(u.cost).toFixed(2) : null;
+            var durStr = u.duration_ms > 0 ? (u.duration_ms >= 60000 ? Math.floor(u.duration_ms/60000) + 'm ' + Math.round((u.duration_ms%60000)/1000) + 's' : (u.duration_ms/1000).toFixed(1) + 's') : null;
+            var parts = [];
+            if (durStr) parts.push(durStr);
+            if (costStr) parts.push(costStr);
+            if (inTok > 0) parts.push(inK + 'k in');
+            if (outTok > 0) parts.push(outK + 'k out');
+            if (parts.length > 0) {
+              var bar = document.createElement('div');
+              bar.className = 'bubble-usage-bar';
+              bar.innerHTML = '<svg class="usage-icon" width="16" height="16" viewBox="-18 0 57 57" stroke="none"><polygon fill="currentColor" points="7.2 8 0.2 4.5 0.2 49.3 14.3 56.3 14.3 48.5 7.2 44.9"/><polygon fill="currentColor" points="14.3 48.5 21.3 52 21.3 7.2 7.2 0.2 7.2 8 14.3 11.6"/></svg><span class="usage-text">' + (cc.escapeHtml ? cc.escapeHtml(parts.join(' · ')) : parts.join(' · ')) + '</span>';
+              msg.appendChild(bar);
+            }
+          }
+        } else {
+          msg.textContent = m.text;
+        }
+      } else {
+        msg.innerHTML = m.html || '';
+      }
       // Collapse reasoning-steps on reopen so the JSON payloads don't
       // spam the pane, but keep the toggle visible ("Show steps") so the
       // user can expand past tool calls if they want. Also drop the live
@@ -957,28 +945,34 @@
   cc.deleteChat = function(id) {
     var chat = findChat(id);
     if (!chat) return;
-    if (!window.confirm('Delete "' + chat.title + '"?')) return;
-    fetch(chatsUrl('/' + encodeURIComponent(id)), {
-      method: 'DELETE',
-      credentials: 'same-origin'
-    })
-    .then(function(r) { return r.ok ? r.json() : null; })
-    .then(function(data) {
-      if (!data || !data.deleted) {
-        console.warn('[interclaw] delete failed — server returned:', data);
-        return;
+    var title = escapeHtml(chat.title || 'this chat');
+    openConfirmModal(
+      'Delete chat',
+      'Delete <strong>' + title + '</strong>? This cannot be undone.',
+      function() {
+        fetch(chatsUrl('/' + encodeURIComponent(id)), {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(data) {
+          if (!data || !data.deleted) {
+            console.warn('[interclaw] delete failed — server returned:', data);
+            return;
+          }
+          cc.chatsStore.chats = cc.chatsStore.chats.filter(function(c) { return c.id !== id; });
+          if (cc.chatsStore.activeId === id) {
+            cc.chatsStore.activeId = null;
+            cc.sessionId = null;
+            cc.sessionReady = false;
+            clearMessagesPane();
+            try { sessionStorage.removeItem('chatbot-state'); } catch (e) {}
+          }
+          cc.renderChatsSidebar();
+        })
+        .catch(function(err) { console.warn('[interclaw] delete failed:', err); });
       }
-      cc.chatsStore.chats = cc.chatsStore.chats.filter(function(c) { return c.id !== id; });
-      if (cc.chatsStore.activeId === id) {
-        cc.chatsStore.activeId = null;
-        cc.sessionId = null;
-        cc.sessionReady = false;
-        clearMessagesPane();
-        try { sessionStorage.removeItem('chatbot-state'); } catch (e) {}
-      }
-      cc.renderChatsSidebar();
-    })
-    .catch(function(err) { console.warn('[interclaw] delete failed:', err); });
+    );
   };
 
   function findChat(id) {

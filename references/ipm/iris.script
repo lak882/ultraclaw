@@ -1,0 +1,10 @@
+  zn "USER"
+  do $System.OBJ.Load("/home/irisowner/zpm/preload/cls/IPM/Installer.cls","ck")
+  do ##class(IPM.Installer).setup("/home/irisowner/zpm/",3)
+  zpm "repo -r -name registry -url https://pm.community.intersystems.com/"
+  do $System.SQL.PurgeAllNamespaces()
+
+  do ##class(%IPM.Main).Shell("install vscode-per-namespace-settings")
+  do ##class(%IPM.Main).Shell("install TestCoverage")
+  set ^UnitTestRoot="/usr/irissys/.vscode/USER/UnitTestRoot"
+  halt

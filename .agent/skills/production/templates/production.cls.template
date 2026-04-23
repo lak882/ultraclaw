@@ -1,0 +1,15 @@
+Class {{PACKAGE}}.Production Extends Ens.Production
+{
+
+XData ProductionDefinition [ XMLNamespace = "http://www.intersystems.com/production" ]
+{
+<Production Name="{{PACKAGE}}.Production" LogGeneralTraceEvents="false">
+  <Description>{{DESCRIPTION}}</Description>
+  <ActorPoolSize>2</ActorPoolSize>
+
+  <!-- Add <Item> elements here -->
+
+</Production>
+}
+
+}

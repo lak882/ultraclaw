@@ -209,12 +209,8 @@
             var msg = 'Authenticated as `' + (authData.key_prefix || '****') + '` in region `' + (verifyData.region || 'us-east-1') + '`.';
             if (authData.wallet_stored) msg += ' Key stored in the IRIS wallet and will persist across restarts.';
             cc.addMessage('assistant', msg);
-            if (!verifyData.logged_in) {
-              cc.showSetupPrompt({ needsLogin: true });
-            } else {
-              cc.updateStatus('Connected');
-              cc.showWelcomeMessage();
-            }
+            cc.updateStatus('Connected');
+            cc.showWelcomeMessage();
           } else {
             cc.addMessage('assistant', 'The key was stored but authentication could not be verified. Try sending a message to confirm it works.');
             cc.updateStatus('Connected');
@@ -244,7 +240,6 @@
         if (deauthData.success) {
           cc.addMessage('assistant', 'API key removed.' + (deauthData.wallet_removed ? ' Wallet entry deleted.' : ''));
           cc.updateStatus('Not authenticated');
-          cc.showSetupPrompt({});
         } else {
           cc.addMessage('error', 'Deauthentication failed: ' + (deauthData.error || deauthData.message || 'Unknown error'));
         }
@@ -283,12 +278,8 @@
           try {
             var checkResp = await fetch(cc.apiBase + '/api/auth-status');
             var checkData = await checkResp.json();
-            if (!checkData.authenticated) {
-              cc.showSetupPrompt({});
-            } else {
-              cc.updateStatus('Connected');
-              cc.showWelcomeMessage();
-            }
+            cc.updateStatus('Connected');
+            cc.showWelcomeMessage();
           } catch (_) {
             cc.updateStatus('Connected');
           }
@@ -318,7 +309,6 @@
           cc.addMessage('assistant', 'Logged out.');
           cc.updateStatus('Not logged in');
           window.dispatchEvent(new CustomEvent('interclaw-auth-changed', { detail: { loggedIn: false } }));
-          cc.showSetupPrompt({ needsLogin: true });
         } else {
           cc.addMessage('error', 'Logout failed.');
         }
@@ -510,6 +500,9 @@
         }
       }
     } catch(e) {}
+
+    // Portal page context prepending disabled.
+
     if (!fullMessage) return;
 
     cc.addMessageWithFiles('user', message, sentFiles);
@@ -544,9 +537,33 @@
       console.log('[plan-detect] auto-switching to plan mode for prompt:', fullMessage.substring(0, 60));
       cc.switchToPlanMode();
     }
+    // Mint a local chat ID before the poll starts so the sidebar tracks
+    // this session immediately. The user bubble is already in the DOM so
+    // hasUserMessage() returns true. ensureChatId is a no-op if
+    // cc.sessionId is already set.
+    var _preSendId = cc.sessionId;
+    cc.ensureChatId(true);
+    if (cc.sessionId && cc.sessionId !== _preSendId && cc.chatsStore) {
+      // New chat — push a stub so the sidebar shows it right away.
+      var _stubTitle = message.trim().split(/\s+/).slice(0, 6).join(' ') || 'New chat';
+      var _stub = { id: cc.sessionId, title: _stubTitle, status: 'running', updatedAt: Date.now() };
+      if (!cc.chatsStore.chats) cc.chatsStore.chats = [];
+      cc.chatsStore.chats.unshift(_stub);
+      if (cc.renderChatsSidebar) cc.renderChatsSidebar();
+    }
     var sdkMode = cc.SDK_PERMISSION_MODES[cc.currentMode] || 'bypassPermissions';
     var editorCtx = cc.getEditorContext();
-    var sendPayload = { action: 'message', prompt: fullMessage, session_id: cc.sessionId, model: cc.getSelectedModel(), namespace: editorCtx.namespace, permission_mode: sdkMode, effort: cc.currentEffort || 'medium', editor_context: editorCtx };
+    var requestId = 'REQ-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    var pageCtx = cc.buildPageContext ? cc.buildPageContext(editorCtx) : '';
+    // Build the legacy-ui link base: {origin}{pathPrefix}/ui/interop/interclaw/legacy-ui/index.html.
+    // The backend stores this on Chat.Request.LinkBase; the model appends
+    // #/csp/healthshare/{ns}/<ZenPage> to build editor links in replies.
+    var linkBase = (function() {
+      var m = window.location.pathname.match(/^(\/[^/]+)\/ui\/interop\/(?:interclaw|cc)\//);
+      var pathPrefix = m ? m[1] : '';
+      return window.location.origin + pathPrefix + '/ui/interop/interclaw/legacy-ui/index.html';
+    })();
+    var sendPayload = { action: 'message', prompt: fullMessage, chat_id: cc.sessionId, request_id: requestId, model: cc.getSelectedModel(), namespace: editorCtx.namespace, permission_mode: sdkMode, effort: cc.currentEffort || 'medium', editor_context: editorCtx, page_context: pageCtx, link_base: linkBase, username: (cc.chatsStore && cc.chatsStore.user) || '' };
     cc.bridgeSend(sendPayload).then(function(ok) {
       if (!ok) {
         cc.stopTimer();

@@ -157,9 +157,12 @@ html, body {
   width: 1px; background: var(--fr-styles-color-light-grey);
   pointer-events: none;
 }
-#sidebar-search { padding: 8px 12px; flex-shrink: 0; }
+#sidebar-search {
+  padding: 8px 12px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 6px;
+}
 #sidebar-search input {
-  width: 100%; padding: 5px 10px;
+  flex: 1; padding: 5px 10px;
   border: 1px solid rgba(0,0,0,0.38); border-radius: 4px;
   font-family: inherit; font-size: var(--fr-styles-font-size-2xs);
   color: rgba(0,0,0,0.87); background: var(--fr-styles-color-white); outline: none;
@@ -169,6 +172,28 @@ html, body {
 #sidebar-search input:focus {
   border-color: var(--fr-styles-color-secondary);
   box-shadow: 0 0 0 1px var(--fr-styles-color-secondary);
+}
+#new-file-btn, #new-folder-btn {
+  width: 28px; height: 28px;
+  padding: 0; margin: 0;
+  border: none;
+  background: none;
+  color: rgba(0,0,0,0.5);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#new-file-btn:hover, #new-folder-btn:hover {
+  color: rgba(0,0,0,0.87);
+  background: rgba(0,0,0,0.04);
+}
+#new-file-btn:focus, #new-folder-btn:focus { outline: none; }
+#new-file-btn svg, #new-folder-btn svg {
+  width: 14px; height: 14px;
 }
 #sidebar-content { flex: 1; overflow-y: auto; padding-bottom: 8px; }
 #sidebar-content::-webkit-scrollbar { width: 4px; }
@@ -205,19 +230,39 @@ html, body {
   flex-shrink: 0; margin-left: 4px; color: rgba(0,0,0,0.54);
 }
 .section-icon svg { width: 14px; height: 14px; }
+.section-title-wrap {
+  flex: 1; display: flex; align-items: center; gap: 4px;
+  min-width: 0; overflow: hidden;
+}
 .section-label {
   font-size: var(--fr-styles-font-size-3xs);
   font-weight: 700; color: rgba(0,0,0,0.56);
   text-transform: uppercase; letter-spacing: 0.7px;
-  margin-left: 6px; flex: 1;
+  margin-left: 6px;
   transition: color 0.1s;
+  white-space: nowrap;
 }
 .section-count {
   font-size: var(--fr-styles-font-size-3xs);
   color: rgba(0,0,0,0.38);
   font-variant-numeric: tabular-nums;
   transition: color 0.1s;
+  white-space: nowrap;
 }
+.folder-more {
+  opacity: 0;
+  width: 20px; height: 20px;
+  padding: 0; margin: 0;
+  border: none; background: none;
+  color: rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+  border-radius: 3px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.section-header:hover .folder-more { opacity: 1; }
+.folder-more:hover { background: rgba(0,0,0,0.08); color: rgba(0,0,0,0.87); }
+.folder-more svg { width: 16px; height: 16px; }
 .section-items {
   overflow: hidden;
   position: relative;
@@ -244,16 +289,22 @@ html, body {
 }
 .group-chevron.collapsed { transform: rotate(-90deg); }
 .group-chevron svg { width: 8px; height: 8px; }
+.group-title-wrap {
+  flex: 1; display: flex; align-items: center; gap: 4px;
+  min-width: 0; overflow: hidden;
+}
 .group-label {
   font-size: var(--fr-styles-font-size-2xs);
   font-weight: 600;
   color: rgba(0,0,0,0.72);
-  margin-left: 6px; flex: 1;
+  margin-left: 6px;
+  white-space: nowrap;
 }
 .group-count {
   font-size: var(--fr-styles-font-size-3xs);
   color: rgba(0,0,0,0.38);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .group-items {
   overflow: hidden;
@@ -274,6 +325,7 @@ html, body {
   border-radius: 4px;
   margin: 1px 6px;
   transition: background 0.1s;
+  position: relative;
 }
 .file-item:hover { background: rgba(0,0,0,0.045); }
 .file-item.active {
@@ -281,8 +333,53 @@ html, body {
 }
 .file-item.active .file-name { color: var(--fr-styles-color-primary); font-weight: 600; }
 .file-item.active .file-icon { color: var(--fr-styles-color-primary); }
+.file-item[draggable="true"] { cursor: grab; }
+.file-item.dragging { opacity: 0.4; }
+.section-header[draggable="true"] { cursor: grab; }
+.section-header.dragging { opacity: 0.4; }
 .file-item.root-file { margin-left: 12px; }
 .file-item.root-file .file-name { font-weight: 600; }
+.file-item.editing .file-name { display: none; }
+.file-item.editing .file-name-input {
+  display: block;
+  flex: 1;
+  padding: 2px 4px;
+  border: 1px solid var(--fr-styles-color-secondary);
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: var(--fr-styles-font-size-2xs);
+  outline: none;
+  background: white;
+}
+.file-name-input {
+  display: none;
+}
+.file-item .file-more {
+  opacity: 0;
+  width: 20px; height: 20px;
+  padding: 0; margin: 0;
+  border: none;
+  background: none;
+  color: rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: color 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+}
+.file-item:hover .file-more,
+.file-item.active .file-more {
+  opacity: 1;
+}
+.file-item .file-more:hover {
+  background: rgba(0,0,0,0.08);
+}
+.file-item .file-more svg {
+  width: 16px; height: 16px;
+}
 
 .file-icon {
   display: inline-flex; align-items: center; justify-content: center;
@@ -358,7 +455,10 @@ html, body {
   border-bottom: 1px solid rgba(0,0,0,0.12);
   display: none; align-items: center; gap: 10px; flex-shrink: 0;
   background: var(--fr-styles-color-white);
+  justify-content: space-between;
 }
+#code-header .left { display: flex; align-items: center; gap: 10px; }
+#code-header .right { display: flex; align-items: center; gap: 8px; }
 #code-header .filename { font-weight: 600; font-size: var(--fr-styles-font-size-sm); color: rgba(0,0,0,0.87); }
 #code-header .lang-badge {
   font-size: var(--fr-styles-font-size-3xs); font-weight: 600; padding: 1px 6px; border-radius: 3px;
@@ -567,6 +667,25 @@ html, body {
   color: #2F2A95;
   opacity: 0.7;
 }
+.section-header.drop-target {
+  background: hsla(220, 70%, 55%, 0.12);
+  outline: 2px dashed hsl(220, 70%, 55%);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+#sidebar-root-drop {
+  height: 8px;
+  margin: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.1s, outline 0.1s;
+}
+#sidebar-root-drop.drop-target {
+  height: 24px;
+  background: hsla(220, 70%, 55%, 0.10);
+  outline: 2px dashed hsl(220, 70%, 55%);
+  outline-offset: -2px;
+}
+
 .group-header.removed .group-label {
   color: #2F2A95;
   text-decoration: line-through;
@@ -624,11 +743,279 @@ html, body {
 }
 .restore-btn.visible { display: inline-block; }
 
+/* ── Save Button ────────────────────────────────── */
+.save-btn {
+  display: none;
+  width: 32px; height: 32px;
+  padding: 0; margin: 0;
+  border: none;
+  background: none;
+  color: rgba(0,0,0,0.5);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+  border-radius: 6px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+.save-btn:hover {
+  color: rgba(0,0,0,0.87);
+  background: rgba(0,0,0,0.04);
+}
+.save-btn:focus { outline: none; }
+.save-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.save-btn:disabled:hover {
+  color: rgba(0,0,0,0.5);
+  background: none;
+}
+.save-btn.visible { display: flex; }
+.save-btn svg {
+  width: 16px; height: 16px;
+}
+
 /* ── Loading ────────────────────────────────────── */
 .loading {
   display: flex; align-items: center; justify-content: center;
   padding: 20px; color: rgba(0,0,0,0.38); font-size: var(--fr-styles-font-size-2xs);
 }
+
+/* ── File Actions Popup (chatbot-style) ──────────── */
+.file-actions-popup {
+  position: fixed;
+  z-index: 10050;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.06);
+  padding: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  color: rgba(0,0,0,0.87);
+  min-width: 160px;
+  user-select: none;
+}
+.file-actions-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 6px;
+  color: rgba(0,0,0,0.87);
+  font-family: inherit;
+  font-size: 13px;
+  transition: background 0.08s ease-out;
+}
+.file-actions-item:hover {
+  background: rgba(0,0,0,0.06);
+}
+.file-actions-item.danger {
+  color: #b3261e;
+}
+.file-actions-item.danger:hover {
+  background: rgba(179, 38, 30, 0.08);
+}
+.file-actions-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: inherit;
+}
+.file-actions-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Confirmation Modal ─────────────────────────── */
+.confirm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 30000;
+}
+.confirm-modal.show { display: flex; }
+.confirm-modal-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  width: 400px;
+  max-width: 90vw;
+  overflow: hidden;
+}
+.confirm-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+  font-size: var(--fr-styles-font-size-base);
+  font-weight: 600;
+  color: rgba(0,0,0,0.87);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.confirm-modal-header svg {
+  width: 20px;
+  height: 20px;
+  color: hsl(0, 70%, 50%);
+  flex-shrink: 0;
+}
+.confirm-modal-body {
+  padding: 20px;
+  font-size: var(--fr-styles-font-size-sm);
+  color: rgba(0,0,0,0.67);
+  line-height: 1.5;
+}
+.confirm-modal-body strong {
+  color: rgba(0,0,0,0.87);
+  font-weight: 600;
+}
+.confirm-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(0,0,0,0.12);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.confirm-modal-btn {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: none;
+  border-radius: 3px;
+  padding: 6px 16px;
+  font-family: inherit;
+  font-size: var(--fr-styles-font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.confirm-modal-btn:hover {
+  background: rgba(0,0,0,0.04);
+  border-color: rgba(0,0,0,0.26);
+}
+.confirm-modal-btn.danger {
+  background: hsl(0, 70%, 50%);
+  border-color: hsl(0, 70%, 50%);
+  color: white;
+}
+.confirm-modal-btn.danger:hover {
+  background: hsl(0, 70%, 45%);
+  border-color: hsl(0, 70%, 45%);
+}
+
+/* Input modal (new file / new folder / rename) */
+.input-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 30000;
+}
+.input-modal.show { display: flex; }
+.input-modal-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  width: 400px;
+  max-width: 90vw;
+  overflow: hidden;
+}
+.input-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+  font-size: var(--fr-styles-font-size-base);
+  font-weight: 600;
+  color: rgba(0,0,0,0.87);
+}
+.input-modal-body {
+  padding: 20px;
+}
+.input-modal-label {
+  font-size: var(--fr-styles-font-size-sm);
+  color: rgba(0,0,0,0.67);
+  margin-bottom: 8px;
+}
+.input-modal-field {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(0,0,0,0.23);
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: var(--fr-styles-font-size-sm);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-modal-field:focus {
+  border-color: hsl(220, 70%, 55%);
+}
+.input-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(0,0,0,0.12);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Alert/error modal */
+.alert-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 30001;
+}
+.alert-modal.show { display: flex; }
+.alert-modal-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  width: 380px;
+  max-width: 90vw;
+  overflow: hidden;
+}
+.alert-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+  font-size: var(--fr-styles-font-size-base);
+  font-weight: 600;
+  color: rgba(0,0,0,0.87);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.alert-modal-header svg {
+  width: 20px;
+  height: 20px;
+  color: hsl(0, 70%, 50%);
+  flex-shrink: 0;
+}
+.alert-modal-body {
+  padding: 20px;
+  font-size: var(--fr-styles-font-size-sm);
+  color: rgba(0,0,0,0.67);
+  line-height: 1.5;
+}
+.alert-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(0,0,0,0.12);
+  display: flex;
+  justify-content: flex-end;
+}
+
 </style>
 
 <!-- Theme overlay removed — user feedback was that the pre-overlay
@@ -664,7 +1051,6 @@ html, body {
     <div id="toolbar">
       <div class="breadcrumb" id="breadcrumb"></div>
       <div class="toolbar-actions">
-        <span id="status-indicator" class="status-indicator"></span>
         <button id="restore-btn" class="restore-btn">Restore</button>
         <div class="view-toggle" id="view-toggle">
           <button class="active" data-view="rendered">Rendered</button>
@@ -678,6 +1064,17 @@ html, body {
       <div id="sidebar">
         <div id="sidebar-search">
           <input type="text" id="search-input" placeholder="Search files..." spellcheck="false">
+          <button id="new-file-btn" title="New file">
+            <svg viewBox="0 0 16 16" fill="currentColor">
+              <path d="M9.5 1.1l3.4 3.5.1.4v2h-1V6H8V2H3v11h4v1H2.5l-.5-.5v-12l.5-.5h6.7l.3.1zM9 2v3h2.9L9 2zm4 14h-1v-3H9v-1h3V9h1v3h3v1h-3v3z"/>
+            </svg>
+          </button>
+          <button id="new-folder-btn" title="New folder">
+            <svg viewBox="0 0 16 16" fill="currentColor">
+              <path d="M14.5 3H7.71l-.86-.85L6.5 2h-5l-.5.5v11l.5.5h13l.5-.5v-10L14.5 3zM14 13H2V7h4.49l.35-.36.86-.85H14v7.21z"/>
+              <path d="M11 8H9.5v1.5H8v1h1.5V12H11v-1.5h1.5v-1H11V8z"/>
+            </svg>
+          </button>
         </div>
         <div id="sidebar-content">
           <div class="loading" aria-hidden="true"></div>
@@ -696,12 +1093,78 @@ html, body {
           </div>
         </div>
         <div id="code-header">
-          <span class="filename" id="file-name"></span>
-          <span class="meta" id="file-meta"></span>
+          <div class="left">
+            <span class="filename" id="file-name"></span>
+            <span class="meta" id="file-meta"></span>
+          </div>
+          <div class="right">
+            <span id="status-indicator" class="status-indicator"></span>
+            <button id="save-btn" class="save-btn" title="Save file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+            </button>
+          </div>
         </div>
         <pre id="code-view" ><code></code></pre>
         <textarea id="source-editor" spellcheck="false"></textarea>
         <div id="markdown-view"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation modal -->
+  <div id="confirm-modal" class="confirm-modal">
+    <div class="confirm-modal-card">
+      <div class="confirm-modal-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span id="confirm-modal-title">Confirm deletion</span>
+      </div>
+      <div class="confirm-modal-body" id="confirm-modal-body">
+        Are you sure you want to delete <strong id="confirm-modal-item"></strong>?
+      </div>
+      <div class="confirm-modal-footer">
+        <button class="confirm-modal-btn" id="confirm-modal-cancel">Cancel</button>
+        <button class="confirm-modal-btn danger" id="confirm-modal-confirm">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input modal (new file / new folder / rename) -->
+  <div id="input-modal" class="input-modal">
+    <div class="input-modal-card">
+      <div class="input-modal-header" id="input-modal-title">Name</div>
+      <div class="input-modal-body">
+        <div class="input-modal-label" id="input-modal-label"></div>
+        <input type="text" id="input-modal-field" class="input-modal-field" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="input-modal-footer">
+        <button class="confirm-modal-btn" id="input-modal-cancel">Cancel</button>
+        <button class="confirm-modal-btn danger" id="input-modal-ok" style="background:hsl(220,70%,55%);border-color:hsl(220,70%,55%);">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert modal (errors) -->
+  <div id="alert-modal" class="alert-modal">
+    <div class="alert-modal-card">
+      <div class="alert-modal-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>Error</span>
+      </div>
+      <div class="alert-modal-body" id="alert-modal-body"></div>
+      <div class="alert-modal-footer">
+        <button class="confirm-modal-btn" id="alert-modal-ok">OK</button>
       </div>
     </div>
   </div>
@@ -738,7 +1201,8 @@ html, body {
 
   /* ── API base URL (same derivation as chatbot state.js) ──────────── */
   var _pathMatch = window.location.pathname.match(/^(\/[^/]+)\/ui\/interop\/(?:interclaw|cc)\//);;
-  var _apiBase = _pathMatch ? _pathMatch[1] + '/api/interclaw' : '/api/interclaw';
+  // Skills API routes at /api/interclaw/skills
+  var _apiBase = _pathMatch ? _pathMatch[1] + '/api/interclaw/skills' : '/api/interclaw/skills';
 
   /* ── Content cache (fetched on demand via REST API) ────────────── */
   var _contentCache = {};
@@ -753,6 +1217,7 @@ html, body {
     files: null,
     tree: null,
     expanded: {},
+    currentDir: '',   // last-focused directory; used as default parent for new files/folders
   };
 
   /* ── Helpers ────────────────────────────────────────────────────────── */
@@ -811,10 +1276,11 @@ html, body {
 
   /* ── Load index.json ────────────────────────────────────────────────── */
   function loadIndex() {
-    fetch(_apiBase + '/api/skill-index?t=' + Date.now()).then(function(r) { return r.json(); })
+    fetch(_apiBase + '/index?t=' + Date.now()).then(function(r) { return r.json(); })
     .then(function(entries) {
       state.manifest = entries;
-      state.files = entries.sort(function(a, b) { return a.path.localeCompare(b.path); });
+      state.files = entries.filter(function(e) { return e.type === 'file'; })
+                           .sort(function(a, b) { return a.path.localeCompare(b.path); });
       state.tree = buildTree(entries);
       var q = ($('#search-input').value || '').trim();
       renderSidebar(q || undefined);
@@ -827,14 +1293,24 @@ html, body {
   /* ── Build tree from flat file list ────────────────────────────────── */
   function buildTree(entries) {
     var root = { _files: [], _dirs: {} };
-    entries.forEach(function(e) {
-      var parts = e.path.split('/');
+
+    function ensureDir(parts) {
       var node = root;
-      for (var i = 0; i < parts.length - 1; i++) {
+      for (var i = 0; i < parts.length; i++) {
         if (!node._dirs[parts[i]]) node._dirs[parts[i]] = { _files: [], _dirs: {} };
         node = node._dirs[parts[i]];
       }
-      node._files.push(e);
+      return node;
+    }
+
+    entries.forEach(function(e) {
+      var parts = e.path.split('/');
+      if (e.type === 'dir') {
+        ensureDir(parts);
+      } else {
+        var node = ensureDir(parts.slice(0, parts.length - 1));
+        node._files.push(e);
+      }
     });
     return root;
   }
@@ -865,6 +1341,35 @@ html, body {
       container.innerHTML = '<div class="search-empty">No matching files</div>';
     }
 
+    // Root drop zone: dropping here moves the file to the root (no folder)
+    var rootDrop = document.createElement('div');
+    rootDrop.id = 'sidebar-root-drop';
+    rootDrop.title = 'Drop here to move to root';
+    rootDrop.addEventListener('dragover', function(e) {
+      if (!e.dataTransfer.types.includes('text/plain')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      rootDrop.classList.add('drop-target');
+    });
+    rootDrop.addEventListener('dragleave', function(e) {
+      if (!rootDrop.contains(e.relatedTarget)) rootDrop.classList.remove('drop-target');
+    });
+    rootDrop.addEventListener('drop', function(e) {
+      e.preventDefault();
+      rootDrop.classList.remove('drop-target');
+      var isDir = e.dataTransfer.types.includes('application/x-dir');
+      var srcPath = e.dataTransfer.getData('text/plain');
+      if (!srcPath) return;
+      var leafName = srcPath.split('/').pop();
+      if (srcPath === leafName) return; // already at root
+      if (isDir) {
+        renameFolderFiles(srcPath, leafName);
+      } else {
+        moveFileTo(srcPath, leafName);
+      }
+    });
+    container.appendChild(rootDrop);
+
     container.scrollTop = scrollTop;
   }
 
@@ -878,20 +1383,80 @@ html, body {
 
     var header = document.createElement('div');
     header.className = 'section-header';
-    // Depth is visualized by the .section-items wrapper (margin-left +
-    // border-left guide line). The header sits flush with that wrapper's
-    // content area — no JS padding needed.
     header.innerHTML =
       '<span class="section-chevron ' + (isOpen ? '' : 'collapsed') + '">' +
         '<svg viewBox="0 0 10 10"><path d="M2 3l3 3.5L8 3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       '</span>' +
       '<span class="section-icon">' + FOLDER_ICON + '</span>' +
-      '<span class="section-label">' + esc(name) + '</span>' +
-      '<span class="section-count">' + allFiles.length + '</span>';
-    header.addEventListener('click', function() {
+      '<span class="section-title-wrap">' +
+        '<span class="section-label">' + esc(name) + '</span>' +
+        '<span class="section-count">(' + allFiles.length + ')</span>' +
+      '</span>' +
+      '<button class="folder-more" title="More actions">' +
+        '<svg viewBox="0 0 24 24" fill="currentColor">' +
+          '<circle cx="5" cy="12" r="2"/>' +
+          '<circle cx="12" cy="12" r="2"/>' +
+          '<circle cx="19" cy="12" r="2"/>' +
+        '</svg>' +
+      '</button>';
+    var moreBtn = header.querySelector('.folder-more');
+    header.addEventListener('click', function(e) {
+      if (e.target === moreBtn || moreBtn.contains(e.target)) return;
       state.expanded[key] = !isOpen;
+      state.currentDir = fullPath;
       renderSidebar(filter || undefined);
     });
+    moreBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openFolderMenu(fullPath, name, moreBtn);
+    });
+
+    // Draggable: this folder header can be dragged into another folder
+    header.draggable = true;
+    header.setAttribute('data-dir-path', fullPath);
+    header.addEventListener('dragstart', function(e) {
+      e.stopPropagation(); // don't bubble to a parent folder's dragstart
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', fullPath);
+      e.dataTransfer.setData('application/x-dir', fullPath);
+      setTimeout(function() { header.classList.add('dragging'); }, 0);
+    });
+    header.addEventListener('dragend', function() {
+      header.classList.remove('dragging');
+    });
+
+    // Drop target: accept file and folder drags
+    header.addEventListener('dragover', function(e) {
+      if (!e.dataTransfer.types.includes('text/plain')) return;
+      var srcPath = e.dataTransfer.getData('application/x-dir') || e.dataTransfer.getData('text/plain');
+      // Refuse to drop a folder onto itself or any descendant
+      if (srcPath && (fullPath === srcPath || fullPath.indexOf(srcPath + '/') === 0)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      header.classList.add('drop-target');
+    });
+    header.addEventListener('dragleave', function(e) {
+      if (!header.contains(e.relatedTarget)) header.classList.remove('drop-target');
+    });
+    header.addEventListener('drop', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      header.classList.remove('drop-target');
+      var isDir = e.dataTransfer.types.includes('application/x-dir');
+      var srcPath = e.dataTransfer.getData('text/plain');
+      if (!srcPath) return;
+      var leafName = srcPath.split('/').pop();
+      var destPath = fullPath + '/' + leafName;
+      if (srcPath === destPath) return;
+      // Refuse to drop a folder into itself or a descendant
+      if (isDir && (fullPath === srcPath || fullPath.indexOf(srcPath + '/') === 0)) return;
+      if (isDir) {
+        renameFolderFiles(srcPath, destPath);
+      } else {
+        moveFileTo(srcPath, destPath);
+      }
+    });
+
     parent.appendChild(header);
 
     if (!isOpen) return;
@@ -926,14 +1491,329 @@ html, body {
     var el = document.createElement('div');
     el.className = 'file-item';
     el.dataset.path = item.path;
+    el.draggable = true;
     if (state.currentFile === item.path) el.classList.add('active');
 
     var icon = fileIconClass(item.ext);
     el.innerHTML =
       '<span class="file-icon ' + icon.cls + '">' + icon.svg + '</span>' +
-      '<span class="file-name" title="' + esc(item.path) + '">' + esc(item.name) + '</span>';
-    el.addEventListener('click', function() { openFile(item.path); });
+      '<span class="file-name" title="' + esc(item.path) + '">' + esc(item.name) + '</span>' +
+      '<input type="text" class="file-name-input" value="' + esc(item.name) + '">' +
+      '<button class="file-more" title="More actions">' +
+        '<svg viewBox="0 0 24 24" fill="currentColor">' +
+          '<circle cx="5" cy="12" r="2"/>' +
+          '<circle cx="12" cy="12" r="2"/>' +
+          '<circle cx="19" cy="12" r="2"/>' +
+        '</svg>' +
+      '</button>';
+
+    var nameSpan = el.querySelector('.file-name');
+    var nameInput = el.querySelector('.file-name-input');
+    var moreBtn = el.querySelector('.file-more');
+
+    // Single click to open
+    el.addEventListener('click', function(e) {
+      if (!el.classList.contains('editing') && e.target !== moreBtn && !moreBtn.contains(e.target)) {
+        var parts = item.path.split('/');
+        state.currentDir = parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+        openFile(item.path);
+      }
+    });
+
+    // More button opens menu
+    moreBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openFileMenu(item.path, item.name, el, moreBtn);
+    });
+
+    // Handle rename input
+    nameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        finishRename(el, item.path, nameInput.value.trim());
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelRename(el);
+      }
+    });
+
+    nameInput.addEventListener('blur', function() {
+      if (el.classList.contains('editing')) {
+        finishRename(el, item.path, nameInput.value.trim());
+      }
+    });
+
+    // Drag-and-drop: move file to another folder
+    el.addEventListener('dragstart', function(e) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.path);
+      // Defer so the element isn't invisible before the ghost image is captured
+      setTimeout(function() { el.classList.add('dragging'); }, 0);
+    });
+    el.addEventListener('dragend', function() {
+      el.classList.remove('dragging');
+    });
+
     return el;
+  }
+
+  // File actions menu
+  function openFileMenu(path, name, itemEl, triggerEl) {
+    closeFileMenu();
+
+    var menu = document.createElement('div');
+    menu.id = 'file-actions-popup';
+    menu.className = 'file-actions-popup';
+    menu.innerHTML =
+      '<button class="file-actions-item" data-action="rename">' +
+        '<span class="file-actions-icon">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>' +
+          '</svg>' +
+        '</span>Rename' +
+      '</button>' +
+      '<button class="file-actions-item danger" data-action="delete">' +
+        '<span class="file-actions-icon">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+            '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>' +
+          '</svg>' +
+        '</span>Delete' +
+      '</button>';
+    document.body.appendChild(menu);
+
+    // Position menu
+    var trig = triggerEl.getBoundingClientRect();
+    var menuW = 160;
+    var gap = 6;
+    var preferredLeft = Math.round(trig.right + gap);
+    if (preferredLeft + menuW + 8 > window.innerWidth) {
+      preferredLeft = Math.max(8, Math.round(trig.left - menuW - gap));
+    }
+    var preferredTop = Math.round(trig.top);
+    var minTop = 50;
+    if (preferredTop < minTop) preferredTop = minTop;
+    menu.style.top = preferredTop + 'px';
+    menu.style.left = preferredLeft + 'px';
+    menu.style.minWidth = menuW + 'px';
+
+    menu.addEventListener('click', function(e) {
+      var btn = e.target.closest('.file-actions-item');
+      if (!btn) return;
+      e.stopPropagation();
+      var action = btn.getAttribute('data-action');
+      closeFileMenu();
+      if (action === 'rename') startRename(itemEl, path, name);
+      else if (action === 'delete') confirmDelete(path, name);
+    });
+
+    window._fileMenuOutsideHandler = function(e) {
+      if (!menu.contains(e.target) && e.target !== triggerEl) closeFileMenu();
+    };
+    window._fileMenuKeyHandler = function(e) {
+      if (e.key === 'Escape') closeFileMenu();
+    };
+    setTimeout(function() {
+      document.addEventListener('mousedown', window._fileMenuOutsideHandler, true);
+      document.addEventListener('keydown', window._fileMenuKeyHandler, true);
+    }, 0);
+  }
+
+  function closeFileMenu() {
+    var m = document.getElementById('file-actions-popup');
+    if (m) m.remove();
+    document.removeEventListener('mousedown', window._fileMenuOutsideHandler, true);
+    document.removeEventListener('keydown', window._fileMenuKeyHandler, true);
+  }
+
+  function startRename(el, oldPath, oldName) {
+    el.classList.add('editing');
+    var input = el.querySelector('.file-name-input');
+    input.style.display = 'block';
+    input.focus();
+    var dotIndex = oldName.lastIndexOf('.');
+    if (dotIndex > 0) {
+      input.setSelectionRange(0, dotIndex);
+    } else {
+      input.select();
+    }
+  }
+
+  function cancelRename(el) {
+    el.classList.remove('editing');
+    var input = el.querySelector('.file-name-input');
+    input.style.display = 'none';
+  }
+
+  function finishRename(el, oldPath, newName) {
+    if (!newName || newName === el.querySelector('.file-name').textContent) {
+      cancelRename(el);
+      return;
+    }
+
+    var pathParts = oldPath.split('/');
+    pathParts[pathParts.length - 1] = newName;
+    var newPath = pathParts.join('/');
+
+    fetch(_apiBase + '/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPath: oldPath, newPath: newPath })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+      if (result.error) { showAlert('Rename failed: ' + result.error); cancelRename(el); return; }
+      if (state.currentFile === oldPath) state.currentFile = newPath;
+      delete _contentCache[oldPath];
+      loadIndex();
+    })
+    .catch(function(err) { showAlert('Rename failed: ' + err.message); cancelRename(el); });
+  }
+
+  // Folder actions menu
+  function openFolderMenu(folderPath, folderName, triggerEl) {
+    closeFileMenu();
+
+    var menu = document.createElement('div');
+    menu.id = 'file-actions-popup';
+    menu.className = 'file-actions-popup';
+    menu.innerHTML =
+      '<button class="file-actions-item" data-action="rename">' +
+        '<span class="file-actions-icon">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>' +
+          '</svg>' +
+        '</span>Rename' +
+      '</button>' +
+      '<button class="file-actions-item danger" data-action="delete">' +
+        '<span class="file-actions-icon">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+            '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+            '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>' +
+          '</svg>' +
+        '</span>Delete folder' +
+      '</button>';
+    document.body.appendChild(menu);
+
+    var trig = triggerEl.getBoundingClientRect();
+    var menuW = 160, gap = 6;
+    var left = Math.round(trig.right + gap);
+    if (left + menuW + 8 > window.innerWidth) left = Math.max(8, Math.round(trig.left - menuW - gap));
+    var top = Math.round(trig.top);
+    if (top < 50) top = 50;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+    menu.style.minWidth = menuW + 'px';
+
+    menu.addEventListener('click', function(e) {
+      var btn = e.target.closest('.file-actions-item');
+      if (!btn) return;
+      e.stopPropagation();
+      var action = btn.getAttribute('data-action');
+      closeFileMenu();
+      if (action === 'rename') {
+        openInputModal('Rename folder', 'New folder name:', folderName, function(newName) {
+          newName = newName.replace(/[\/\\]/g, '');
+          if (!newName || newName === folderName) return;
+          var parentParts = folderPath.split('/');
+          parentParts[parentParts.length - 1] = newName;
+          var newFolderPath = parentParts.join('/');
+          renameFolderFiles(folderPath, newFolderPath);
+        });
+      } else if (action === 'delete') {
+        confirmDeleteFolder(folderPath, folderName);
+      }
+    });
+
+    window._fileMenuOutsideHandler = function(e) {
+      if (!menu.contains(e.target) && e.target !== triggerEl) closeFileMenu();
+    };
+    window._fileMenuKeyHandler = function(e) {
+      if (e.key === 'Escape') closeFileMenu();
+    };
+    setTimeout(function() {
+      document.addEventListener('mousedown', window._fileMenuOutsideHandler, true);
+      document.addEventListener('keydown', window._fileMenuKeyHandler, true);
+    }, 0);
+  }
+
+  function moveFileTo(srcPath, destPath) {
+    fetch(_apiBase + '/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPath: srcPath, newPath: destPath })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+      if (result.error) { showAlert('Move failed: ' + result.error); return; }
+      if (state.currentFile === srcPath) state.currentFile = destPath;
+      delete _contentCache[srcPath];
+      loadIndex();
+    })
+    .catch(function(err) { showAlert('Move failed: ' + err.message); });
+  }
+
+  function renameFolderFiles(oldFolder, newFolder) {
+    var allFiles = state.files || [];
+    var toRename = allFiles.filter(function(f) {
+      return f.path.indexOf(oldFolder + '/') === 0;
+    });
+
+    function finish() {
+      // Delete the now-empty old directory from the filesystem.
+      fetch(_apiBase + '/folder?path=' + encodeURIComponent(oldFolder), { method: 'DELETE' })
+        .catch(function() {})
+        .then(function() { loadIndex(); });
+    }
+
+    if (!toRename.length) { finish(); return; }
+    var done = 0;
+    toRename.forEach(function(f) {
+      var newPath = newFolder + f.path.slice(oldFolder.length);
+      fetch(_apiBase + '/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPath: f.path, newPath: newPath })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        if (state.currentFile === f.path) state.currentFile = newPath;
+        delete _contentCache[f.path];
+        if (++done === toRename.length) finish();
+      })
+      .catch(function() { if (++done === toRename.length) finish(); });
+    });
+  }
+
+  function confirmDeleteFolder(folderPath, folderName) {
+    openConfirmModal(
+      'Delete folder',
+      'Delete folder <strong>' + esc(folderName) + '</strong> and all its files? This cannot be undone.',
+      function() { deleteFolderFiles(folderPath); }
+    );
+  }
+
+  function deleteFolderFiles(folderPath) {
+    fetch(_apiBase + '/folder?path=' + encodeURIComponent(folderPath), { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(result) {
+      if (result.error) { showAlert('Failed to delete folder: ' + result.error); return; }
+      // Clear any open file that was inside the deleted folder
+      if (state.currentFile && (state.currentFile === folderPath || state.currentFile.indexOf(folderPath + '/') === 0)) {
+        state.currentFile = null;
+        $('#welcome').style.display = 'flex';
+        $('#code-header').style.display = 'none';
+        $('#code-view').style.display = 'none';
+        $('#source-editor').style.display = 'none';
+        $('#markdown-view').style.display = 'none';
+      }
+      // Clear cache for any files under the deleted folder
+      Object.keys(_contentCache).forEach(function(p) {
+        if (p === folderPath || p.indexOf(folderPath + '/') === 0) delete _contentCache[p];
+      });
+      loadIndex();
+    })
+    .catch(function(err) { showAlert('Failed to delete folder: ' + err.message); });
   }
 
   /* ── Open file (fetch on demand from .claude/) ──────────────────── */
@@ -943,6 +1823,7 @@ html, body {
     state.currentFile = path;
     state.dirty = false;
     showStatus('');
+    updateSaveButton();
 
     var parts = path.split('/');
     $('#breadcrumb').innerHTML = parts.map(function(p, i) {
@@ -970,7 +1851,7 @@ html, body {
     $('#source-editor').style.display = 'block';
 
     // Fetch live from symlink
-    fetch(_apiBase + '/api/skill-file?path=' + encodeURIComponent(path) + '&t=' + Date.now())
+    fetch(_apiBase + '/file?path=' + encodeURIComponent(path) + '&t=' + Date.now())
       .then(function(r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.text();
@@ -1113,6 +1994,16 @@ html, body {
         ed.selectionEnd = 0;
         ed.focus();
       });
+    } else if (view === 'rendered' && state.currentFileData && state.currentFileData.language === 'markdown') {
+      // Re-render markdown from current editor content if dirty
+      if (state.dirty) {
+        renderMarkdown($('#source-editor').value);
+      }
+    } else if (view === 'highlighted' && state.currentFileData) {
+      // Re-render highlighted code from current editor content if dirty
+      if (state.dirty) {
+        renderHighlighted($('#source-editor').value, state.currentFileData.language);
+      }
     }
   }
 
@@ -1120,23 +2011,68 @@ html, body {
   function scheduleSave() {
     state.dirty = true;
     showStatus('modified');
+    updateSaveButton();
+  }
+
+  function updateSaveButton() {
+    var btn = $('#save-btn');
+    if (state.currentFile && state.dirty) {
+      btn.classList.add('visible');
+      btn.disabled = false;
+    } else if (state.currentFile) {
+      btn.classList.add('visible');
+      btn.disabled = true;
+    } else {
+      btn.classList.remove('visible');
+    }
   }
 
   function doSave() {
     if (!state.currentFile || !state.dirty) return;
     var content = $('#source-editor').value;
-    state.dirty = false;
-    if (state.currentFileData) state.currentFileData.content = content;
-    if (_contentCache[state.currentFile]) _contentCache[state.currentFile].content = content;
-    if (state.currentFileData && state.currentFileData.language === 'markdown') renderMarkdown(content);
-    else if (state.currentView === 'highlighted' && state.currentFileData) renderHighlighted(content, state.currentFileData.language);
-    $('#file-meta').textContent = formatSize(content.length);
-    showStatus('');
+
+    // Show saving indicator
+    showStatus('saving');
+
+    // Send PUT request to save file to backend
+    fetch(_apiBase + '/file?path=' + encodeURIComponent(state.currentFile), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      body: content
+    })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(result) {
+      if (result.error) {
+        showAlert('Save failed: ' + result.error);
+        showStatus('modified');
+        return;
+      }
+      // Success - update local state
+      state.dirty = false;
+      if (state.currentFileData) state.currentFileData.content = content;
+      if (_contentCache[state.currentFile]) _contentCache[state.currentFile].content = content;
+      if (state.currentFileData && state.currentFileData.language === 'markdown') renderMarkdown(content);
+      else if (state.currentView === 'highlighted' && state.currentFileData) renderHighlighted(content, state.currentFileData.language);
+      $('#file-meta').textContent = formatSize(content.length);
+      showStatus('saved');
+      updateSaveButton();
+      // Clear saved indicator after 3 seconds
+      setTimeout(function() { showStatus(''); }, 3000);
+    })
+    .catch(function(err) {
+      showAlert('Save failed: ' + err.message);
+      showStatus('modified');
+    });
   }
 
   function showStatus(type) {
     var el = $('#status-indicator');
     if (type === 'modified') el.innerHTML = '<span class="dot modified"></span> Edited (local)';
+    else if (type === 'saving') el.innerHTML = '<span class="dot saving"></span> Saving...';
+    else if (type === 'saved') el.innerHTML = '<span class="dot saved"></span> Saved';
     else if (type === 'refreshed') el.innerHTML = '<span class="dot refreshed"></span> Updated';
     else el.innerHTML = '';
   }
@@ -1149,7 +2085,7 @@ html, body {
       if (!state.currentFile || state.dirty) return;
 
       
-      fetch(_apiBase + "/api/skill-file?path=" + encodeURIComponent(state.currentFile) + "&t=" + Date.now())
+      fetch(_apiBase + "/file?path=" + encodeURIComponent(state.currentFile) + "&t=" + Date.now())
         .then(function(r) { return r.ok ? r.text() : null; })
         .then(function(content) {
           if (!content) return;
@@ -1202,6 +2138,13 @@ html, body {
     });
   })();
 
+  /* ── Sidebar background click resets context to root ───────────────── */
+  $('#sidebar-content').addEventListener('click', function(e) {
+    if (!e.target.closest('.file-item') && !e.target.closest('.section-header')) {
+      state.currentDir = '';
+    }
+  });
+
   /* ── Events ─────────────────────────────────────────────────────────── */
   $('#search-input').addEventListener('input', function() {
     renderSidebar(this.value.trim() || undefined);
@@ -1228,6 +2171,193 @@ html, body {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); doSave(); }
     if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); $('#search-input').focus(); $('#search-input').select(); }
   });
+  $('#save-btn').addEventListener('click', function() { doSave(); });
+
+  $('#new-file-btn').addEventListener('click', function() {
+    createNewFile();
+  });
+
+  $('#new-folder-btn').addEventListener('click', function() {
+    createNewFolder();
+  });
+
+  function createNewFile() {
+    var parentPath = state.currentDir ? state.currentDir + '/' : '';
+
+    openInputModal('New file', 'File name' + (parentPath ? ' in ' + state.currentDir : ' in root') + ':', '', function(name) {
+      name = name.replace(/[\/\\]/g, '');
+      if (!name) return;
+      if (name.indexOf('.') === -1) name += '.md';
+      var path = parentPath + name;
+      fetch(_apiBase + '/file?path=' + encodeURIComponent(path), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        body: ''
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(result) {
+        if (result.error) { showAlert('Failed to create file: ' + result.error); return; }
+        loadIndex();
+        setTimeout(function() { openFile(path); }, 500);
+      })
+      .catch(function(err) { showAlert('Failed to create file: ' + err.message); });
+    });
+  }
+
+  function createNewFolder() {
+    var parentPath = state.currentDir ? state.currentDir + '/' : '';
+
+    openInputModal('New folder', 'Folder name' + (parentPath ? ' in ' + state.currentDir : ' in root') + ':', '', function(name) {
+      name = name.replace(/[\/\\]/g, '');
+      if (!name) return;
+      var path = parentPath + name + '/.gitkeep';
+      fetch(_apiBase + '/file?path=' + encodeURIComponent(path), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        body: ''
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(result) {
+        if (result.error) { showAlert('Failed to create folder: ' + result.error); return; }
+        // Expand the new folder and its parent
+        var newDirPath = (parentPath + name).replace(/\/$/, '');
+        state.expanded[newDirPath] = true;
+        if (parentPath) state.expanded[parentPath.replace(/\/$/, '')] = true;
+        loadIndex();
+      })
+      .catch(function(err) { showAlert('Failed to create folder: ' + err.message); });
+    });
+  }
+
+  // ── Modal helpers ─────────────────────────────────────────────────────────
+
+  // Confirm modal
+  var confirmCallback = null;
+
+  function openConfirmModal(title, bodyHtml, onConfirm) {
+    $('#confirm-modal-title').textContent = title;
+    $('#confirm-modal-body').innerHTML = bodyHtml;
+    confirmCallback = onConfirm;
+    $('#confirm-modal').classList.add('show');
+    $('#confirm-modal-confirm').focus();
+  }
+
+  function closeConfirmModal() {
+    $('#confirm-modal').classList.remove('show');
+    confirmCallback = null;
+  }
+
+  $('#confirm-modal-cancel').addEventListener('click', closeConfirmModal);
+  $('#confirm-modal-confirm').addEventListener('click', function() {
+    var cb = confirmCallback;
+    closeConfirmModal();
+    if (cb) cb();
+  });
+  $('#confirm-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeConfirmModal();
+  });
+
+  function confirmDelete(path, name) {
+    openConfirmModal(
+      'Confirm deletion',
+      'Are you sure you want to delete <strong>' + esc(name) + '</strong>?',
+      function() { deleteFile(path); }
+    );
+  }
+
+  // Input modal (new file / new folder / rename)
+  var inputCallback = null;
+
+  function openInputModal(title, label, defaultValue, onOk) {
+    $('#input-modal-title').textContent = title;
+    $('#input-modal-label').textContent = label;
+    var field = $('#input-modal-field');
+    field.value = defaultValue || '';
+    inputCallback = onOk;
+    $('#input-modal').classList.add('show');
+    setTimeout(function() { field.focus(); field.select(); }, 30);
+  }
+
+  function closeInputModal() {
+    $('#input-modal').classList.remove('show');
+    inputCallback = null;
+  }
+
+  function commitInputModal() {
+    var val = $('#input-modal-field').value.trim();
+    var cb = inputCallback;
+    closeInputModal();
+    if (cb && val) cb(val);
+  }
+
+  $('#input-modal-cancel').addEventListener('click', closeInputModal);
+  $('#input-modal-ok').addEventListener('click', commitInputModal);
+  $('#input-modal-field').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); commitInputModal(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeInputModal(); }
+  });
+  $('#input-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeInputModal();
+  });
+
+  // Alert modal (errors)
+  function showAlert(message) {
+    $('#alert-modal-body').textContent = message;
+    $('#alert-modal').classList.add('show');
+    $('#alert-modal-ok').focus();
+  }
+
+  $('#alert-modal-ok').addEventListener('click', function() {
+    $('#alert-modal').classList.remove('show');
+  });
+  $('#alert-modal').addEventListener('click', function(e) {
+    if (e.target === this) $('#alert-modal').classList.remove('show');
+  });
+
+  // Global Escape handler for all modals
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    if ($('#confirm-modal').classList.contains('show')) { closeConfirmModal(); return; }
+    if ($('#input-modal').classList.contains('show')) { closeInputModal(); return; }
+    if ($('#alert-modal').classList.contains('show')) { $('#alert-modal').classList.remove('show'); }
+  });
+
+  function deleteFile(path) {
+    // TODO: Implement backend DELETE endpoint
+    fetch(_apiBase + '/file?path=' + encodeURIComponent(path), {
+      method: 'DELETE'
+    })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(result) {
+      if (result.error) {
+        showAlert('Failed to delete: ' + result.error);
+        return;
+      }
+      // If we deleted the currently open file, clear the view
+      if (state.currentFile === path) {
+        state.currentFile = null;
+        $('#welcome').style.display = 'flex';
+        $('#code-header').style.display = 'none';
+        $('#code-view').style.display = 'none';
+        $('#source-editor').style.display = 'none';
+        $('#markdown-view').style.display = 'none';
+      }
+      // Reload index
+      loadIndex();
+    })
+    .catch(function(err) {
+      showAlert('Failed to delete: ' + err.message);
+    });
+  }
 
   /* ── Public API for chatbot integration ─────────────────────────────── */
   window._skillsEditor = {

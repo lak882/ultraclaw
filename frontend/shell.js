@@ -21,7 +21,8 @@
   var TAB_TO_FRAME = {
     portal: 'shell-iframe-portal',
     traces: 'shell-iframe-portal',
-    skills: 'shell-iframe-skills'
+    skills: 'shell-iframe-skills',
+    admin: 'shell-iframe-admin'
   };
   var DEFAULT_TAB = 'portal';
 
@@ -59,7 +60,10 @@
         // Cache-bust v: bump when skills-editor/index.html changes so the
         // iframe doesn't serve a stale copy out of the disk cache after a
         // deploy. The browser keyed cache on URL so this is the only knob.
-        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=9'
+        frameSrc: base + 'skills-editor/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=31'
+      },
+      admin: {
+        frameSrc: base + 'admin/index.html?$NAMESPACE=' + namespace + '&chrome=none&v=2'
       }
     };
   }
@@ -76,6 +80,7 @@
     if (portal && !portal.src) portal.src = sources.portal.frameSrc;
     var skills = document.getElementById('shell-iframe-skills');
     if (skills && !skills.src) skills.src = sources.skills.frameSrc;
+    // Admin loads lazily on first activation to avoid unnecessary init overhead.
   }
 
   // Decide which tab is "active" based on the portal iframe's current URL.
@@ -167,6 +172,11 @@
       var current = detectPortalTab();
       if (current === 'traces') navigatePortalIframe(sources.portal.zenHash);
       activateTab('portal');
+    } else if (tabId === 'admin') {
+      // Lazy-load admin iframe on first activation.
+      var adminFrame = document.getElementById('shell-iframe-admin');
+      if (adminFrame && !adminFrame.src) adminFrame.src = sources.admin.frameSrc;
+      activateTab('admin');
     } else {
       activateTab(tabId);
     }
@@ -278,6 +288,10 @@
     // (c) Skills iframe: reload against the new namespace.
     var skillsFrame = document.getElementById('shell-iframe-skills');
     if (skillsFrame) skillsFrame.src = sources.skills.frameSrc;
+
+    // (d) Admin iframe: reload only if it was already loaded.
+    var adminFrame = document.getElementById('shell-iframe-admin');
+    if (adminFrame && adminFrame.src) adminFrame.src = sources.admin.frameSrc;
   });
 
   // ── postMessage bridge: iframes → shell → chatbot ──
@@ -367,30 +381,146 @@
 
   var authGateApplied = null;
   function applyAuthGate(loggedIn) {
+    // Always treat the user as logged in — the chatbot and header are always visible.
+    loggedIn = true;
     if (authGateApplied === loggedIn) return;
     authGateApplied = loggedIn;
-    document.body.classList.toggle('shell-login-required', !loggedIn);
+
+    document.body.classList.toggle('shell-logged-in', loggedIn);
+    var userCollapsed = sessionStorage.getItem('chatbot-closed') === 'true';
+    if (!userCollapsed) {
+      document.body.classList.remove('chatbot-closed');
+    }
+
     var overlay = document.getElementById('shell-auth-overlay');
-    if (overlay) overlay.setAttribute('aria-hidden', loggedIn ? 'true' : 'false');
+    if (overlay) overlay.setAttribute('aria-hidden', 'true');
   }
 
-  async function refreshAuth() {
-    try {
-      var resp = await fetch(apiBase() + '/api/auth-status', {
-        credentials: 'same-origin',
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!resp.ok) throw new Error('auth-status HTTP ' + resp.status);
-      var data = await resp.json();
-      applyAuthGate(!!data.logged_in);
-    } catch (e) {
-      console.warn('[shell] auth-status check failed:', e.message);
+  // Check if the portal iframe is showing the IRIS login page by inspecting its content
+  function checkIframeForLoginPage() {
+    var frame = document.getElementById('shell-iframe-portal');
+    if (!frame || !frame.contentWindow) {
+      console.log('[shell] No iframe or contentWindow');
       applyAuthGate(false);
+      return;
+    }
+
+    try {
+      var iframeDoc = frame.contentWindow.document;
+      var iframeBody = iframeDoc.body;
+      var iframeTitle = iframeDoc.title || '';
+
+      // Check if we're on a login page by looking for login-related indicators
+      // IRIS login page indicators:
+      // - URL contains "login" or "logout"
+      // - Form element with 'login' in the name attribute
+      // - Element with class "form-title" contains "Log In"
+      var href = frame.contentWindow.location.href || '';
+      var hrefLower = href.toLowerCase();
+      var hasLoginInUrl = hrefLower.indexOf('login') !== -1;
+      var hasLogoutInUrl = hrefLower.indexOf('logout') !== -1;
+
+      // Helper function to check for login indicators in a document
+      function checkDocumentForLogin(doc) {
+        var result = { hasLoginFormName: false, hasLogInTitle: false };
+
+        // Check for form element with 'login' in the name attribute
+        var forms = doc.querySelectorAll('form[name]');
+        for (var i = 0; i < forms.length; i++) {
+          var formName = forms[i].getAttribute('name') || '';
+          if (formName.toLowerCase().indexOf('login') !== -1) {
+            result.hasLoginFormName = true;
+            break;
+          }
+        }
+
+        // Check for element with class "form-title" containing "Log In"
+        var formTitles = doc.querySelectorAll('.form-title');
+        for (var i = 0; i < formTitles.length; i++) {
+          var titleText = formTitles[i].textContent || '';
+          if (titleText.indexOf('Log In') !== -1) {
+            result.hasLogInTitle = true;
+            break;
+          }
+        }
+
+        return result;
+      }
+
+      // Check the main iframe document
+      var mainCheck = checkDocumentForLogin(iframeDoc);
+      var hasLoginFormName = mainCheck.hasLoginFormName;
+      var hasLogInTitle = mainCheck.hasLogInTitle;
+
+      // Check nested iframes (legacy-ui wrapper contains a nested iframe with the actual IRIS page)
+      var nestedIframes = iframeDoc.querySelectorAll('iframe');
+      for (var i = 0; i < nestedIframes.length && !hasLoginFormName && !hasLogInTitle; i++) {
+        try {
+          var nestedDoc = nestedIframes[i].contentWindow.document;
+          var nestedCheck = checkDocumentForLogin(nestedDoc);
+          if (nestedCheck.hasLoginFormName) hasLoginFormName = true;
+          if (nestedCheck.hasLogInTitle) hasLogInTitle = true;
+        } catch (nestedErr) {
+          // Cross-origin nested iframe, skip it
+        }
+      }
+
+      // Treat as logged out if any login indicator is present
+      var isOnLoginPage = hasLogoutInUrl ||
+                          hasLoginInUrl ||
+                          hasLoginFormName ||
+                          hasLogInTitle;
+
+      console.log('[shell] Login detection:', {
+        url: href,
+        title: iframeTitle,
+        hasLoginInUrl: hasLoginInUrl,
+        hasLogoutInUrl: hasLogoutInUrl,
+        hasLoginFormName: hasLoginFormName,
+        hasLogInTitle: hasLogInTitle,
+        nestedIframesChecked: nestedIframes.length,
+        isOnLoginPage: isOnLoginPage
+      });
+
+      applyAuthGate(!isOnLoginPage);
+    } catch (e) {
+      // Cross-origin or can't access iframe content - assume logged in
+      // (the iframe will handle its own auth if needed)
+      console.warn('[shell] Cannot check iframe content (cross-origin?):', e.message);
+      applyAuthGate(true);
     }
   }
 
-  window.addEventListener('focus', refreshAuth);
-  window.addEventListener('interclaw-auth-changed', refreshAuth);
+  // Check on iframe load and navigation events (no polling)
+  var portalFrame = document.getElementById('shell-iframe-portal');
+  if (portalFrame) {
+    portalFrame.addEventListener('load', function() {
+      setTimeout(checkIframeForLoginPage, 500);
+
+      // Listen for navigation events inside the iframe
+      try {
+        var iframeWindow = portalFrame.contentWindow;
+        iframeWindow.addEventListener('hashchange', checkIframeForLoginPage);
+        iframeWindow.addEventListener('popstate', checkIframeForLoginPage);
+
+        // Check for nested iframe (legacy-ui wrapper) and listen to its events too
+        var checkNestedIframe = function() {
+          var nestedIframes = iframeWindow.document.querySelectorAll('iframe');
+          if (nestedIframes.length > 0) {
+            nestedIframes[0].addEventListener('load', function() {
+              setTimeout(checkIframeForLoginPage, 300);
+            });
+          }
+        };
+        setTimeout(checkNestedIframe, 100);
+      } catch (e) {
+        console.warn('[shell] Cannot attach iframe navigation listeners (cross-origin?):', e.message);
+      }
+    });
+  }
+
+  window.addEventListener('focus', checkIframeForLoginPage);
+  window.addEventListener('interclaw-auth-changed', checkIframeForLoginPage);
 
   // ── Hash sync: iframe hash → outer window URL ──
   // Outer URL shape: #/<tab>[<inner-hash-without-leading-slash>]?NAMESPACE=<ns>
@@ -711,7 +841,7 @@
       }
     }
 
-    var m = h.match(/^#\/(chat|portal|traces|skills)(.*)$/);
+    var m = h.match(/^#\/(chat|portal|traces|skills|admin)(.*)$/);
     if (!m) return false;
     var tabId = m[1];
     var rest = m[2] || '';
@@ -730,6 +860,13 @@
 
     if (tabId === 'skills') {
       activateTab('skills');
+      return true;
+    }
+
+    if (tabId === 'admin') {
+      var adminFrameR = document.getElementById('shell-iframe-admin');
+      if (adminFrameR && !adminFrameR.src) adminFrameR.src = sources.admin.frameSrc;
+      activateTab('admin');
       return true;
     }
 
@@ -752,6 +889,9 @@
 
   // ── Boot ──
   function boot() {
+    // Start with chatbot collapsed by default until we confirm logged in
+    document.body.classList.add('chatbot-closed');
+
     // Set chat-mode BEFORE iframes start loading so the hash-sync that
     // fires on the first iframe `load` won't clobber `#/chat` with
     // `#/portal/…`. We only need a cheap regex here; the full restore
@@ -778,7 +918,7 @@
     wireIframeHashSync();
     var restored = restoreFromOuterHash();
     if (!restored) activateTab(DEFAULT_TAB);
-    refreshAuth();
+    checkIframeForLoginPage();
   }
 
   if (document.readyState === 'loading') {

@@ -32,8 +32,8 @@ Method GetCredentialSecret() As %String
 ClassMethod WriteStreamEvent(bridgeId As %String, payloadJSON As %String)
 {
     If bridgeId = "" Quit
-    Set seq = $Increment(^Inteclaw.ChatEvents(bridgeId, "seq"))
-    Set ^Inteclaw.ChatEvents(bridgeId, "evt", seq) = payloadJSON
+    Set seq = $Increment(^InterClaw.ChatEvents(bridgeId, "seq"))
+    Set ^InterClaw.ChatEvents(bridgeId, "evt", seq) = payloadJSON
 }
 
 /// Stream from AWS Bedrock /invoke-with-response-stream, parse the AWS

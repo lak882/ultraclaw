@@ -1,0 +1,20 @@
+Class {{PACKAGE_NAME}}.{{CLASS_NAME}} Extends Ens.DataTransformDTL [ DependsOn = ({{SOURCE_CLASS}}, {{TARGET_CLASS}}) ]
+{
+
+/// {{DESCRIPTION}}
+Parameter IGNOREMISSINGSOURCE = 1;
+Parameter REPORTERRORS = 1;
+Parameter TREATEMPTYREPEATINGFIELDASNULL = 0;
+
+XData DTL [ XMLNamespace = "http://www.intersystems.com/dtl" ]
+{
+<transform sourceClass='{{SOURCE_CLASS}}' targetClass='{{TARGET_CLASS}}'
+           sourceDocType='{{SOURCE_DOC_TYPE}}' targetDocType='{{TARGET_DOC_TYPE}}'
+           create='new' language='objectscript' >
+
+{{ACTIONS}}
+
+</transform>
+}
+
+}

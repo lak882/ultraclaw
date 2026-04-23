@@ -15,9 +15,19 @@
   };
 
   cc.stopGeneration = function() {
+    // Abort the active poll so the frontend stops waiting immediately.
+    if (cc.bridgeAbort) {
+      try { cc.bridgeAbort.abort(); } catch (_) {}
+    }
     if (cc.currentAbortController) {
       cc.currentAbortController.abort();
       cc.currentAbortController = null;
+    }
+    // Signal the BO to exit its agent loop between iterations.
+    var chatId = cc.sessionId;
+    if (chatId) {
+      var stopUrl = (cc.chatApiBase || '/api/interclaw/production') + '/api/chats/' + encodeURIComponent(chatId) + '/stop';
+      fetch(stopUrl, { method: 'POST', credentials: 'same-origin' }).catch(function() {});
     }
     cc.stopTimer();
     cc.clearResponseTimeout();

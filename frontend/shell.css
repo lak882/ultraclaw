@@ -36,6 +36,24 @@ body.chatbot-auth-gate #chatbot-toggle { display: none !important; }
 body.chatbot-auth-gate #app-root { right: 0 !important; transition: none !important; }
 body.chatbot-fullscreen #app-root { display: none; }
 
+/* Default: chatbot collapsed until logged in */
+body:not(.shell-logged-in) {
+  /* Chatbot will be collapsed via chatbot-closed class added in JS */
+}
+
+/* When logged out - disable header tabs and chatbot toggle */
+body:not(.shell-logged-in) #interclaw-header .ic-header-tab {
+  pointer-events: none !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+body:not(.shell-logged-in) #chatbot-toggle {
+  pointer-events: none !important;
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+}
+
 #shell-viewport {
   position: relative;
   flex: 1;

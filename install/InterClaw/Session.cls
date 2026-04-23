@@ -86,11 +86,11 @@ Storage Default
 <Value name="13"><Value>DenyPrefixes</Value></Value>
 <Value name="14"><Value>BypassPermissions</Value></Value>
 </Data>
-<DataLocation>^Inteclaw.SessionD</DataLocation>
+<DataLocation>^InterClaw.SessionD</DataLocation>
 <DefaultData>SessionDefaultData</DefaultData>
-<IdLocation>^Inteclaw.SessionD</IdLocation>
-<IndexLocation>^Inteclaw.SessionI</IndexLocation>
-<StreamLocation>^Inteclaw.SessionS</StreamLocation>
+<IdLocation>^InterClaw.SessionD</IdLocation>
+<IndexLocation>^InterClaw.SessionI</IndexLocation>
+<StreamLocation>^InterClaw.SessionS</StreamLocation>
 <Type>%Storage.Persistent</Type>
 }
 

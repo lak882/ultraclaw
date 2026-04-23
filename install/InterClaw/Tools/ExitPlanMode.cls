@@ -15,8 +15,8 @@ ClassMethod Execute(inputJSON As %String) As %String
     Set sid = input.%Get("session_id")
     If sid = "" Set sid = $Get(%InterClawSessionId)
     If sid = "" Return "Error: no session id available to toggle plan mode"
-    Kill ^Inteclaw.SessionPerm(sid, "deny")
-    Kill ^Inteclaw.SessionPerm(sid, "plan")
+    Kill ^InterClaw.SessionPerm(sid, "deny")
+    Kill ^InterClaw.SessionPerm(sid, "plan")
     Return "Plan mode DISABLED for session " _ sid _ ". Full tool set restored."
 }
 

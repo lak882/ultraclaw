@@ -24,6 +24,16 @@ Most tasks map to a single tool. Pick the most specific one; fall back to `exec`
 | Read a skill file | `read_skill_file` | docs/templates/references |
 | List skill files | `list_skill_files` | enumerate what's available |
 | Fall-back ObjectScript / Python | `exec` | `iris` is preimported; bind `result` |
+| Send an HL7 message | `send_hl7` | POST to a CSP HL7 HTTPService; returns HTTP status |
+| Recent message traces | `trace` | filter by session_id or config_item |
+| Recent errors/warnings | `get_errors` | Ensemble event log, last N hours |
+| Start/stop/update production | `manage_production` | actions: start/stop/restart/update/status |
+| Lookup table CRUD | `manage_lookup` | list_tables/list_keys/get/set/clear_key/clear_table |
+| Namespace CRUD | `manage_namespace` | exists/list/create (HS Foundation)/delete |
+| Web app CRUD | `manage_webapp` | list/get/create (csp/rest/wsgi)/delete |
+| Delete a package | `reset_package` | dry-run by default; pass commit=true to delete |
+| Batch-send HL7 fixtures | `test_suite` | POST every *.hl7 file in a dir, summarize |
+
 
 ### When to use `exec`
 
@@ -155,7 +165,7 @@ web/fastapi-app.py.template                   -- user-facing WSGI target
 
 ## Trace and Errors (no typed tool yet)
 
-Until dedicated `trace` and `get_errors` tools ship, query directly:
+For direct SQL access (when you need columns the `trace` / `get_errors` tools don't expose):
 
 - Recent messages with session links: `run_sql` with
   `SELECT TOP 20 SessionId, %Id AS MsgId, TimeCreated, SourceConfigName, TargetConfigName, MessageBodyClassName FROM Ens.MessageHeader ORDER BY %Id DESC`

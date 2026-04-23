@@ -1,0 +1,33 @@
+Class {{PACKAGE}}.BO.{{NAME}}Operation Extends Ens.BusinessOperation
+{
+
+Parameter ADAPTER = "{{ADAPTER_CLASS}}";
+
+Property Adapter As {{ADAPTER_CLASS}};
+
+Parameter INVOCATION = "Queue";
+
+Method {{HANDLER_METHOD}}(pRequest As {{REQUEST_CLASS}}, Output pResponse As {{RESPONSE_CLASS}}) As %Status
+{
+    Set tSC = $$$OK
+
+    // TODO: send pRequest via adapter
+    // HTTP example:  Set tSC = ..Adapter.PostJSON(..Adapter.URL, tJSON, .tHTTPResponse)
+    // File example:  Set tSC = ..Adapter.PutString(pRequest.Content, pRequest.Filename)
+    // TCP example:   Set tSC = ..Adapter.SendMessageString(pRequest.Content, .tReply)
+
+    Set pResponse = ##class({{RESPONSE_CLASS}}).%New()
+
+    Return tSC
+}
+
+XData MessageMap
+{
+<MapItems>
+  <MapItem MessageType="{{REQUEST_CLASS}}">
+    <Method>{{HANDLER_METHOD}}</Method>
+  </MapItem>
+</MapItems>
+}
+
+}

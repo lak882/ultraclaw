@@ -1,0 +1,10 @@
+node_modules
+out
+.buildpath
+.project
+/packages
+zpm.xml
+
+/tests/sandbox/durable-sys/irishealth/shared/iris/**
+/tests/sandbox/durable-sys/irishealth/shared/iris.key
+/tests/sandbox/durable-sys/webgateway/shared/durable/**

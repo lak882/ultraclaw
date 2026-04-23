@@ -18,10 +18,16 @@
     cc.currentModel = model;
     var hLabel = document.getElementById('ic-header-model-label');
     if (hLabel) hLabel.textContent = cc.modelLabels[model] || model;
-    var hOpts = document.querySelectorAll('#ic-header-model-dropdown .ic-header-model-option');
-    if (hOpts.length) hOpts.forEach(function(o) { o.classList.toggle('selected', o.dataset.value === model); });
     sessionStorage.setItem('chatbot-model', model);
   };
+
+  // Cycle haiku → sonnet → opus → haiku on click
+  document.addEventListener('click', function(e) {
+    if (e.target.id !== 'ic-header-model-label') return;
+    var order = ['haiku', 'sonnet', 'opus'];
+    var idx = order.indexOf(cc.currentModel);
+    cc.setSelectedModel(order[(idx + 1) % order.length]);
+  });
 
   cc.applyModelConfig = function(defaultModel) {
     var saved = sessionStorage.getItem('chatbot-model');

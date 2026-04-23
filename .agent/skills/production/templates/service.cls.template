@@ -1,0 +1,29 @@
+Class {{PACKAGE}}.BS.{{NAME}}Service Extends Ens.BusinessService
+{
+
+Parameter ADAPTER = "{{ADAPTER_CLASS}}";
+
+Property Adapter As {{ADAPTER_CLASS}};
+
+Property TargetConfigNames As %String(MAXLEN = 1000);
+
+Parameter SETTINGS = "TargetConfigNames:Basic:selector?multiSelect=1&context={Ens.ContextSearch/ProductionItems?targets=1&productionName=@productionId}";
+
+Method OnProcessInput(pInput As {{INPUT_TYPE}}, pOutput As %RegisteredObject) As %Status
+{
+    Set tSC = $$$OK
+
+    Set tRequest = ##class({{REQUEST_CLASS}}).%New()
+    // TODO: populate tRequest from pInput
+
+    Set tSC = ..SendRequestAsync(..TargetConfigNames, tRequest)
+
+    Return tSC
+}
+
+Method OnInit() As %Status
+{
+    Return $$$OK
+}
+
+}

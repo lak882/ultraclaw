@@ -231,7 +231,7 @@
         // would orphan the file we already wrote on the first user turn.
         // Backend session id is informational only at this point; the bridge
         // is bound by chat_id (set on /api/start).
-        if (!cc.sessionId) cc.sessionId = data.session_id;
+        if (!cc.sessionId) cc.sessionId = data.chat_id || data.session_id;
         cc.sessionReady = true;
         cc.saveState();
         // Don't drain the queue here — `session` fires mid-turn and the
@@ -273,24 +273,7 @@
           cc._currentThinkingStepText = '';
         }
 
-        // Only show action tools. InterClaw IRIS-native tools + Skill (slash
-        // commands) + Agent (sub-agent dispatch). No Bash / Edit / Write /
-        // Web* — those were Claude Code paths we no longer run.
-        // Hide routine lookup tools (get_doc, get_schema, list_docs,
-        // list_skill_files, read_skill_file, production_status, echo).
-        var VISIBLE_TOOLS = {
-          Skill: 1, Agent: 1,
-          put_class: 1, compile_class: 1, test_dtl: 1, exec: 1, spawn_agent: 1,
-          enter_plan_mode: 1, exit_plan_mode: 1, run_sql: 1
-        };
-        var showStep = !!VISIBLE_TOOLS[data.tool];
-
-        // Track hidden tool calls so tool_results pair correctly
         if (!cc._hiddenToolCount) cc._hiddenToolCount = 0;
-        if (!showStep) {
-          cc._hiddenToolCount++;
-          break;
-        }
 
         if (cc.currentThinkingEl) {
           cc.updateReasoningStep(cc.currentThinkingEl.id, { status: 'success' });
@@ -474,7 +457,10 @@
         var cacheRead = data.cache_read_tokens || 0;
         var cacheWrite = data.cache_write_tokens || 0;
         if (!cc.suppressAssistant) {
-          cc.lastTurnTokens += inTok + outTok + cacheRead + cacheWrite;
+          // Exclude cache_write from the running counter — it inflates the
+          // first-turn display by the full system prompt size even though
+          // subsequent turns read from cache at 10% cost.
+          cc.lastTurnTokens += inTok + outTok + cacheRead;
           cc.lastInputTokens += inTok;
           cc.lastOutputTokens += outTok;
           cc.lastCacheReadTokens = (cc.lastCacheReadTokens || 0) + cacheRead;
@@ -482,14 +468,12 @@
         }
         var elSec = parseFloat(elapsed);
         var durStr = elSec >= 60 ? Math.floor(elSec/60) + 'm ' + Math.round(elSec%60) + 's' : elapsed + 's';
-        // Per-model rate table (Anthropic direct $/million, input/output/cacheRead/cacheWrite).
-        // Bedrock rates are close enough that we use the same table.
         var MODEL_RATES = {
           opus:   { input: 15,   output: 75,   cacheRead: 1.5,   cacheWrite: 18.75 },
           sonnet: { input:  3,   output: 15,   cacheRead: 0.3,   cacheWrite:  3.75 },
           haiku:  { input:  0.8, output:  4,   cacheRead: 0.08,  cacheWrite:  1.0 }
         };
-        var activeModel = (cc.currentModel && MODEL_RATES[cc.currentModel]) ? cc.currentModel : 'opus';
+        var activeModel = (cc.currentModel && MODEL_RATES[cc.currentModel]) ? cc.currentModel : 'sonnet';
         var r = MODEL_RATES[activeModel];
         var costUsd = data.cost != null ? data.cost.toFixed(2) : (
           (cc.lastInputTokens * r.input +
@@ -497,18 +481,21 @@
            (cc.lastCacheReadTokens || 0) * r.cacheRead +
            (cc.lastCacheWriteTokens || 0) * r.cacheWrite) / 1000000
         ).toFixed(2);
-        var totalIn = cc.lastInputTokens + (cc.lastCacheReadTokens || 0) + (cc.lastCacheWriteTokens || 0);
+        // tokens in = new input + cache reads; cache writes excluded so the
+        // first-turn counter doesn't inflate by the system prompt write cost.
+        var totalIn = cc.lastInputTokens + (cc.lastCacheReadTokens || 0);
         var inK = (totalIn / 1000).toFixed(1);
         var outK = (cc.lastOutputTokens / 1000).toFixed(1);
-        cc.lastUsageText = durStr + ' \u00b7 $' + costUsd + ' \u00b7 ' + inK + 'k tokens in \u00b7 ' + outK + 'k tokens out';
+        cc.lastUsageText = durStr + ' \u00b7 $' + costUsd + ' \u00b7 ' + inK + 'k in \u00b7 ' + outK + 'k out';
         break;
       case 'done':
         cc.stopTimer();
         cc.clearResponseTimeout();
         cc.currentAbortController = null;
         cc.hideStopButton();
-        if (data.session_id && data.session_id !== '' && !cc.sessionId) {
-          cc.sessionId = data.session_id;
+        var _doneId = data.chat_id || data.session_id;
+        if (_doneId && _doneId !== '' && !cc.sessionId) {
+          cc.sessionId = _doneId;
         }
         cc.sessionReady = true;
         // Clear bridgePolling BEFORE saveState so persistChat doesn't bail
@@ -517,34 +504,6 @@
         // the double-assign is a harmless no-op.
         cc.bridgePolling = false;
         cc.saveState();
-        // Fire a Haiku retitle on every turn completion, bypassing the
-        // gates in persistChat (bridgePolling/suppressPersist). The
-        // maybeRetitle helper is cadence-gated internally and fast-paths
-        // the first-turn-with-placeholder case, so this is cheap and
-        // correct to call unconditionally.
-        try {
-          if (cc.sessionId && cc.maybeRetitle) {
-            var paneMsgs = (function() {
-              var out = [];
-              var content = document.getElementById('chatbot-content');
-              if (!content) return out;
-              var kids = content.children;
-              for (var i = 0; i < kids.length; i++) {
-                var el = kids[i];
-                var msgEl = el.classList && el.classList.contains('chatbot-msg-wrap')
-                  ? el.querySelector('.chatbot-message') : el;
-                if (!msgEl || !msgEl.classList) continue;
-                var type = 'assistant';
-                if (msgEl.classList.contains('chatbot-message-user')) type = 'user';
-                else if (msgEl.classList.contains('chatbot-message-system')) type = 'system';
-                else if (msgEl.classList.contains('chatbot-message-error')) type = 'error';
-                out.push({ type: type, html: msgEl.innerHTML });
-              }
-              return out;
-            })();
-            setTimeout(function() { cc.maybeRetitle(cc.sessionId, paneMsgs); }, 300);
-          }
-        } catch (_) {}
         cc.totalTokensAccum += cc.lastTurnTokens;
         if (cc.lastTurnTokens > 0) cc.updateTokenCounter(cc.totalTokensAccum);
         cc.transformThinkingToUsage();

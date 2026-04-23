@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+<Document name="SimpleApp.ZPM"><Module>
+  <Name>SimpleApp</Name>
+  <Version>0.0.1+snapshot</Version>
+  <Invoke Class="%EnsembleMgr" Method="EnableNamespace" Phase="Compile" When="Before" CheckStatus="true">
+    <Arg>${namespace}</Arg>
+    <Arg>${verbose}</Arg>
+  </Invoke>
+  <Resources>
+    <Resource Name="TSL.SimpleAppInclude.INC" Preload="true">
+    </Resource>
+    <Resource Name="TSL.TestInstaller.CLS" Preload="true">
+    </Resource>
+    <Resource Name="SimpleApp.Routine.MAC" Deploy="true">
+    </Resource>
+    <Resource Name="TSL.SqlCompute.PKG">
+    </Resource>
+    <Resource Name="/cls/" ProcessorClass="FileCopy">
+      <Attribute Name="InstallDirectory">{$mgrdir}/{$namespace}/source</Attribute>
+      <Attribute Name="Overlay">0</Attribute>
+    </Resource>
+    <Resource Name="/rtn/" ProcessorClass="TSL.DebugResourceProcessor">
+    </Resource>
+    <Resource Name="TSL.DebugResourceProcessor.CLS" Preload="true">
+    </Resource>
+  </Resources>
+  <InstallerClass>TSL.TestInstaller</InstallerClass>
+</Module>
+</Document></Export>

@@ -1,5 +1,5 @@
 {
-  "$schema": "Commands registry — single source of truth for all slash commands",
+  "$schema": "Commands registry \u2014 single source of truth for all slash commands",
   "commands": [
     {
       "name": "connect",
@@ -114,6 +114,13 @@
       "mutates": true
     },
     {
+      "name": "record-map",
+      "description": "Create or update a Record Map (delimited or fixed-width file parser)",
+      "category": "hl7",
+      "handler": "remote",
+      "mutates": true
+    },
+    {
       "name": "send",
       "description": "Send HL7 messages to an HTTP service",
       "category": "testing",
@@ -201,7 +208,7 @@
     },
     {
       "name": "reset-force",
-      "description": "Force-reset — skip dry run, delete immediately",
+      "description": "Force-reset \u2014 skip dry run, delete immediately",
       "category": "maintenance",
       "handler": "remote",
       "mutates": true
@@ -254,13 +261,13 @@
     },
     {
       "name": "model",
-      "description": "Change model — opus (capable), sonnet (balanced), haiku (fast)",
+      "description": "Change model \u2014 opus (capable), sonnet (balanced), haiku (fast)",
       "category": "session",
       "handler": "local"
     },
     {
       "name": "login",
-      "description": "Log in with IRIS credentials — /login <username> <password>",
+      "description": "Log in with IRIS credentials \u2014 /login <username> <password>",
       "category": "session",
       "handler": "local"
     },
@@ -272,7 +279,7 @@
     },
     {
       "name": "authenticate",
-      "description": "Set Bedrock API key — /authenticate <ABSK...>",
+      "description": "Set Bedrock API key \u2014 /authenticate <ABSK...>",
       "category": "session",
       "handler": "local"
     },
@@ -290,7 +297,7 @@
     },
     {
       "name": "feedback",
-      "description": "Submit feedback — /feedback [1-5] [category] <comment>",
+      "description": "Submit feedback \u2014 /feedback [1-5] [category] <comment>",
       "category": "session",
       "handler": "local"
     },
@@ -322,35 +329,35 @@
     },
     {
       "name": "git-token",
-      "description": "Configure GitLab token — /git-token <token> --url <url> --project <id>",
+      "description": "Configure GitLab token \u2014 /git-token <token> --url <url> --project <id>",
       "category": "git",
       "handler": "remote",
       "mutates": true
     },
     {
       "name": "git-issue",
-      "description": "Create a GitLab issue — /git-issue <title>",
+      "description": "Create a GitLab issue \u2014 /git-issue <title>",
       "category": "git",
       "handler": "remote",
       "mutates": true
     },
     {
       "name": "git-push",
-      "description": "Push files to a GitLab branch — /git-push <paths> [--branch name]",
+      "description": "Push files to a GitLab branch \u2014 /git-push <paths> [--branch name]",
       "category": "git",
       "handler": "remote",
       "mutates": true
     },
     {
       "name": "switch-namespace",
-      "description": "Switch active namespace — /switch-namespace <NS>",
+      "description": "Switch active namespace \u2014 /switch-namespace <NS>",
       "category": "connection",
       "handler": "remote",
       "mutates": false
     },
     {
       "name": "auto-navigate",
-      "description": "Toggle auto-nav of chat links — /auto-navigate enable|disable",
+      "description": "Toggle auto-nav of chat links \u2014 /auto-navigate enable|disable",
       "category": "session",
       "handler": "remote",
       "mutates": false

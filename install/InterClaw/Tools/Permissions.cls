@@ -20,9 +20,9 @@ ClassMethod Context(session As InterClaw.Session) As %DynamicObject
         // write to. These bypass ORM / transaction isolation — a different
         // job's global Set is visible immediately here, which %Persistent
         // properties are not inside an open BP transaction.
-        Set bypass = +$Get(^Inteclaw.SessionPerm(sid, "bypass"), 0)
-        Set rawNames = $Get(^Inteclaw.SessionPerm(sid, "deny"), "")
-        Set rawPrefixes = $Get(^Inteclaw.SessionPerm(sid, "denyPrefixes"), "")
+        Set bypass = +$Get(^InterClaw.SessionPerm(sid, "bypass"), 0)
+        Set rawNames = $Get(^InterClaw.SessionPerm(sid, "deny"), "")
+        Set rawPrefixes = $Get(^InterClaw.SessionPerm(sid, "denyPrefixes"), "")
     }
     Do ctx.%Set("bypass", (bypass = 1), "boolean")
 

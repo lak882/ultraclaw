@@ -21,6 +21,7 @@
       // adopt cc.sessionId as their id; brand-new chats have no id until the
       // `session` event comes back and openChat/startNewChat wires it up.
       if (cc.sessionId && !payload.chat_id) payload.chat_id = cc.sessionId;
+      if (!payload.request_id) payload.request_id = 'REQ-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 8).toUpperCase();
       var startResp = await fetch(cc.chatApiBase + '/api/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -33,7 +34,8 @@
       }
       var startData = await startResp.json();
       cc.currentBridgeId = startData.bridge_id;
-      console.log('[bridge] started:', cc.currentBridgeId);
+      cc.currentRequestId = startData.request_id || null;
+      console.log('[bridge] started:', cc.currentBridgeId, 'req:', cc.currentRequestId);
       // Push the chat id into the URL the moment the bridge starts.
       // Works on every tab (chat → path form, portal/traces/skills →
       // `?chat=<id>` query param), so the first message immediately
@@ -54,45 +56,93 @@
       }
       if (cc.refreshChatsList) cc.refreshChatsList();
 
-      var after = 0;
+      // Seed `after` from the last-seen seq for this session. Without
+      // this, each new turn polls from seq=0 and receives every prior
+      // turn's events — which the event handlers re-render, producing
+      // the "old response reappears on new chat" bug.
+      if (!cc._lastSeqBySession) cc._lastSeqBySession = {};
       cc.bridgePolling = true;
       cc.bridgeAbort = new AbortController();
-
+      var _seenToolIds = {};
+      var _seenToolDone = {};
       var pollRetries = 0;
-      var maxPollRetries = 3;
+      var maxPollRetries = 5;
 
       while (cc.bridgePolling) {
         try {
-          var pollResp = await fetch(
-            cc.chatApiBase + '/api/events?bridge_id=' + cc.currentBridgeId + '&after=' + after,
-            { signal: cc.bridgeAbort.signal }
-          );
-          if (!pollResp.ok) {
-            // Retry transient 500s up to maxPollRetries before giving up
-            if (pollResp.status >= 500 && pollRetries < maxPollRetries) {
+          var qs = 'chat_id=' + encodeURIComponent(payload.chat_id) + '&request_id=' + encodeURIComponent(payload.request_id);
+
+          // Poll tools first so steps appear before the final answer.
+          var toolsResp = await fetch(cc.chatApiBase + '/api/tools?' + qs, { signal: cc.bridgeAbort.signal });
+          if (toolsResp.ok) {
+            var toolsData = await toolsResp.json();
+            var tools = toolsData.tools || [];
+            for (var ti = 0; ti < tools.length; ti++) {
+              var t = tools[ti];
+              var tid = t.tool_use_id || String(t.id);
+              if (!_seenToolIds[tid]) {
+                // New tool call — add a running step.
+                _seenToolIds[tid] = true;
+                var toolLabel = cc.getToolLabel ? cc.getToolLabel(t.name, typeof t.input === 'string' ? t.input : JSON.stringify(t.input)) : t.name;
+                var inputStr = typeof t.input === 'string' ? t.input : JSON.stringify(t.input || {}, null, 2);
+                var toolContent = inputStr;
+                try {
+                  var _p = JSON.parse(inputStr);
+                  if (_p.code) toolContent = _p.code;
+                  else if (_p.sql) toolContent = _p.sql;
+                  else if (_p.source) toolContent = _p.source.substring(0, 2000);
+                  else if (_p.dtl) toolContent = _p.dtl;
+                  else if (_p.plan) toolContent = _p.plan;
+                } catch(e) {}
+                cc.handleEvent({ type: 'tool_use', tool: t.name, label: toolLabel, input: toolContent });
+              }
+              if (t.done && !_seenToolDone[tid]) {
+                // Tool completed — update the step with result.
+                _seenToolDone[tid] = true;
+                var outStr = typeof t.output === 'string' ? t.output : JSON.stringify(t.output || '');
+                cc.handleEvent({ type: 'tool_result', text: outStr, is_error: t.is_error });
+              }
+            }
+          }
+
+          // Poll status to check if the turn is complete.
+          var statusResp = await fetch(cc.chatApiBase + '/api/status?' + qs, { signal: cc.bridgeAbort.signal });
+          if (!statusResp.ok) {
+            if (statusResp.status >= 500 && pollRetries < maxPollRetries) {
               pollRetries++;
-              console.warn('[bridge] poll 500, retry ' + pollRetries + '/' + maxPollRetries);
               await new Promise(function(r) { setTimeout(r, 1000 * pollRetries); });
               continue;
             }
-            throw new Error('Poll failed: HTTP ' + pollResp.status);
+            throw new Error('Poll failed: HTTP ' + statusResp.status);
           }
-          pollRetries = 0; // Reset on success
-          var pollData = await pollResp.json();
+          pollRetries = 0;
+          var statusData = await statusResp.json();
 
-          for (var i = 0; i < pollData.events.length; i++) {
-            var evt = pollData.events[i];
-            after = evt.seq;
-            var data = evt.data;
-            console.log('[bridge] evt:', data.type);
-            if (data.type === 'connected') continue;
-            cc.handleEvent(data);
+          if (!statusData.done) {
+            if (cc.resetResponseTimeout) cc.resetResponseTimeout();
+            await new Promise(function(r) { setTimeout(r, 2000); });
+            continue;
           }
 
-          if (pollData.done) {
-            cc.bridgePolling = false;
-            break;
+          // Turn complete — fire output, usage, done events.
+          if (statusData.error) {
+            cc.handleEvent({ type: 'error', text: statusData.error });
+          } else if (statusData.response_text) {
+            cc.handleEvent({ type: 'output', text: statusData.response_text });
           }
+          cc.handleEvent({
+            type: 'usage',
+            input_tokens: statusData.input_tokens || 0,
+            output_tokens: statusData.output_tokens || 0,
+            cache_read_tokens: statusData.cache_read_tokens || 0,
+            cache_write_tokens: statusData.cache_write_tokens || 0,
+            cost: statusData.cost || 0,
+            elapsed_ms: statusData.duration_ms || 0
+          });
+          cc.handleEvent({ type: 'done', chat_id: payload.chat_id });
+
+          cc.bridgePolling = false;
+          break;
         } catch (e) {
           if (e.name === 'AbortError') break;
           throw e;
@@ -120,93 +170,12 @@
       cc.bridgePolling = false;
       cc.bridgeAbort = null;
       cc.currentBridgeId = null;
+      cc.currentRequestId = null;
       if (cc.refreshChatsList) cc.refreshChatsList();
     }
     return true;
   };
 
-  // Attach the event stream to an existing server-side bridge. Used when a
-  // user reopens a chat whose previous turn is still streaming (e.g. after a
-  // window close). afterSeq is the last event sequence the chat already has;
-  // the poll resumes from there. Shares the same event loop as bridgeSend —
-  // any new tool_use / delta / done events render into the reopened pane.
-  cc.attachBridge = async function(bridgeId, afterSeq) {
-    if (!bridgeId) return false;
-    cc.currentBridgeId = bridgeId;
-    var after = +afterSeq || 0;
-    cc.bridgePolling = true;
-    cc.bridgeAbort = new AbortController();
-    var pollRetries = 0;
-    var maxPollRetries = 3;
-    cc.showStopButton();
-    cc.showTypingIndicator();
-    // Resume mode renders only the final answer, no intermediate steps.
-    // The typing indicator's empty `.reasoning-steps` wrapper would show
-    // as a stray "Hide steps" toggle with no content — drop it.
-    if (cc.currentStepsEl && cc.currentStepsEl.parentNode) {
-      cc.currentStepsEl.parentNode.removeChild(cc.currentStepsEl);
-      cc.currentStepsEl = null;
-      cc.currentStepsListEl = null;
-    }
-    cc.updateStatus('Resuming...');
-    try {
-      while (cc.bridgePolling) {
-        try {
-          var pollResp = await fetch(
-            cc.chatApiBase + '/api/events?bridge_id=' + cc.currentBridgeId + '&after=' + after,
-            { signal: cc.bridgeAbort.signal }
-          );
-          if (!pollResp.ok) {
-            if (pollResp.status >= 500 && pollRetries < maxPollRetries) {
-              pollRetries++;
-              await new Promise(function(r) { setTimeout(r, 1000 * pollRetries); });
-              continue;
-            }
-            throw new Error('Poll failed: HTTP ' + pollResp.status);
-          }
-          pollRetries = 0;
-          var pollData = await pollResp.json();
-          for (var i = 0; i < pollData.events.length; i++) {
-            var evt = pollData.events[i];
-            after = evt.seq;
-            var data = evt.data;
-            if (data.type === 'connected') continue;
-            // Resume mode: skip intermediate streaming events. The user
-            // reopened mid-turn or post-interrupt — they don't want to
-            // watch the replay of every tool step and delta they already
-            // missed. Only keep events that contribute to the final
-            // presentation: the answer text, the usage summary, and the
-            // terminal done/error. `session` is always free.
-            var RESUME_ALLOWED = {
-              output: 1, usage: 1, done: 1, error: 1, session: 1,
-              status: 1, goto: 1, reload: 1
-            };
-            if (!RESUME_ALLOWED[data.type]) continue;
-            cc.handleEvent(data);
-          }
-          if (pollData.done) {
-            cc.bridgePolling = false;
-            break;
-          }
-        } catch (e) {
-          if (e.name === 'AbortError') break;
-          throw e;
-        }
-      }
-    } catch (e) {
-      console.warn('[bridge] attach error:', e && e.message);
-      cc.updateStatus('Error');
-      cc.removeTypingIndicator();
-      cc.hideStopButton();
-      return false;
-    } finally {
-      cc.bridgePolling = false;
-      cc.bridgeAbort = null;
-      cc.currentBridgeId = null;
-      if (cc.refreshChatsList) cc.refreshChatsList();
-    }
-    return true;
-  };
 
   cc.wsSend = function(payload) {
     cc.bridgeSend(payload);
@@ -222,7 +191,13 @@
     cc.showTypingIndicator();
 
     var editorCtx = cc.getEditorContext();
-    cc.wsSend({ action: 'message', prompt: command, session_id: cc.sessionId, model: cc.getSelectedModel(), namespace: editorCtx.namespace, effort: cc.currentEffort || 'medium', editor_context: editorCtx });
+    var pageCtx = cc.buildPageContext ? cc.buildPageContext(editorCtx) : '';
+    var linkBase = (function() {
+      var m = window.location.pathname.match(/^(\/[^/]+)\/ui\/interop\/(?:interclaw|cc)\//);
+      var pathPrefix = m ? m[1] : '';
+      return window.location.origin + pathPrefix + '/ui/interop/interclaw/legacy-ui/index.html';
+    })();
+    cc.wsSend({ action: 'message', prompt: command, chat_id: cc.sessionId, model: cc.getSelectedModel(), namespace: editorCtx.namespace, effort: cc.currentEffort || 'medium', editor_context: editorCtx, page_context: pageCtx, link_base: linkBase });
   };
 
   cc.initSession = async function(opts) {
@@ -251,32 +226,16 @@
 
       cc.bridgeConnected = true;
       cc.updateStatus('Ready');
-      console.log('[bridge] auth-status check passed');
-
-      if (!authData.logged_in) {
-        opts._needsAuth = true;
-        opts._needsLogin = true;
-        console.log('[bridge] not logged in — showing login prompt');
-      } else if (!authData.authenticated) {
-        opts._needsAuth = true;
-        console.log('[bridge] logged in as ' + authData.user + ' but API key not configured — showing setup prompt');
-      } else {
-        console.log('[bridge] authenticated via ' + authData.provider + ' (' + authData.key_prefix + '), user: ' + authData.user);
-      }
+      console.log('[bridge] auth-status ok, user: ' + (authData.user || 'unknown'));
     } catch (e) {
       if (cc.isReloading) return;
       console.error('[bridge] init error:', e.message);
-      opts._needsAuth = true;
       cc.updateStatus('Offline');
     } finally {
       cc.setInputDisabled(false);
       cc.updateSendButton();
       if (!opts.skipWelcome) {
-        if (opts._needsAuth) {
-          cc.showSetupPrompt({ needsLogin: opts._needsLogin });
-        } else {
-          cc.showWelcomeMessage();
-        }
+        cc.showWelcomeMessage();
       }
     }
   };

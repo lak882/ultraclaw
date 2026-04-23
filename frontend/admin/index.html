@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>InterClaw Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="../interclaw-logo.svg">
+  <style>
+    :root {
+      --ic-header-height: 44px;
+      --ic-header-total: 44px;
+      --color-bg: #f8f8fb;
+      --color-surface: #fff;
+      --color-border: #e8e8ec;
+      --color-border-light: #f0f0f4;
+      --color-text: #1a1a2e;
+      --color-text-secondary: #6b6f76;
+      --color-text-muted: #9098a0;
+      --color-primary: hsl(238,49%,39%);
+      --color-primary-light: hsl(238,49%,95%);
+      --color-success: #16a34a;
+      --color-success-bg: #f0fdf4;
+      --color-warning: #d97706;
+      --color-warning-bg: #fffbeb;
+      --color-error: #dc2626;
+      --color-error-bg: #fef2f2;
+      --color-blue: #2563eb;
+      --color-blue-bg: #eff6ff;
+      --radius: 7px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      background: var(--color-bg);
+      color: var(--color-text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ── */
+    #admin-root {
+      position: fixed;
+      inset: 0;
+      top: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+
+    /* ── Sub-nav ── */
+    #admin-subnav {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 20px;
+      height: 40px;
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+    .subnav-tab {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 10px;
+      height: 28px;
+      border-radius: 5px;
+      border: none;
+      background: none;
+      color: var(--color-text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.12s, background 0.12s;
+    }
+    .subnav-tab:hover { color: var(--color-text); background: #f2f2f5; }
+    .subnav-tab.active { color: var(--color-text); background: #ededf0; font-weight: 600; }
+    .subnav-tab svg { width: 13px; height: 13px; opacity: 0.6; flex-shrink: 0; }
+    .subnav-tab.active svg { opacity: 0.85; }
+    .subnav-sep { width: 1px; height: 14px; background: var(--color-border); margin: 0 6px; }
+
+    /* ── Body area ── */
+    #admin-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left sidebar ── */
+    #admin-sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--color-surface);
+      border-right: 1px solid var(--color-border);
+      overflow: hidden;
+    }
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px 8px;
+      gap: 8px;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+    }
+    .sidebar-count {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      background: #f0f0f4;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+    .sidebar-search {
+      margin: 8px 12px;
+      position: relative;
+    }
+    .sidebar-search svg {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 13px;
+      height: 13px;
+      color: var(--color-text-muted);
+      pointer-events: none;
+    }
+    .sidebar-search input {
+      width: 100%;
+      padding: 5px 8px 5px 28px;
+      border: 1px solid var(--color-border);
+      border-radius: 5px;
+      font-size: 12px;
+      color: var(--color-text);
+      background: var(--color-bg);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .sidebar-search input:focus { border-color: var(--color-primary); }
+    .sidebar-search input::placeholder { color: var(--color-text-muted); }
+
+    .session-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0;
+    }
+    .session-list::-webkit-scrollbar { width: 4px; }
+    .session-list::-webkit-scrollbar-thumb { background: #d0d0d8; border-radius: 2px; }
+
+    .session-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px 14px;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .session-item:hover { background: #f5f5f8; }
+    .session-item.active {
+      background: var(--color-primary-light);
+      border-left-color: var(--color-primary);
+    }
+    .session-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .session-item-preview {
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--color-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+    .session-item-time {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      flex-shrink: 0;
+    }
+    .session-item-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 10.5px;
+      font-weight: 500;
+      padding: 1px 6px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+    .badge-ns { background: #ededf0; color: var(--color-text-secondary); }
+    .badge-model { background: var(--color-blue-bg); color: var(--color-blue); }
+    .badge-count { background: #f0f0f4; color: var(--color-text-muted); }
+    .badge-success { background: var(--color-success-bg); color: var(--color-success); }
+    .badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+    .badge-error { background: var(--color-error-bg); color: var(--color-error); }
+
+    /* ── Main content ── */
+    #admin-main {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view-panel { display: none; flex: 1; overflow: auto; }
+    .view-panel.active { display: flex; flex-direction: column; }
+
+    /* ── Overview panel ── */
+    #view-overview {
+      padding: 24px;
+      gap: 20px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+      margin-bottom: 12px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .stat-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stat-label {
+      font-size: 11.5px;
+      color: var(--color-text-muted);
+      font-weight: 500;
+    }
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .stat-sub {
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
+    .stat-trend-up { color: var(--color-success); }
+    .stat-trend-down { color: var(--color-error); }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    .card-body { padding: 0; }
+
+    /* ── Simple bar chart ── */
+    .mini-bar-list { padding: 8px 0; }
+    .mini-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 16px;
+    }
+    .mini-bar-label {
+      width: 90px;
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mini-bar-track {
+      flex: 1;
+      height: 6px;
+      background: #f0f0f4;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .mini-bar-fill {
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+    .mini-bar-val {
+      width: 32px;
+      text-align: right;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+
+    /* ── Activity list ── */
+    .activity-list { padding: 4px 0; }
+    .activity-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .activity-row:last-child { border-bottom: none; }
+    .activity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .activity-dot-success { background: var(--color-success); }
+    .activity-dot-warning { background: var(--color-warning); }
+    .activity-dot-error { background: var(--color-error); }
+    .activity-dot-info { background: var(--color-blue); }
+    .activity-content { flex: 1; min-width: 0; }
+    .activity-text {
+      font-size: 12.5px;
+      color: var(--color-text);
+      line-height: 1.4;
+    }
+    .activity-meta {
+      font-size: 11px;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Sessions table ── */
+    #view-sessions { padding: 0; }
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--color-border);
+      gap: 12px;
+      background: var(--color-surface);
+    }
+    .table-toolbar-left { display: flex; align-items: center; gap: 10px; }
+    .toolbar-search {
+      position: relative;
+    }
+    .toolbar-search svg {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 13px;
+      height: 13px;
+      color: var(--color-text-muted);
+      pointer-events: none;
+    }
+    .toolbar-search input {
+      padding: 5px 10px 5px 28px;
+      border: 1px solid var(--color-border);
+      border-radius: 5px;
+      font-size: 12px;
+      color: var(--color-text);
+      background: var(--color-bg);
+      outline: none;
+      width: 220px;
+      transition: border-color 0.15s;
+    }
+    .toolbar-search input:focus { border-color: var(--color-primary); }
+    .toolbar-search input::placeholder { color: var(--color-text-muted); }
+    .filter-select {
+      padding: 5px 8px;
+      border: 1px solid var(--color-border);
+      border-radius: 5px;
+      font-size: 12px;
+      color: var(--color-text-secondary);
+      background: var(--color-surface);
+      outline: none;
+      cursor: pointer;
+    }
+    .filter-select:focus { border-color: var(--color-primary); }
+    .toolbar-info {
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+
+    .data-table-wrap {
+      flex: 1;
+      overflow: auto;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+    .data-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .data-table th {
+      padding: 8px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-text-muted);
+      background: var(--color-bg);
+      border-bottom: 1px solid var(--color-border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    .data-table th:hover { color: var(--color-text); }
+    .data-table th.sorted { color: var(--color-primary); }
+    .data-table td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--color-border-light);
+      color: var(--color-text);
+      vertical-align: middle;
+    }
+    .data-table tbody tr { cursor: pointer; transition: background 0.1s; }
+    .data-table tbody tr:hover { background: #f8f8fb; }
+    .data-table tbody tr.selected { background: var(--color-primary-light); }
+    .data-table td.mono {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      color: var(--color-text-secondary);
+    }
+    .data-table td.truncate {
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Tool calls panel ── */
+    #view-activity { padding: 0; }
+
+    /* ── System panel ── */
+    #view-system {
+      padding: 24px;
+      gap: 20px;
+    }
+    .system-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .kv-table { width: 100%; }
+    .kv-table tr { border-bottom: 1px solid var(--color-border-light); }
+    .kv-table tr:last-child { border-bottom: none; }
+    .kv-table th {
+      padding: 8px 16px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      width: 44%;
+      white-space: nowrap;
+    }
+    .kv-table td {
+      padding: 8px 16px;
+      font-size: 12.5px;
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    /* ── Detail panel (right of table) ── */
+    #admin-detail {
+      width: 340px;
+      flex-shrink: 0;
+      border-left: 1px solid var(--color-border);
+      background: var(--color-surface);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #admin-detail.hidden { display: none; }
+    .detail-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .detail-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+    .detail-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      color: var(--color-text-muted);
+      border-radius: 3px;
+      display: flex;
+    }
+    .detail-close:hover { background: #f2f2f5; color: var(--color-text); }
+    .detail-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+    .detail-body::-webkit-scrollbar { width: 4px; }
+    .detail-body::-webkit-scrollbar-thumb { background: #d0d0d8; border-radius: 2px; }
+    .detail-section { margin-bottom: 16px; }
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-muted);
+      margin-bottom: 8px;
+    }
+    .detail-kv { display: flex; flex-direction: column; gap: 5px; }
+    .detail-kv-row { display: flex; gap: 8px; align-items: baseline; }
+    .detail-kv-key {
+      font-size: 11.5px;
+      color: var(--color-text-muted);
+      width: 90px;
+      flex-shrink: 0;
+    }
+    .detail-kv-val {
+      font-size: 12px;
+      color: var(--color-text);
+      font-weight: 500;
+      word-break: break-all;
+    }
+    .detail-kv-val.mono {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+    }
+    .detail-msg-list { display: flex; flex-direction: column; gap: 6px; }
+    .detail-msg {
+      padding: 7px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .detail-msg-user {
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+      align-self: flex-end;
+    }
+    .detail-msg-ai {
+      background: #f5f5f8;
+      color: var(--color-text);
+    }
+    .detail-tool-list { display: flex; flex-direction: column; gap: 4px; }
+    .detail-tool-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 8px;
+      background: #f8f8fb;
+      border-radius: 4px;
+      gap: 6px;
+    }
+    .detail-tool-name {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px;
+      color: var(--color-text);
+      font-weight: 500;
+    }
+    .detail-tool-dur {
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 60px 20px;
+      color: var(--color-text-muted);
+    }
+    .empty-state svg { width: 32px; height: 32px; opacity: 0.3; }
+    .empty-state-title { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); }
+    .empty-state-desc { font-size: 12px; text-align: center; max-width: 240px; }
+
+    /* ── Refresh button ── */
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: none; border: 1px solid var(--color-border);
+      border-radius: 5px; padding: 4px 10px;
+      font-size: 12px; color: var(--color-text-secondary);
+      cursor: pointer; white-space: nowrap;
+      transition: background 0.1s, color 0.1s;
+    }
+    .btn-ghost:hover { background: #f2f2f5; color: var(--color-text); }
+    .btn-ghost svg { width: 12px; height: 12px; }
+
+    /* ── Status dot ── */
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .status-dot-green { background: var(--color-success); }
+    .status-dot-yellow { background: var(--color-warning); }
+    .status-dot-red { background: var(--color-error); }
+    .status-dot-grey { background: #c0c0c8; }
+  </style>
+</head>
+<body>
+  <script src="../install-config.js"></script>
+
+  <div id="admin-root">
+    <!-- Sub-navigation (hidden: simplified to sessions-only view) -->
+    <div id="admin-subnav" style="display:none">
+      <button class="subnav-tab active" data-view="sessions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Sessions
+      </button>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <span id="last-refresh" style="font-size:11px; color:var(--color-text-muted)"></span>
+        <button class="btn-ghost" id="refresh-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Main body: content only (left session-list sidebar removed for simplified view) -->
+    <div id="admin-body">
+      <div id="admin-sidebar" style="display:none">
+        <div class="sidebar-header">
+          <span class="sidebar-title">Sessions</span>
+          <span class="sidebar-count" id="sidebar-count">0</span>
+        </div>
+        <div class="sidebar-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="sidebar-search-input" placeholder="Search sessions..." autocomplete="off">
+        </div>
+        <div class="session-list" id="session-list"></div>
+      </div>
+
+      <!-- Content area -->
+      <div id="admin-main">
+        <!-- Overview -->
+        <div class="view-panel" id="view-overview">
+          <div style="padding:24px; display:flex; flex-direction:column; gap:20px; flex:1; overflow:auto;">
+            <div>
+              <div class="section-title">Usage Summary</div>
+              <div class="stat-grid" id="stat-grid"></div>
+            </div>
+            <div class="overview-grid">
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Sessions by Namespace</span>
+                </div>
+                <div class="card-body">
+                  <div class="mini-bar-list" id="ns-chart"></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Model Usage</span>
+                </div>
+                <div class="card-body">
+                  <div class="mini-bar-list" id="model-chart"></div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="flex:1">
+              <div class="card-header">
+                <span class="card-title">Recent Activity</span>
+              </div>
+              <div class="card-body">
+                <div class="activity-list" id="activity-log"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sessions table -->
+        <div class="view-panel active" id="view-sessions" style="flex-direction:row">
+          <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+            <div class="table-toolbar">
+              <div class="table-toolbar-left">
+                <div class="toolbar-search">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" id="sessions-search" placeholder="Filter sessions..." autocomplete="off">
+                </div>
+                <select class="filter-select" id="filter-ns">
+                  <option value="">All namespaces</option>
+                </select>
+                <select class="filter-select" id="filter-model">
+                  <option value="">All models</option>
+                </select>
+              </div>
+              <span class="toolbar-info" id="sessions-count-label"></span>
+            </div>
+            <div class="data-table-wrap">
+              <table class="data-table" id="sessions-table">
+                <thead>
+                  <tr>
+                    <th data-col="created_at" class="sorted">Started</th>
+                    <th data-col="namespace">Namespace</th>
+                    <th data-col="model">Model</th>
+                    <th data-col="first_message">First Message</th>
+                    <th data-col="message_count">Msgs</th>
+                    <th data-col="tool_calls">Tools</th>
+                    <th data-col="total_tokens">Tokens</th>
+                    <th data-col="cost_usd">Cost</th>
+                    <th data-col="duration_s">Duration</th>
+                    <th data-col="session_id">Session ID</th>
+                  </tr>
+                </thead>
+                <tbody id="sessions-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Detail panel -->
+          <div id="admin-detail" class="hidden">
+            <div class="detail-header">
+              <span class="detail-title" id="detail-title">Session Detail</span>
+              <button class="detail-close" id="detail-close-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="detail-body" id="detail-body"></div>
+          </div>
+        </div>
+
+        <!-- Tool Activity table -->
+        <div class="view-panel" id="view-activity">
+          <div class="table-toolbar">
+            <div class="table-toolbar-left">
+              <div class="toolbar-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="activity-search" placeholder="Filter by tool name..." autocomplete="off">
+              </div>
+              <select class="filter-select" id="filter-tool-status">
+                <option value="">All statuses</option>
+                <option value="success">Success</option>
+                <option value="error">Error</option>
+              </select>
+            </div>
+            <span class="toolbar-info" id="activity-count-label"></span>
+          </div>
+          <div class="data-table-wrap">
+            <table class="data-table" id="activity-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Tool</th>
+                  <th>Session</th>
+                  <th>Namespace</th>
+                  <th>Duration</th>
+                  <th>Status</th>
+                  <th>Summary</th>
+                </tr>
+              </thead>
+              <tbody id="activity-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- System info -->
+        <div class="view-panel" id="view-system">
+          <div style="padding:24px; display:flex; flex-direction:column; gap:20px; overflow:auto; flex:1;">
+            <div class="system-grid">
+              <div class="card">
+                <div class="card-header"><span class="card-title">IRIS Instance</span></div>
+                <div class="card-body">
+                  <table class="kv-table" id="sys-iris"></table>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">InterClaw</span></div>
+                <div class="card-body">
+                  <table class="kv-table" id="sys-interclaw"></table>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">Active Namespaces</span></div>
+              <div class="card-body">
+                <table class="data-table" id="sys-namespaces-table">
+                  <thead>
+                    <tr>
+                      <th>Namespace</th>
+                      <th>Productions</th>
+                      <th>Sessions (24h)</th>
+                      <th>Last Activity</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sys-namespaces-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // ── Mock data
+    // TODO: Replace each data fetch function below with an actual SQL query via
+    // the InterClaw run_query API:
+    //   POST /api/interclaw/api/run-query
+    //   { "sql": "SELECT ...", "namespace": "HSCUSTOM" }
+    //
+    // Suggested SQL shapes are documented in each fetch function.
+
+    var MODELS = { opus: 'Claude Opus 4.7', sonnet: 'Claude Sonnet 4.6', haiku: 'Claude Haiku 4.5' };
+    var NS_LIST = ['HSCUSTOM', 'TESTING', 'INTERCLAW', 'DEMO'];
+    var MODEL_KEYS = ['sonnet', 'opus', 'haiku'];
+    var TOOL_NAMES = ['get_doc', 'put_doc', 'get_schema', 'run_query', 'test_dtl',
+                      'manage_production', 'send_hl7', 'get_errors', 'trace',
+                      'manage_namespace', 'list_docs', 'compile'];
+
+    function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function pick(arr) { return arr[rnd(0, arr.length - 1)]; }
+
+    function fmtTs(d) {
+      var now = new Date();
+      var diff = (now - d) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function fmtDur(s) {
+      if (s < 60) return s + 's';
+      return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+    }
+
+    function fmtTokens(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+      return String(n);
+    }
+
+    function fmtCost(n) {
+      if (n >= 1) return '$' + n.toFixed(2);
+      return '$' + n.toFixed(3);
+    }
+
+    // Approximate Bedrock pricing per 1M tokens (input / output) for mock math.
+    var MODEL_PRICING = {
+      opus:   { inPerM: 15.00, outPerM: 75.00 },
+      sonnet: { inPerM:  3.00, outPerM: 15.00 },
+      haiku:  { inPerM:  0.80, outPerM:  4.00 }
+    };
+
+    var FIRST_MESSAGES = [
+      'Build an ADT A01 to A04 transform for the HSCUSTOM namespace',
+      'Create a routing rule that sends ORU messages to the lab operation',
+      'Why are messages stuck in the suspended queue?',
+      'Add a new file-based HL7 service for incoming ORM messages',
+      'Show me the last 10 errors in the event log',
+      'Run a test on the VXU DTL and check the diff output',
+      'Create a new HealthShare namespace called TESTING',
+      'Generate a Mermaid diagram of the Sanford production',
+      'What lookup tables exist in HSCUSTOM?',
+      'Deploy the updated routing rule and restart the production',
+      'Build a BPL that transforms and routes SIU messages',
+      'Check the message trace for session id 12345',
+      'Create a JSON adapter for the Epic payload',
+      'What is the status of the DEMO production?',
+      'Update the PID segment transform to include SSN mapping',
+    ];
+
+    // ── Generate mock sessions
+    // SQL: SELECT SessionId, CreatedAt, Namespace, Model, MessageCount,
+    //             ToolCallCount, DurationSeconds, FirstMessage
+    //      FROM InterClaw.Session
+    //      ORDER BY CreatedAt DESC
+    //      FETCH FIRST 100 ROWS ONLY
+    function generateSessions() {
+      var sessions = [];
+      var now = Date.now();
+      for (var i = 0; i < 47; i++) {
+        var ago = rnd(0, 72 * 3600 * 1000);
+        var created = new Date(now - ago);
+        var model = pick(MODEL_KEYS);
+        var ns = pick(NS_LIST);
+        var msgCount = rnd(3, 28);
+        var toolCount = rnd(0, msgCount * 2);
+        var dur = rnd(30, 900);
+        var id = 'local-' + Math.random().toString(36).substr(2, 12);
+        var inTok = rnd(1500, 12000) * msgCount;
+        var outTok = rnd(400, 3500) * msgCount;
+        var p = MODEL_PRICING[model];
+        var cost = (inTok * p.inPerM + outTok * p.outPerM) / 1000000;
+        sessions.push({
+          session_id: id,
+          created_at: created,
+          namespace: ns,
+          model: model,
+          message_count: msgCount,
+          tool_calls: toolCount,
+          duration_s: dur,
+          first_message: pick(FIRST_MESSAGES),
+          input_tokens: inTok,
+          output_tokens: outTok,
+          total_tokens: inTok + outTok,
+          cost_usd: cost,
+          messages: generateMessages(msgCount),
+          tool_call_details: generateToolCalls(toolCount, id, ns, created)
+        });
+      }
+      sessions.sort(function(a, b) { return b.created_at - a.created_at; });
+      return sessions;
+    }
+
+    function generateMessages(count) {
+      var msgs = [];
+      for (var i = 0; i < Math.min(count, 6); i++) {
+        msgs.push({
+          role: i % 2 === 0 ? 'user' : 'assistant',
+          text: i % 2 === 0
+            ? pick(FIRST_MESSAGES)
+            : 'I have completed the task. The transform has been created and pushed to the server.'
+        });
+      }
+      return msgs;
+    }
+
+    // SQL: SELECT ToolName, SessionId, Namespace, Timestamp,
+    //             DurationMs, Status, Summary
+    //      FROM InterClaw.ToolCall
+    //      ORDER BY Timestamp DESC
+    //      FETCH FIRST 500 ROWS ONLY
+    function generateToolCalls(count, sessionId, ns, sessionStart) {
+      var calls = [];
+      for (var i = 0; i < count; i++) {
+        var offset = rnd(0, 600000);
+        calls.push({
+          tool: pick(TOOL_NAMES),
+          session_id: sessionId,
+          namespace: ns,
+          timestamp: new Date(sessionStart.getTime() + offset),
+          duration_ms: rnd(80, 4200),
+          status: Math.random() > 0.08 ? 'success' : 'error',
+          summary: 'Executed successfully'
+        });
+      }
+      calls.sort(function(a, b) { return b.timestamp - a.timestamp; });
+      return calls;
+    }
+
+    // ── State
+    var allSessions = generateSessions();
+    var allToolCalls = (function() {
+      var calls = [];
+      allSessions.forEach(function(s) {
+        s.tool_call_details.forEach(function(c) { calls.push(c); });
+      });
+      calls.sort(function(a, b) { return b.timestamp - a.timestamp; });
+      return calls;
+    })();
+
+    var state = {
+      activeView: 'sessions',
+      selectedSessionId: null,
+      searchSidebar: '',
+      searchSessions: '',
+      searchActivity: '',
+      filterNs: '',
+      filterModel: '',
+      filterToolStatus: '',
+      sortCol: 'created_at',
+      sortDir: -1,
+    };
+
+    // ── View switching
+    function switchView(viewId) {
+      state.activeView = viewId;
+      document.querySelectorAll('.subnav-tab').forEach(function(t) {
+        t.classList.toggle('active', t.dataset.view === viewId);
+      });
+      document.querySelectorAll('.view-panel').forEach(function(p) {
+        p.classList.toggle('active', p.id === 'view-' + viewId);
+      });
+      document.getElementById('admin-sidebar').style.display = 'none';
+      renderCurrentView();
+    }
+
+    // ── Sidebar session list
+    function renderSidebar() {
+      var q = state.searchSidebar.toLowerCase();
+      var filtered = allSessions.filter(function(s) {
+        return !q || s.first_message.toLowerCase().indexOf(q) !== -1
+                  || s.namespace.toLowerCase().indexOf(q) !== -1
+                  || s.session_id.indexOf(q) !== -1;
+      });
+      document.getElementById('sidebar-count').textContent = filtered.length;
+      var list = document.getElementById('session-list');
+      list.innerHTML = filtered.map(function(s) {
+        var active = s.session_id === state.selectedSessionId;
+        return '<div class="session-item' + (active ? ' active' : '') + '" data-id="' + s.session_id + '">'
+          + '<div class="session-item-top">'
+          + '<span class="session-item-preview">' + escHtml(s.first_message) + '</span>'
+          + '<span class="session-item-time">' + fmtTs(s.created_at) + '</span>'
+          + '</div>'
+          + '<div class="session-item-meta">'
+          + '<span class="badge badge-ns">' + s.namespace + '</span>'
+          + '<span class="badge badge-model">' + MODELS[s.model] + '</span>'
+          + '<span class="badge badge-count">' + s.message_count + ' msgs</span>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+    }
+
+    // ── Overview
+    function renderOverview() {
+      var total = allSessions.length;
+      var today = allSessions.filter(function(s) {
+        return (Date.now() - s.created_at) < 86400000;
+      }).length;
+      var totalMsgs = allSessions.reduce(function(a, s) { return a + s.message_count; }, 0);
+      var totalTools = allToolCalls.length;
+      var errorTools = allToolCalls.filter(function(c) { return c.status === 'error'; }).length;
+
+      var stats = [
+        { label: 'Total Sessions', value: total, sub: today + ' today' },
+        { label: 'Messages Sent', value: totalMsgs, sub: Math.round(totalMsgs / Math.max(total,1)) + ' avg per session' },
+        { label: 'Tool Calls', value: totalTools, sub: totalTools - errorTools + ' successful' },
+        { label: 'Error Rate', value: (errorTools / Math.max(totalTools,1) * 100).toFixed(1) + '%', sub: errorTools + ' failed calls' }
+      ];
+      document.getElementById('stat-grid').innerHTML = stats.map(function(s) {
+        return '<div class="stat-card">'
+          + '<div class="stat-label">' + s.label + '</div>'
+          + '<div class="stat-value">' + s.value + '</div>'
+          + '<div class="stat-sub">' + s.sub + '</div>'
+          + '</div>';
+      }).join('');
+
+      // Namespace chart
+      var nsCounts = {};
+      allSessions.forEach(function(s) { nsCounts[s.namespace] = (nsCounts[s.namespace] || 0) + 1; });
+      var nsMax = Math.max.apply(null, Object.values(nsCounts));
+      document.getElementById('ns-chart').innerHTML = Object.entries(nsCounts)
+        .sort(function(a,b){return b[1]-a[1];})
+        .map(function(e) {
+          return '<div class="mini-bar-row">'
+            + '<div class="mini-bar-label">' + e[0] + '</div>'
+            + '<div class="mini-bar-track"><div class="mini-bar-fill" style="width:' + (e[1]/nsMax*100) + '%"></div></div>'
+            + '<div class="mini-bar-val">' + e[1] + '</div>'
+            + '</div>';
+        }).join('');
+
+      // Model chart
+      var modelCounts = {};
+      allSessions.forEach(function(s) { modelCounts[s.model] = (modelCounts[s.model] || 0) + 1; });
+      var mMax = Math.max.apply(null, Object.values(modelCounts));
+      document.getElementById('model-chart').innerHTML = Object.entries(modelCounts)
+        .sort(function(a,b){return b[1]-a[1];})
+        .map(function(e) {
+          return '<div class="mini-bar-row">'
+            + '<div class="mini-bar-label">' + (MODELS[e[0]] || e[0]) + '</div>'
+            + '<div class="mini-bar-track"><div class="mini-bar-fill" style="width:' + (e[1]/mMax*100) + '%"></div></div>'
+            + '<div class="mini-bar-val">' + e[1] + '</div>'
+            + '</div>';
+        }).join('');
+
+      // Activity log
+      var recentCalls = allToolCalls.slice(0, 8);
+      var dotClass = { success: 'activity-dot-success', error: 'activity-dot-error', info: 'activity-dot-info' };
+      document.getElementById('activity-log').innerHTML = recentCalls.map(function(c) {
+        var dc = c.status === 'error' ? 'activity-dot-error' : 'activity-dot-success';
+        return '<div class="activity-row">'
+          + '<div class="activity-dot ' + dc + '"></div>'
+          + '<div class="activity-content">'
+          + '<div class="activity-text"><strong>' + c.tool + '</strong> called in session ' + c.session_id.substr(0,16) + '</div>'
+          + '<div class="activity-meta">' + fmtTs(c.timestamp) + ' &bull; ' + c.namespace + ' &bull; ' + c.duration_ms + 'ms</div>'
+          + '</div>'
+          + '</div>';
+      }).join('');
+    }
+
+    // ── Sessions table
+    function getFilteredSessions() {
+      var q = state.searchSessions.toLowerCase();
+      return allSessions.filter(function(s) {
+        if (state.filterNs && s.namespace !== state.filterNs) return false;
+        if (state.filterModel && s.model !== state.filterModel) return false;
+        if (q && s.first_message.toLowerCase().indexOf(q) === -1
+               && s.namespace.toLowerCase().indexOf(q) === -1
+               && s.session_id.indexOf(q) === -1) return false;
+        return true;
+      }).sort(function(a, b) {
+        var va = a[state.sortCol], vb = b[state.sortCol];
+        if (va instanceof Date) va = va.getTime();
+        if (vb instanceof Date) vb = vb.getTime();
+        return (va < vb ? -1 : va > vb ? 1 : 0) * state.sortDir;
+      });
+    }
+
+    function renderSessionsTable() {
+      var filtered = getFilteredSessions();
+      document.getElementById('sessions-count-label').textContent = filtered.length + ' sessions';
+
+      // Populate filter dropdowns once
+      var nsSelect = document.getElementById('filter-ns');
+      if (nsSelect.options.length <= 1) {
+        NS_LIST.forEach(function(ns) {
+          var o = document.createElement('option');
+          o.value = ns; o.textContent = ns;
+          nsSelect.appendChild(o);
+        });
+      }
+      var mSelect = document.getElementById('filter-model');
+      if (mSelect.options.length <= 1) {
+        MODEL_KEYS.forEach(function(m) {
+          var o = document.createElement('option');
+          o.value = m; o.textContent = MODELS[m];
+          mSelect.appendChild(o);
+        });
+      }
+
+      document.getElementById('sessions-tbody').innerHTML = filtered.map(function(s) {
+        var sel = s.session_id === state.selectedSessionId ? ' class="selected"' : '';
+        return '<tr' + sel + ' data-id="' + s.session_id + '">'
+          + '<td>' + fmtTs(s.created_at) + '</td>'
+          + '<td><span class="badge badge-ns">' + s.namespace + '</span></td>'
+          + '<td><span class="badge badge-model">' + MODELS[s.model] + '</span></td>'
+          + '<td class="truncate">' + escHtml(s.first_message) + '</td>'
+          + '<td style="text-align:center">' + s.message_count + '</td>'
+          + '<td style="text-align:center">' + s.tool_calls + '</td>'
+          + '<td style="text-align:right" title="' + s.input_tokens.toLocaleString() + ' in / ' + s.output_tokens.toLocaleString() + ' out">' + fmtTokens(s.total_tokens) + '</td>'
+          + '<td style="text-align:right">' + fmtCost(s.cost_usd) + '</td>'
+          + '<td>' + fmtDur(s.duration_s) + '</td>'
+          + '<td class="mono">' + s.session_id.substr(0, 20) + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+
+    // ── Session detail panel
+    function openDetail(sessionId) {
+      state.selectedSessionId = sessionId;
+      var s = allSessions.find(function(x) { return x.session_id === sessionId; });
+      if (!s) return;
+      var panel = document.getElementById('admin-detail');
+      panel.classList.remove('hidden');
+      document.getElementById('detail-title').textContent = s.namespace + ' session';
+      document.getElementById('detail-body').innerHTML =
+        '<div class="detail-section">'
+        + '<div class="detail-section-title">Session Info</div>'
+        + '<div class="detail-kv">'
+        + kv('ID', '<span class="mono">' + s.session_id + '</span>')
+        + kv('Started', s.created_at.toLocaleString())
+        + kv('Duration', fmtDur(s.duration_s))
+        + kv('Namespace', s.namespace)
+        + kv('Model', MODELS[s.model])
+        + kv('Messages', s.message_count)
+        + kv('Tool calls', s.tool_calls)
+        + kv('Input tokens', s.input_tokens.toLocaleString())
+        + kv('Output tokens', s.output_tokens.toLocaleString())
+        + kv('Total tokens', s.total_tokens.toLocaleString())
+        + kv('Cost', fmtCost(s.cost_usd))
+        + '</div>'
+        + '</div>'
+        + '<div class="detail-section">'
+        + '<div class="detail-section-title">Conversation Preview</div>'
+        + '<div class="detail-msg-list">'
+        + s.messages.map(function(m) {
+            return '<div class="detail-msg ' + (m.role === 'user' ? 'detail-msg-user' : 'detail-msg-ai') + '">'
+              + escHtml(m.text.substring(0, 120)) + (m.text.length > 120 ? '...' : '')
+              + '</div>';
+          }).join('')
+        + '</div>'
+        + '</div>'
+        + '<div class="detail-section">'
+        + '<div class="detail-section-title">Tool Calls (' + s.tool_call_details.length + ')</div>'
+        + '<div class="detail-tool-list">'
+        + s.tool_call_details.slice(0, 10).map(function(c) {
+            return '<div class="detail-tool-row">'
+              + '<span class="detail-tool-name">' + c.tool + '</span>'
+              + '<span class="badge ' + (c.status === 'error' ? 'badge-error' : 'badge-success') + '">' + c.status + '</span>'
+              + '<span class="detail-tool-dur">' + c.duration_ms + 'ms</span>'
+              + '</div>';
+          }).join('')
+        + (s.tool_call_details.length > 10 ? '<div style="font-size:11px;color:var(--color-text-muted);padding:4px 8px">+'+(s.tool_call_details.length-10)+' more</div>' : '')
+        + '</div>'
+        + '</div>';
+
+      renderSidebar();
+      renderSessionsTable();
+    }
+
+    function closeDetail() {
+      state.selectedSessionId = null;
+      document.getElementById('admin-detail').classList.add('hidden');
+      renderSidebar();
+      renderSessionsTable();
+    }
+
+    function kv(label, val) {
+      return '<div class="detail-kv-row"><span class="detail-kv-key">' + label + '</span><span class="detail-kv-val">' + val + '</span></div>';
+    }
+
+    // ── Tool activity table
+    function renderActivityTable() {
+      var q = state.searchActivity.toLowerCase();
+      var filtered = allToolCalls.filter(function(c) {
+        if (state.filterToolStatus && c.status !== state.filterToolStatus) return false;
+        if (q && c.tool.indexOf(q) === -1 && c.session_id.indexOf(q) === -1) return false;
+        return true;
+      });
+      document.getElementById('activity-count-label').textContent = filtered.length + ' events';
+      document.getElementById('activity-tbody').innerHTML = filtered.slice(0, 200).map(function(c) {
+        var badgeClass = c.status === 'error' ? 'badge-error' : 'badge-success';
+        return '<tr>'
+          + '<td>' + fmtTs(c.timestamp) + '</td>'
+          + '<td class="mono" style="font-weight:600">' + c.tool + '</td>'
+          + '<td class="mono">' + c.session_id.substr(0, 16) + '</td>'
+          + '<td><span class="badge badge-ns">' + c.namespace + '</span></td>'
+          + '<td>' + c.duration_ms + 'ms</td>'
+          + '<td><span class="badge ' + badgeClass + '">' + c.status + '</span></td>'
+          + '<td class="truncate" style="color:var(--color-text-secondary)">' + c.summary + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+
+    // ── System panel
+    // SQL: SELECT * FROM InterClaw.SystemConfig (or ^InterClaw.Config global)
+    function renderSystem() {
+      var irisRows = [
+        ['Instance', 'IRIS-DEV-01'],
+        ['Version', '2026.1.0 (Build 2196U)'],
+        ['Platform', 'Linux x64'],
+        ['Port', '52773'],
+        ['Status', '<span class="status-dot status-dot-green"></span>Running'],
+      ];
+      var icRows = [
+        ['Version', '1.4.2'],
+        ['Install NS', 'INTERCLAW'],
+        ['Default NS', 'HSCUSTOM'],
+        ['Default Model', 'Claude Sonnet 4.6'],
+        ['API Key', '<span class="badge badge-success">Configured</span>'],
+        ['Auth Status', '<span class="badge badge-success">Logged in</span>'],
+      ];
+      document.getElementById('sys-iris').innerHTML = irisRows.map(function(r) {
+        return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
+      }).join('');
+      document.getElementById('sys-interclaw').innerHTML = icRows.map(function(r) {
+        return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
+      }).join('');
+
+      // SQL: SELECT Namespace, ProductionCount, SessionCount24h, LastActivity
+      //      FROM InterClaw.NamespaceStats ORDER BY LastActivity DESC
+      var namespaces = NS_LIST.map(function(ns) {
+        var sessions24h = allSessions.filter(function(s) {
+          return s.namespace === ns && (Date.now() - s.created_at) < 86400000;
+        }).length;
+        return { ns: ns, productions: rnd(1, 5), sessions24h: sessions24h,
+                 lastActivity: new Date(Date.now() - rnd(0, 12 * 3600000)),
+                 status: Math.random() > 0.2 ? 'running' : 'stopped' };
+      });
+      document.getElementById('sys-namespaces-tbody').innerHTML = namespaces.map(function(r) {
+        var dotCls = r.status === 'running' ? 'status-dot-green' : 'status-dot-grey';
+        return '<tr>'
+          + '<td><strong>' + r.ns + '</strong></td>'
+          + '<td>' + r.productions + '</td>'
+          + '<td>' + r.sessions24h + '</td>'
+          + '<td>' + fmtTs(r.lastActivity) + '</td>'
+          + '<td><span class="status-dot ' + dotCls + '"></span>' + r.status + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+
+    function renderCurrentView() {
+      var v = state.activeView;
+      if (v === 'overview') renderOverview();
+      else if (v === 'sessions') { renderSessionsTable(); }
+      else if (v === 'activity') renderActivityTable();
+      else if (v === 'system') renderSystem();
+      renderSidebar();
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function updateLastRefresh() {
+      document.getElementById('last-refresh').textContent =
+        'Updated ' + new Date().toLocaleTimeString();
+    }
+
+    // ── Wire events
+    document.querySelectorAll('.subnav-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() { switchView(btn.dataset.view); });
+    });
+
+    document.getElementById('refresh-btn').addEventListener('click', function() {
+      allSessions = generateSessions();
+      allToolCalls = (function() {
+        var calls = [];
+        allSessions.forEach(function(s) { s.tool_call_details.forEach(function(c) { calls.push(c); }); });
+        calls.sort(function(a, b) { return b.timestamp - a.timestamp; });
+        return calls;
+      })();
+      state.selectedSessionId = null;
+      document.getElementById('admin-detail').classList.add('hidden');
+      updateLastRefresh();
+      renderCurrentView();
+    });
+
+    document.getElementById('sidebar-search-input').addEventListener('input', function(e) {
+      state.searchSidebar = e.target.value;
+      renderSidebar();
+    });
+
+    document.getElementById('session-list').addEventListener('click', function(e) {
+      var item = e.target.closest('.session-item');
+      if (item) openDetail(item.dataset.id);
+    });
+
+    document.getElementById('sessions-search').addEventListener('input', function(e) {
+      state.searchSessions = e.target.value;
+      renderSessionsTable();
+    });
+    document.getElementById('filter-ns').addEventListener('change', function(e) {
+      state.filterNs = e.target.value;
+      renderSessionsTable();
+    });
+    document.getElementById('filter-model').addEventListener('change', function(e) {
+      state.filterModel = e.target.value;
+      renderSessionsTable();
+    });
+
+    document.getElementById('sessions-tbody').addEventListener('click', function(e) {
+      var row = e.target.closest('tr');
+      if (row && row.dataset.id) openDetail(row.dataset.id);
+    });
+
+    document.getElementById('detail-close-btn').addEventListener('click', closeDetail);
+
+    document.getElementById('activity-search').addEventListener('input', function(e) {
+      state.searchActivity = e.target.value;
+      renderActivityTable();
+    });
+    document.getElementById('filter-tool-status').addEventListener('change', function(e) {
+      state.filterToolStatus = e.target.value;
+      renderActivityTable();
+    });
+
+    // Column sort on sessions table
+    document.querySelector('#sessions-table thead').addEventListener('click', function(e) {
+      var th = e.target.closest('th');
+      if (!th || !th.dataset.col) return;
+      if (state.sortCol === th.dataset.col) {
+        state.sortDir *= -1;
+      } else {
+        state.sortCol = th.dataset.col;
+        state.sortDir = -1;
+      }
+      document.querySelectorAll('#sessions-table th').forEach(function(t) {
+        t.classList.toggle('sorted', t.dataset.col === state.sortCol);
+      });
+      renderSessionsTable();
+    });
+
+    // ── Init
+    updateLastRefresh();
+    switchView('sessions');
+
+    // Postmessage context to shell (so the active tab is tracked)
+    try {
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'interclaw-context', tab: 'admin', context: { namespace: '' } }, '*');
+      }
+    } catch(e) {}
+  })();
+  </script>
+</body>
+</html>

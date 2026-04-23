@@ -1,0 +1,34 @@
+Class {{PACKAGE}}.Rule.{{NAME}}RoutingRule Extends Ens.Rule.Definition
+{
+
+Parameter RuleAssistClass = "EnsLib.HL7.MsgRouter.RuleAssist";
+
+XData RuleDefinition [ XMLNamespace = "http://www.intersystems.com/rule" ]
+{
+<ruleDefinition alias="{{PACKAGE}}.Rule.{{NAME}}RoutingRule" context="EnsLib.HL7.MsgRouter.RoutingEngine" production="{{PACKAGE}}.Production">
+
+<ruleSet name="Main Routing" effectiveBegin="" effectiveEnd="">
+
+  <rule name="{{MESSAGE_TYPE}} Messages" disabled="false">
+    <constraint name="docCategory" value="{{SCHEMA_CATEGORY}}"/>
+    <constraint name="docName" value="{{MESSAGE_STRUCTURE}}"/>
+    <when condition="1">
+      <comment text="{{COMMENT}}"/>
+      <send transform="{{TRANSFORM_CLASS}}" target="{{TARGET_CONFIG_NAME}}"/>
+      <return/>
+    </when>
+  </rule>
+
+  <rule name="Unhandled Messages" disabled="false">
+    <when condition="1">
+      <comment text="Log unrecognized messages for review"/>
+      <send transform="" target="{{UNHANDLED_TARGET}}"/>
+    </when>
+  </rule>
+
+</ruleSet>
+
+</ruleDefinition>
+}
+
+}

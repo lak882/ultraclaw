@@ -1,0 +1,6 @@
+Class {{PACKAGE}}.Msg.{{NAME}}Response Extends Ens.Response
+{
+
+{{PROPERTIES}}
+
+}

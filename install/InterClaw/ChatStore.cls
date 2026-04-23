@@ -231,16 +231,24 @@ ClassMethod DeriveTitle(text As %String) As %String
 /// Why Haiku: cheapest available model; a 3-6 word summary never needs
 /// frontier reasoning. Why last-10: preserves topic-shift signal without
 /// blowing up prompt size on long chats.
-ClassMethod Retitle(user As %String, id As %String) As %String
+ClassMethod Retitle(user As %String, id As %String, messagesJSON As %String = "") As %String
 {
     Set existing = ..Read(user, id)
     If '$IsObject(existing) Return ""
     // Respect manual renames — once a user sets a title, auto-retitle is off.
     If ''existing.%Get("titleLocked") Return ""
-    Set msgs = existing.%Get("messages")
-    If '$IsObject(msgs) Return ""
+    // Prefer caller-supplied messages (frontend pane), fall back to disk.
+    // Mirrors the V2 class behavior — see InterClaw.V2.ChatStore.Retitle.
+    Set msgsSource = ""
+    If messagesJSON '= "" {
+        Set msgsSource = messagesJSON
+    } Else {
+        Set msgs = existing.%Get("messages")
+        If $IsObject(msgs) { Set msgsSource = msgs.%ToJSON() }
+    }
+    If msgsSource = "" Return ""
     Set currentTitle = existing.%Get("title")
-    Set newTitle = ..SummarizeTitle(msgs.%ToJSON(), currentTitle)
+    Set newTitle = ..SummarizeTitle(msgsSource, currentTitle)
     If newTitle = "" Return ""
     If newTitle = currentTitle Return ""
     Do existing.%Set("title", newTitle)

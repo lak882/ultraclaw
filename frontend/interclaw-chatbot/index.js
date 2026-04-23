@@ -19,7 +19,7 @@
   var link = document.createElement('link');
   link.rel = 'stylesheet';
   link.id = 'interclaw-chatbot-styles';
-  link.href = basePath + 'chatbot.css?v=3';
+  link.href = basePath + 'chatbot.css?v=6';
   document.head.appendChild(link);
 
   var chatsLink = document.createElement('link');
@@ -68,7 +68,7 @@
   ];
 
   // Cache-busting version — bump this to force-reload all modules
-  var MODULE_VERSION = 83;
+  var MODULE_VERSION = 137;
 
   function loadNext(i) {
     if (i >= modules.length) {

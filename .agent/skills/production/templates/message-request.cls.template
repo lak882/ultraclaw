@@ -1,0 +1,6 @@
+Class {{PACKAGE}}.Msg.{{NAME}}Request Extends Ens.Request
+{
+
+{{PROPERTIES}}
+
+}

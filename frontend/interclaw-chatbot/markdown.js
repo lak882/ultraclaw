@@ -78,8 +78,10 @@
     };
     chatbotRenderer.hr = function() { return '<hr class="chatbot-hr">'; };
     chatbotRenderer.blockquote = function(quote) {
+      // Blockquote rendering disabled. Pass the inner content through
+      // so quoted text appears inline with no visual callout.
       if (typeof quote === 'object') quote = quote.text;
-      return '<blockquote class="chatbot-blockquote">' + quote + '</blockquote>';
+      return quote;
     };
     chatbotRenderer.link = function(href, title, text) {
       if (typeof href === 'object') { text = href.text; title = href.title; href = href.href; }

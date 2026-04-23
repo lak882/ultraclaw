@@ -181,14 +181,11 @@
     var hashPath = legacyUrl.substring(hashIdx + 1);
     var pfx = cc.pathPrefix || '';
 
-    // Shell: pick the Traces iframe if the target is the message viewer,
-    // otherwise drop into Portal. The full legacy-ui URL with chrome=none
-    // makes the iframe reuse its wrapper, avoiding a double header.
+    // Navigate directly to the portal URL — bypass the legacy-ui wrapper entirely.
     var shell = (window.top && window.top._interclawShell) || window._interclawShell;
     if (shell && typeof shell.openInTab === 'function') {
       var tabId = (hashPath.indexOf('MessageViewer') !== -1) ? 'traces' : 'portal';
-      var base = pfx + '/ui/interop/interclaw/legacy-ui/index.html?chrome=none#' + hashPath;
-      if (shell.openInTab(tabId, base)) return true;
+      if (shell.openInTab(tabId, pfx + hashPath)) return true;
     }
 
     // Inside-legacy-ui case (the wrapper's own iframe exists here).
@@ -197,7 +194,7 @@
       frame.src = pfx + hashPath;
       return true;
     }
-    window.location.href = pfx + '/ui/interop/interclaw/legacy-ui/index.html#' + hashPath;
+    window.location.href = pfx + hashPath;
     return true;
   };
 
@@ -320,21 +317,16 @@
     // Class match: build a portal URL and route it into the shell's iframe.
     // Previously this path was a no-op (the "Navigation links removed from
     // chat UI" era) which meant /goto DTL.MyTransform did nothing on the
-    // shell. Now we wrap the portal URL in the legacy-ui shell and hand it
-    // off to navigateLegacyUi so it lands inside the Portal tab.
+    // Navigate directly to the portal URL without the legacy-ui wrapper.
     if (componentName && editorType && editorType !== 'trace') {
       var portalLink = cc.buildPortalLink(componentName, editorType);
       if (portalLink) {
         var pfx = cc.pathPrefix || '';
-        // Strip the origin + pathPrefix down to the zen path so we can rebuild
-        // the legacy-ui hash URL. `portalLink.url` already includes pathPrefix
-        // + /csp/healthshare/<ns>/... — we just need the /csp/... portion.
         var zenPath = portalLink.url;
         if (pfx && zenPath.indexOf(pfx) === 0) zenPath = zenPath.substring(pfx.length);
-        var legacyUrl = pfx + '/ui/interop/interclaw/legacy-ui/index.html#' + zenPath;
         cc.addMessage('system', 'Opening `' + componentName + '` in ' + portalLink.label + '.');
         cc.saveState();
-        cc.navigateLegacyUi(legacyUrl);
+        cc.navigateLegacyUi(pfx + '/ui/interop/interclaw/legacy-ui/index.html#' + zenPath);
         return;
       }
     }

@@ -68,21 +68,17 @@
           document.body.classList.add('chatbot-closed');
         }
 
-        // If the URL carries a chat id, buildSidebar already kicked off
-        // openChat for it — which calls renderChatDoc, which prepends
-        // welcome itself. Skip sessionStorage restore to avoid double
-        // rendering. initSession still runs for auth but skips welcome
-        // (renderChatDoc owns that on URL-deep-link paths).
+        // Always show the welcome message on page open, regardless of
+        // whether a chat is being resumed from URL, sessionStorage, or
+        // a fresh load. The welcome is idempotent (one per pane) and
+        // ephemeral (not persisted in the chat doc), so it just sits at
+        // the top of the pane alongside any restored turns.
         var hasUrlChat = /^#\/chat\/[^?]+/.test(window.location.hash || '');
         if (hasUrlChat) {
           sessionStorage.removeItem('chatbot-state');
-          // preserveSession: the sidebar's URL auto-open has already called
-          // openChat which set cc.sessionId. Don't null it here or the
-          // next send will mint a fresh chat.
+          if (cc.showWelcomeMessage) cc.showWelcomeMessage();
           cc.initSession({ skipWelcome: true, preserveSession: true });
         } else if (!isReload && cc.restoreState()) {
-          // Restored conversation from tab navigation. restoreState set
-          // cc.sessionId from sessionStorage — don't wipe it.
           if (cc.showWelcomeMessage) cc.showWelcomeMessage();
           cc.initSession({ skipWelcome: true, preserveSession: true });
         } else {
@@ -94,19 +90,123 @@
       }, 300);
     });
 
-    // ── Tree selection context indicator ──
+    // ── Context indicator pills (skills tree selection + portal page) ──
     var folderSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>';
     var fileSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>';
+    var pageSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>';
 
-    function updateContextIndicator(sel) {
+    // Pill state: tree = skills file/folder, portal = active Zen page
+    var _treePill = null;
+    var _portalPill = null;
+
+    function renderContextPills() {
       var sep = document.getElementById('chatbot-context-sep');
       var body = document.getElementById('chatbot-context-body');
       if (!sep || !body) return;
-      if (!sel || !sel.name) { sep.style.display = 'none'; body.style.display = 'none'; return; }
-      var icon = sel.type === 'folder' ? folderSvg : fileSvg;
-      body.innerHTML = icon + '<span>' + sel.name + '</span>';
-      sep.style.display = '';
-      body.style.display = '';
+      var pills = [];
+      if (_treePill) {
+        var icon = _treePill.type === 'folder' ? folderSvg : fileSvg;
+        pills.push('<span class="chatbot-context-pill" title="' + cc.escapeHtml(_treePill.name) + '">' + icon + '<span>' + cc.escapeHtml(_treePill.name) + '</span></span>');
+      }
+      if (_portalPill) {
+        pills.push('<span class="chatbot-context-pill" title="' + cc.escapeHtml(_portalPill) + '">' + pageSvg + '<span>' + cc.escapeHtml(_portalPill) + '</span></span>');
+      }
+      if (pills.length === 0) {
+        sep.style.display = 'none';
+        body.style.display = 'none';
+        body.innerHTML = '';
+      } else {
+        body.innerHTML = pills.join('');
+        sep.style.display = '';
+        body.style.display = '';
+      }
+    }
+
+    function updateContextIndicator(sel) {
+      _treePill = (sel && sel.name) ? sel : null;
+      renderContextPills();
+    }
+
+    // Parse a zenPath from the portal iframe into a short readable label.
+    // zenPath looks like: /csp/healthshare/HSCUSTOM/EnsPortal.DTLEditor.zen?DT=Demo.DTL.Foo.cls
+    function portalPillFromZenPath(zenPath) {
+      if (!zenPath) return null;
+      var pageLabels = {
+        DTLEditor: 'DTL Editor', RuleEditor: 'Rule Editor', BPLEditor: 'BPL Editor',
+        ProductionConfig: 'Production', MessageViewer: 'Message Viewer',
+        VisualTrace: 'Visual Trace', EventLog: 'Event Log',
+        'HL7.SchemaDocumentStructure': 'HL7 Schema',
+        LookupSettings: 'Lookup Table', BusinessProcess: 'BP Editor'
+      };
+      // Extract Zen page name
+      var pageMatch = zenPath.match(/EnsPortal\.([^.]+(?:\.[^?&/]+)?)?\.zen/);
+      var pageName = pageMatch ? (pageLabels[pageMatch[1]] || pageMatch[1]) : null;
+      // Extract component from query params
+      var params = '';
+      try { params = zenPath.indexOf('?') !== -1 ? zenPath.substring(zenPath.indexOf('?')) : ''; } catch(e) {}
+      var qs = new URLSearchParams(params);
+      var component = qs.get('DT') || qs.get('RULE') || qs.get('BP') || qs.get('PRODUCTION') || qs.get('MS') || qs.get('LookupTable');
+      if (component) component = component.replace(/\.cls$/, '').replace(/\.lut$/, '');
+      if (component && pageName) return pageName + ': ' + component;
+      if (component) return component;
+      if (pageName) return pageName;
+      return null;
+    }
+
+    // Derive portal pill from cc._editorContext (already parsed from outer URL hash)
+    function portalPillFromEditorContext() {
+      var ctx = cc._editorContext;
+      if (!ctx) return null;
+      var pageLabels = {
+        dtl: 'DTL Editor', rule: 'Rule Editor', bpl: 'BPL Editor',
+        production: 'Production', schema: 'HL7 Schema', lookup: 'Lookup Table'
+      };
+      if (ctx.active && ctx.activeType) {
+        var label = pageLabels[ctx.activeType] || ctx.activeType;
+        return label + ': ' + ctx.active;
+      }
+      if (ctx.zenDetail && ctx.activeType) {
+        return (pageLabels[ctx.activeType] || ctx.activeType) + ': ' + ctx.zenDetail;
+      }
+      if (ctx.zenPage) {
+        var zenLabels = {
+          MessageViewer: 'Message Viewer', VisualTrace: 'Visual Trace',
+          EventLog: 'Event Log', LookupSettings: 'Lookup Table',
+          ProductionConfig: 'Production'
+        };
+        return zenLabels[ctx.zenPage] || ctx.zenPage;
+      }
+      return null;
+    }
+
+    var _lastAnnouncedPill = null;
+
+    function buildContextSentence(ctx, pill) {
+      if (!pill) return null;
+      var pageLabels = {
+        dtl: 'DTL Editor', rule: 'Rule Editor', bpl: 'BPL Editor',
+        production: 'Production Config', schema: 'HL7 Schema Browser', lookup: 'Lookup Table Editor',
+        MessageViewer: 'Message Viewer', VisualTrace: 'Visual Trace',
+        EventLog: 'Event Log', ProductionConfig: 'Production Config'
+      };
+      if (ctx && ctx.active && ctx.activeType) {
+        var page = pageLabels[ctx.activeType] || ctx.activeType;
+        return 'Currently viewing ' + page + ' — ' + ctx.active + '.';
+      }
+      if (ctx && ctx.zenPage) {
+        var page2 = pageLabels[ctx.zenPage] || ctx.zenPage;
+        return 'Currently viewing ' + page2 + '.';
+      }
+      return 'Currently viewing ' + pill + '.';
+    }
+
+    function refreshPortalPill() {
+      if (cc.getEditorContext) cc.getEditorContext(); // re-parse URL
+      _portalPill = portalPillFromEditorContext();
+      renderContextPills();
+      if (_portalPill !== _lastAnnouncedPill) {
+        _lastAnnouncedPill = _portalPill;
+      }
     }
 
     // Load from localStorage on init
@@ -115,10 +215,92 @@
       if (saved) updateContextIndicator(JSON.parse(saved));
     } catch(e) {}
 
+    // Seed portal pill silently on init (no system message — user hasn't navigated).
+    // The delayed retry handles the case where shell.js hasn't synced the hash yet.
+    function seedPortalPill() {
+      if (cc.getEditorContext) cc.getEditorContext();
+      _portalPill = portalPillFromEditorContext();
+      _lastAnnouncedPill = _portalPill; // suppress announcement on first seed
+      renderContextPills();
+    }
+    seedPortalPill();
+    setTimeout(seedPortalPill, 800);
+
     // Live updates from skills editor
     window.addEventListener('interclaw-tree-selection', function(e) {
-      if (e.detail) updateContextIndicator(e.detail);
+      updateContextIndicator(e.detail || null);
     });
+
+    // Live updates from portal iframe via shell.js postMessage bridge
+    window.addEventListener('interclaw-shell-context', function(e) {
+      var d = e.detail;
+      if (!d) return;
+      if (d.tab === 'portal' || d.tab === 'traces') {
+        // Prefer the parsed zenPath from the iframe message; fall back to editorContext
+        var pill = (d.context && d.context.zenPath) ? portalPillFromZenPath(d.context.zenPath) : null;
+        _portalPill = pill || portalPillFromEditorContext();
+        renderContextPills();
+      }
+    });
+
+    // Update when outer URL hash changes (Angular / Zen navigation syncs hash)
+    window.addEventListener('hashchange', refreshPortalPill);
+    window.addEventListener('interclaw-namespace-change', refreshPortalPill);
+
+    // Also listen on the parent window for shell-level navigation (Angular pushState)
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.addEventListener('hashchange', refreshPortalPill);
+        window.parent.addEventListener('popstate', refreshPortalPill);
+      }
+    } catch(e) {}
+
+    // Poll every 2s to catch Angular route changes that don't emit events
+    setInterval(refreshPortalPill, 2000);
+
+    // Watch h2.rule-name inside the rule editor iframe for rule switches
+    var _ruleNameObserver = null;
+    var _ruleNameEl = null;
+    function getRuleDoc() {
+      try {
+        var shellDoc = (window.parent && window.parent !== window) ? window.parent.document : document;
+        var pf = shellDoc.getElementById('shell-iframe-portal');
+        if (!pf) return null;
+        // Check viewer-frame first (legacy-ui wrapper)
+        try {
+          var vf = pf.contentDocument ? pf.contentDocument.getElementById('viewer-frame') : null;
+          if (vf && vf.contentDocument && vf.contentDocument.querySelector('h2.rule-name')) {
+            return vf.contentDocument;
+          }
+        } catch(e) {}
+        // Fallback: rule editor loaded directly in portal iframe
+        try {
+          if (pf.contentDocument && pf.contentDocument.querySelector('h2.rule-name')) {
+            return pf.contentDocument;
+          }
+        } catch(e) {}
+      } catch(e) {}
+      return null;
+    }
+
+    function attachRuleNameObserver() {
+      try {
+        var ruleDoc = getRuleDoc();
+        if (!ruleDoc) {
+          if (_ruleNameObserver) { _ruleNameObserver.disconnect(); _ruleNameObserver = null; _ruleNameEl = null; }
+          return;
+        }
+        // Observe the parent of h2.rule-name so we catch Angular replacing the element.
+        var h2 = ruleDoc.querySelector('h2.rule-name.ng-star-inserted') || ruleDoc.querySelector('h2.rule-name');
+        var container = h2 ? h2.parentElement : ruleDoc.body;
+        if (!container || container === _ruleNameEl) return;
+        if (_ruleNameObserver) _ruleNameObserver.disconnect();
+        _ruleNameEl = container;
+        _ruleNameObserver = new MutationObserver(function() { refreshPortalPill(); });
+        _ruleNameObserver.observe(container, { childList: true, subtree: true, characterData: true });
+      } catch(e) {}
+    }
+    setInterval(attachRuleNameObserver, 1000);
 
     // Universal scroll-to-bottom. Any caller that changes the chat pane's
     // content (opening an existing chat, leaving chat mode for the portal,

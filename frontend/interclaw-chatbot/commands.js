@@ -121,11 +121,12 @@
   }
 
   cc.slashCommands = [];
+  cc.slashSkills = [];
   cc.categoryLabels = {};
   cc.commandsReady = null;
 
   cc.loadCommandRegistry = function() {
-    cc.commandsReady = fetch(cc.apiBase + '/api/commands')
+    var commandsP = fetch(cc.chatApiBase + '/api/commands')
       .then(function(r) { return r.json(); })
       .then(function(data) {
         cc.slashCommands = (data.commands || []).map(function(c) {
@@ -139,6 +140,21 @@
         cc.slashCommands = [];
         cc.categoryLabels = {};
       });
+
+    var skillsP = fetch(cc.chatApiBase + '/api/skills')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        cc.slashSkills = (data.skills || []).map(function(s) {
+          return { cmd: '/' + s.name, desc: s.description, category: 'skills', audience: null };
+        });
+        console.log('[commands] loaded ' + cc.slashSkills.length + ' skills');
+      })
+      .catch(function(err) {
+        console.warn('[commands] failed to load skills:', err);
+        cc.slashSkills = [];
+      });
+
+    cc.commandsReady = Promise.all([commandsP, skillsP]);
     return cc.commandsReady;
   };
   cc.loadCommandRegistry();
@@ -278,21 +294,35 @@
   function renderCmdList(filter) {
     var body = document.getElementById('chatbot-cmd-panel-body');
     if (!body) return;
-    var results = fuzzyFilter(filter, cc.slashCommands);
-    if (results.length === 0) {
+    var cmdResults = fuzzyFilter(filter, cc.slashCommands);
+    var skillResults = fuzzyFilter(filter, cc.slashSkills);
+    if (cmdResults.length === 0 && skillResults.length === 0) {
       if (filter && _cmdPanelOpen) {
         _noMatchClosed = true;
         cc.toggleCmdPanel();
       }
       return;
     }
-    body.innerHTML = '<div class="chatbot-cmd-panel-header">Commands</div>' +
-    results.map(function(r) {
-      return '<div class="chatbot-cmd-item" data-cmd="' + r.cmd.cmd + '">' +
-        '<span class="chatbot-cmd-item-name">' + highlightText(r.cmd.cmd, r.cmdIndices) + '</span>' +
-        '<span class="chatbot-cmd-item-desc">' + highlightText(r.cmd.desc, r.descIndices) + '</span>' +
-      '</div>';
-    }).join('');
+    var html = '';
+    if (cmdResults.length > 0) {
+      html += '<div class="chatbot-cmd-panel-header">Commands</div>' +
+        cmdResults.map(function(r) {
+          return '<div class="chatbot-cmd-item" data-cmd="' + r.cmd.cmd + '">' +
+            '<span class="chatbot-cmd-item-name">' + highlightText(r.cmd.cmd, r.cmdIndices) + '</span>' +
+            '<span class="chatbot-cmd-item-desc">' + highlightText(r.cmd.desc, r.descIndices) + '</span>' +
+          '</div>';
+        }).join('');
+    }
+    if (skillResults.length > 0) {
+      html += '<div class="chatbot-cmd-panel-header">Skills</div>' +
+        skillResults.map(function(r) {
+          return '<div class="chatbot-cmd-item" data-cmd="' + r.cmd.cmd + '">' +
+            '<span class="chatbot-cmd-item-name">' + highlightText(r.cmd.cmd, r.cmdIndices) + '</span>' +
+            '<span class="chatbot-cmd-item-desc">' + highlightText(r.cmd.desc, r.descIndices) + '</span>' +
+          '</div>';
+        }).join('');
+    }
+    body.innerHTML = html;
   }
 
   cc.toggleCmdPanel = function() {

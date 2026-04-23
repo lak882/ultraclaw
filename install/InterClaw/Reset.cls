@@ -8,7 +8,7 @@
 ///   - InterClaw.* classes from the current namespace
 ///   - Portal favorite "InterClaw"
 ///   - InterClaw.Bedrock and InterClaw.User credentials
-///   - ^InterClaw.* and ^Inteclaw.* globals
+///   - ^InterClaw.* and ^InterClaw.* globals
 ///
 /// Usage:
 ///   do ##class(InterClaw.Reset).Run()       ; execute
@@ -211,9 +211,9 @@ ClassMethod RemoveGlobals(dryRun As %Boolean = 0)
 {
     set globals = $listbuild(
         "^InterClaw.Config", "^InterClaw.ChatEvents", "^InterClaw.ChatPending",
-        "^Inteclaw.ChatEvents", "^Inteclaw.SessionD", "^Inteclaw.SessionI",
-        "^Inteclaw.SessionS", "^Inteclaw.SessionPerm", "^Inteclaw.PlanTrace",
-        "^Inteclaw.ChatPending", "^Inteclaw.Config")
+        "^InterClaw.ChatEvents", "^InterClaw.SessionD", "^InterClaw.SessionI",
+        "^InterClaw.SessionS", "^InterClaw.SessionPerm", "^InterClaw.PlanTrace",
+        "^InterClaw.ChatPending", "^InterClaw.Config")
     set ptr = 0, found = 0
     while $listnext(globals, ptr, globalName) {
         if $data(@globalName) {

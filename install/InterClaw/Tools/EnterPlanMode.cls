@@ -19,8 +19,8 @@ ClassMethod Execute(inputJSON As %String) As %String
     If sid = "" Return "Error: no session id available to toggle plan mode"
     // Out-of-band globals so the BP sees the new state immediately even if
     // it is holding an open transaction / cached %Persistent object.
-    Set ^Inteclaw.SessionPerm(sid, "deny") = "put_class,compile_class,exec,spawn_agent,test_dtl"
-    Set ^Inteclaw.SessionPerm(sid, "plan") = 1
+    Set ^InterClaw.SessionPerm(sid, "deny") = "put_class,compile_class,exec,spawn_agent,test_dtl"
+    Set ^InterClaw.SessionPerm(sid, "plan") = 1
     Set plan = input.%Get("plan")
     Set out = "Plan mode ENABLED for session " _ sid _ "." _ $Char(10)
     Set out = out _ "Blocked tools: put_class, compile_class, exec, spawn_agent, test_dtl." _ $Char(10)
