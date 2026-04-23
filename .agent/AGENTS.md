@@ -47,7 +47,7 @@ Skills live at `.agent/skills/<name>/SKILL.md` (or `<name>/<sub>/SKILL.md` for n
 | `iris-sql` | The `run_sql` tool contract and IRIS SQL dialect. Call arguments and return shape, TOP vs LIMIT, `%STARTSWITH`/`%INLIST`/`%EXTERNAL`, `$Horolog`+DATEADD, class-to-table mapping, canonical system-table queries. |
 | `test` | Testing workflows for IRIS Interoperability components. In-memory DTL testing via `Transform`, segment-level diff via `InterClaw.Script.Production.Test.DTL`. Future: end-to-end production testing. |
 | `sample` | Generating realistic sample messages for testing and demos. Currently HL7 v2 (ADT, ORU, order-based). MSH template, segment patterns, minimum-viable ADT/ORU bodies, custom Z-structure handling. |
-| `improving-skills` | Meta-skill for fixing a skill that repeatedly fails to trigger, gives bad guidance, or drifts out of date. Load when you notice a skill underperforming. |
+| `improving-skills` | Runbook for test-driven skill improvement: run a test prompt N times through fresh chats, compare outputs, edit the skill, re-test. Load when a skill fails to trigger, gives wrong guidance, or drifts out of date. |
 
 ## Mandatory Skill Loading
 
