@@ -1,6 +1,7 @@
 ---
 name: improving-skills
 description: Use when a skill repeatedly fails to trigger correctly, provides ineffective guidance, or needs updating after workflow changes
+tools: [read_file, write_file, create_file, delete_file]
 ---
 
 # Improving Skills

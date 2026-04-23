@@ -1,21 +1,15 @@
 ---
 name: record-map
 description: Parse and create fixed-width or delimited flat files in IRIS Interoperability. Use when building CSV, TSV, pipe-separated, or fixed-width file integrations, when authoring a `EnsLib.RecordMap.RecordMap` subclass, or when wiring RecordMap services/operations into a production. Triggers on "record map", "CSV", "flat file", "fixed-width", "file parser", "delimited file".
-tools: [read_class, create_class, write_class, run_sql, xecute]
 ---
 
 # record-map
 
 Create and maintain RecordMap classes that parse and emit flat files (CSV, TSV, fixed-width). A RecordMap class describes the file layout; IRIS generates a persistent target class with one property per field, plus `GetObject` / `PutObject` helpers for round-tripping.
 
-## MANDATORY FIRST STEP: Verify the field separator and check for separator collision
+## MANDATORY FIRST STEP: Verify the field separator
 
-Before writing any RecordMap UDL, do both of the following:
-
-1. Identify the field-level separator from the spec.
-2. Check every compound field in the spec. If the sub-delimiter used inside any compound field is the SAME character as the record-level separator you have chosen, raise this conflict with the user before proceeding. A collision means RecordMap will split the compound field on every sub-delimiter token, producing truncated and incorrect field values at read time. Either choose a different record separator, or document clearly that the compound fields cannot be round-tripped correctly through this RecordMap.
-
-If the spec describes fields that are compound but uses a different character for sub-delimiting than the record separator, proceed normally and apply the sub-field guidance below.
+Before writing any RecordMap UDL, identify the field-level separator from the spec. If the spec describes fields that are themselves compound (e.g. "Format: `<code>` `<coding system>` `<display name>`"), those sub-separators are NOT handled by RecordMap. See the sub-field limitation section below.
 
 ## Sub-field (compound field) limitation
 
@@ -47,32 +41,12 @@ RecordMap parses one level of structure: it splits a record into fields using th
 | Read an existing RecordMap | `read_class` ? pass `classname` |
 | Create a new RecordMap | `create_class` ? pass full UDL body; compiles by default |
 | Update an existing RecordMap | `write_class` ? pass full UDL body |
-| Force target-class generation | `xecute:` `Set tSC = ##class(EnsLib.RecordMap.Generator).GenerateObject("MyApp.RecordMap.Foo", .tTarget) Set %result = $System.Status.GetErrorText(tSC)` |
-| Verify generated field count | `run_sql` ? see verification query below |
+| Force target-class generation | `exec:` `Set tSC = ##class(EnsLib.RecordMap.Generator).GenerateObject("MyApp.RecordMap.Foo", .tTarget) Set %result = $System.Status.GetErrorText(tSC)` |
 | Inspect generated target class | `read_class` ? pass the `targetClassname` value |
 
-## Verification: confirm generation succeeded after every create or update
+## Verification: confirm the class was actually created
 
-After every `create_class` or `write_class` call, perform all three of the following steps before declaring success:
-
-**Step 1.** Check the tool return. If `compiled: false` or `errors` is non-empty, report the error and stop.
-
-**Step 2.** Call `GenerateObject` explicitly and confirm a clean status:
-```objectscript
-Set tSC = ##class(EnsLib.RecordMap.Generator).GenerateObject("MyApp.RecordMap.Foo", .tTarget)
-Set %result = $System.Status.GetErrorText(tSC)
-```
-An empty string means success. Any non-empty string is an error; report it.
-
-**Step 3.** Query the generated target class to confirm the expected field count:
-```sql
-SELECT Name, Type FROM %Dictionary.CompiledProperty
-WHERE parent = 'MyApp.Record.Foo'
-AND Name NOT %STARTSWITH '%'
-```
-The row count must equal the number of fields declared in the RecordMap. If it is fewer, generation silently dropped fields; do not describe the class as ready.
-
-Only after all three steps pass should you describe the RecordMap as ready.
+After every `create_class` or `write_class` call, check the return value before writing the response. If `compiled: false` or `errors` is non-empty, report the error and do not describe the class as ready. If the tool returned an error string rather than a success object, the class does not exist; do not describe it as created.
 
 ## Key gotchas
 
@@ -81,7 +55,6 @@ Only after all three steps pass should you describe the RecordMap as ready.
 - `recordTerminator` is usually `\x0d\x0a` (CRLF) for Windows-origin files, `\x0a` (LF) for Unix-origin.
 - For batch files with headers/trailers, use `BatchFileService` / `BatchFileOperation` variants, and IRIS sends a `EnsLib.RecordMap.BatchRequest` carrying all records.
 - Compound fields (secondary delimiters within a field) are stored as raw `%String`. See the sub-field limitation section above.
-- Separator collision: if the spec's compound-field sub-delimiter is the same character as the record-level separator, RecordMap will misparse those fields at read time. Check for this before choosing a separator.
 
 ## Authoring checklist
 
@@ -92,9 +65,8 @@ Only after all three steps pass should you describe the RecordMap as ready.
 5. Declare every `<Field>` with a `name`, `datatype`, and either a `<Separator>` or `width`.
 6. Mark required fields with `required="1"`; add `index="1"` where you'll query by that field.
 7. For any compound field (secondary delimiter within the field value), use `datatype="%String"` and document the `$piece` split pattern for downstream use.
-8. Check for separator collision: if any compound field's sub-delimiter matches the record separator, raise the conflict before proceeding.
-9. Push with `create_class` / `write_class`. Then run the three-step verification (GenerateObject + field-count SQL) before declaring success.
-10. If wiring into a production, set `RecordMap` on the service or operation `Host` settings (see `references/authoring.md`).
+8. Push with `create_class` / `write_class`. Confirm the tool return before describing results.
+9. If wiring into a production, set `RecordMap` on the service or operation `Host` settings (see `references/authoring.md`).
 
 ## References
 

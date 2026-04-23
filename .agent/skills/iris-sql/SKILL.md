@@ -1,6 +1,7 @@
 ---
 name: iris-sql
 description: Run SQL against IRIS using the `run_sql` tool. Covers the exact call contract (arguments, return shape, limits), the IRIS SQL dialect (TOP vs LIMIT, %STARTSWITH, %INLIST, %EXTERNAL, class-to-table mapping, $Horolog+DATEADD), and the canonical system-table queries. Load before writing any SQL statement, before calling `run_sql`, and before answering any question that needs data from IRIS. Triggers on "query", "run SQL", "SELECT", "count", "list classes", "how many", "show me rows from", "find classes that", "what's in Ens_Util.Log", "check event log", "inspect dictionary", "message headers", "traces", "messages in", "errors in", "when did", "who sent", "show recent", "event log", "lookup table", "production hosts", "property types", "class definitions", "disabled items", "warnings", "last hour", "last day", "count messages", "sample rows", "first N", "top N", "most recent", "oldest", "group by", "join on". Also load for any question that implies aggregating, filtering, or enumerating IRIS-resident data.
+tools: [run_sql]
 ---
 
 # iris-sql

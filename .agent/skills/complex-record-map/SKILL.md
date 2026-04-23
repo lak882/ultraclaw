@@ -1,6 +1,7 @@
 ---
 name: complex-record-map
 description: Create and maintain Complex Record Maps in IRIS Interoperability. A Complex Record Map (`EnsLib.RecordMap.ComplexMap`) composes existing RecordMap classes into a hierarchical file structure with an optional header, a body of records and nested sequences, and an optional trailer. Use when a flat file contains multiple record types, per-record parent-child relationships, or repeating groups that cannot be expressed with a single RecordMap. Triggers on "complex record map", "ComplexMap", "ComplexBatch", "nested records", "header + body + trailer file", "multi-record-type file", "RecordSequence", "RecordReference".
+tools: [read_class, create_class, write_class, run_sql, xecute]
 ---
 
 # complex-record-map

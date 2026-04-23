@@ -1,6 +1,7 @@
 ---
 name: rule
 description: Create and maintain HL7 Routing Rules for IRIS Interoperability. Use when authoring or editing a routing rule class. Triggers on "create rule", "routing rule", "add a when", "constraint", "route messages".
+tools: [read_class, create_class, write_class, run_sql, xecute]
 ---
 
 # rule

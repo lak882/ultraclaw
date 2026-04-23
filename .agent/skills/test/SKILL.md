@@ -1,6 +1,7 @@
 ---
 name: test
 description: Testing workflows for IRIS Interoperability components. Covers in-memory DTL testing via `Transform`, segment-level diff, and (future) end-to-end production testing via HL7 send and trace verification. Triggers on "test DTL", "verify transform", "DTL diff", "test production", "run test", "check transform output".
+tools: [xecute, read_class]
 ---
 
 # test

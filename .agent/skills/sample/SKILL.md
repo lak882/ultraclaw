@@ -1,6 +1,7 @@
 ---
 name: sample
 description: Generate realistic sample messages for testing and demos. Currently covers HL7 v2 messages (ADT, ORU, ORC-based orders). Use to build test messages for DTLs, routing rules, or production smoke tests. Outputs pipe-delimited v2 text. Triggers on "sample message", "sample HL7", "generate HL7", "generate ADT", "generate ORU", "example HL7 message", "test message", "realistic HL7".
+tools: [xecute]
 ---
 
 # sample

@@ -48,6 +48,13 @@ Skills live at `.agent/skills/<name>/SKILL.md` (or `<name>/<sub>/SKILL.md` for n
 | `test` | Testing workflows for IRIS Interoperability components. In-memory DTL testing via `Transform`, segment-level diff via `InterClaw.Script.Production.Test.DTL`. Future: end-to-end production testing. |
 | `sample` | Generating realistic sample messages for testing and demos. Currently HL7 v2 (ADT, ORU, order-based). MSH template, segment patterns, minimum-viable ADT/ORU bodies, custom Z-structure handling. |
 | `improving-skills` | Meta-skill for fixing a skill that repeatedly fails to trigger, gives bad guidance, or drifts out of date. Load when you notice a skill underperforming. |
+| `brainstorming` | Pre-implementation requirements exploration. Load before any creative work that touches features, components, behavior, or design. |
+| `test-driven-development` | TDD discipline: write the failing test first, watch it fail for the right reason, then implement. Load before writing implementation code for any feature or bug fix. |
+| `systematic-debugging` | Root-cause-first debugging. Load on any bug, test failure, or unexpected behavior before proposing a fix. |
+| `verification-before-completion` | "Am I actually done?" checklist. Load before declaring work complete. |
+| `receiving-code-review` | Disciplined response to review feedback; verify claims rather than rubber-stamp. Load when receiving review comments. |
+| `finishing-a-development-branch` | Merge/PR/cleanup decision guide when implementation is complete and tests pass. |
+| `using-git-worktrees` | Worktree-based isolation for feature work. Load before starting work that needs isolation from current workspace. |
 
 ## Mandatory Skill Loading
 
@@ -65,6 +72,13 @@ Before certain tool calls, always `read_file` the corresponding skill body at th
 | Running a DTL `Transform` for testing | `test` |
 | Generating a sample HL7 message | `sample` |
 | Auditing, editing, or rewriting an existing skill | `improving-skills` |
+| Starting creative work (feature, component, behavior, design) | `brainstorming` |
+| Writing implementation code for any feature or bug fix | `test-driven-development` |
+| Encountering any bug, test failure, or unexpected behavior | `systematic-debugging` |
+| Declaring work complete | `verification-before-completion` |
+| Receiving code review feedback | `receiving-code-review` |
+| Implementation complete, deciding how to integrate | `finishing-a-development-branch` |
+| Starting isolated feature work | `using-git-worktrees` |
 
 Skills are free to load � their bodies are small and the `<available_skills>` block gives you the absolute path. Do not guess field paths, column types, SQL dialect quirks, or workflow ordering without first loading the relevant skill.
 

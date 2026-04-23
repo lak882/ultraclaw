@@ -1,6 +1,7 @@
 ---
 name: production
 description: Create and structure IRIS Interoperability productions. Use when authoring a production class, business services, processes, operations, or message classes. Triggers on "create production", "new service", "new process", "new operation", "add business host".
+tools: [read_class, create_class, write_class, run_sql, xecute]
 ---
 
 # production
@@ -19,9 +20,9 @@ For starting, stopping, checking state, or debugging a running production, use t
 
 | Goal | How |
 |---|---|
-| Read an existing class | `read_class` â pass `classname` |
-| Create a new class | `create_class` â pass full UDL body; compiles by default |
-| Update an existing class | `write_class` â pass full UDL body; compiles by default |
+| Read an existing class | `read_class` ï¿½ pass `classname` |
+| Create a new class | `create_class` ï¿½ pass full UDL body; compiles by default |
+| Update an existing class | `write_class` ï¿½ pass full UDL body; compiles by default |
 | List classes in a package | `run_sql`: `SELECT Name FROM %Dictionary.ClassDefinition WHERE Name %STARTSWITH 'Pkg.' ORDER BY Name` |
 | Reload production config after edits | `exec:` `Set sc=##class(Ens.Director).UpdateProduction() Set %result=$System.Status.GetErrorText(sc)` |
 
@@ -34,7 +35,7 @@ For starting, stopping, checking state, or debugging a running production, use t
 | `references/operations.md` | Business operation hierarchy, MessageMap XDATA, retry/error handling |
 | `references/processes.md` | Business process and BPL reference, BPL vs code-based decision |
 | `references/messages.md` | Request/response message class structure, property types, HL7 virtual document paths |
-| `references/pitfalls.md` | Production-specific gotchas â load during review |
+| `references/pitfalls.md` | Production-specific gotchas ï¿½ load during review |
 
 Load via `read_file` with the absolute path: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/production/references/<name>.md`.
 
@@ -45,7 +46,7 @@ Load via `read_file` with the absolute path: `/usr/local/InterSystems/INTERCLAW-
 | `templates/production.cls.template` | Starter production class with XDATA shell |
 | `templates/service.cls.template` | Custom business service stub |
 | `templates/operation.cls.template` | Custom business operation stub with MessageMap |
-| `templates/process.cls.template` | Code-based business process stub (rare â prefer BPL) |
+| `templates/process.cls.template` | Code-based business process stub (rare ï¿½ prefer BPL) |
 | `templates/message-request.cls.template` | Request message class stub |
 | `templates/message-response.cls.template` | Response message class stub |
 

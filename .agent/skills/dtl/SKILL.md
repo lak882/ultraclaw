@@ -1,6 +1,7 @@
 ---
 name: dtl
 description: Create and maintain InterSystems IRIS Data Transformation Language (DTL) classes: field mappings, utility functions, foreach loops, conditionals, and lookup tables. Use when writing or editing a DTL class. Triggers on "create DTL", "transform", "map HL7", "field path".
+tools: [read_class, create_class, write_class, run_sql, xecute]
 ---
 
 # dtl

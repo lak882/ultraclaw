@@ -75,3 +75,29 @@ Two root causes identified:
 **Outcome:** Committed
 
 **Notes:** Backup stored at .agent/skills/improving-skills/backups/record-map-2025-07-14.md. One change session; no adversarial test yet. The improving-skills protocol calls for adversarial testing in fresh sessions before full commit; that is pending.
+
+---
+
+## record-map - 2025-01-01 (second update)
+
+**Modification:** Two targeted additions to address gaps confirmed in the Treatment Team RecordMap session.
+
+**Gap 1: Separator collision not warned**
+
+The spec used backtick as both the record-level separator and the sub-delimiter inside compound fields 1 and 6. The skill documented compound-field limitations but did not warn that choosing the same character for both layers causes RecordMap to misparse compound fields at read time.
+
+**Change:** Expanded the MANDATORY FIRST STEP section to explicitly require checking for separator collision. Added rule: if sub-delimiter equals record separator, raise the conflict with the user before proceeding and either choose a different separator or document that those fields cannot be round-tripped correctly.
+
+**Gap 2: GenerateObject verification missing from post-create workflow**
+
+After create_class compiled successfully, the response declared success without calling GenerateObject or querying %Dictionary.CompiledProperty to confirm field count. The verification section said "check the tool return" but did not require the GenerateObject call or the SQL field-count check.
+
+**Change:** Replaced the single-step verification section with a three-step mandatory verification sequence: (1) check tool return, (2) call GenerateObject and confirm empty error string, (3) run field-count SQL against the target class and confirm row count equals declared field count. All three must pass before declaring success.
+
+Also added GenerateObject and field-count SQL to the tool reference table, and added steps 8 and 9 to the authoring checklist to require separator collision check and three-step verification.
+
+**Authorization:** Iron Law three-instance requirement waived by human partner in the same session.
+
+**Outcome:** Committed
+
+**Notes:** Backup stored at .agent/skills/improving-skills/backups/record-map-2025-01-01.md. Adversarial testing pending in future sessions.

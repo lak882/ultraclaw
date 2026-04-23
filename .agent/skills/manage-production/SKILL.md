@@ -1,6 +1,7 @@
 ---
 name: manage-production
 description: Operate a running IRIS Interoperability production. Use for starting, stopping, restarting, checking state, inspecting errors/traces, and managing lookup tables. Triggers on "start production", "stop production", "restart", "status", "errors", "trace", "lookup".
+tools: [run_sql, xecute]
 ---
 
 # manage-production
