@@ -48,6 +48,9 @@ Skills live at `.agent/skills/<name>/SKILL.md` (or `<name>/<sub>/SKILL.md` for n
 | `test` | Testing workflows for IRIS Interoperability components. In-memory DTL testing via `Transform`, segment-level diff via `InterClaw.Script.Production.Test.DTL`. Future: end-to-end production testing. |
 | `sample` | Generating realistic sample messages for testing and demos. Currently HL7 v2 (ADT, ORU, order-based). MSH template, segment patterns, minimum-viable ADT/ORU bodies, custom Z-structure handling. |
 | `improving-skills` | Meta-skill for fixing a skill that repeatedly fails to trigger, gives bad guidance, or drifts out of date. Load when you notice a skill underperforming. |
+| `writing-skills` | Meta-skill for authoring new skills using TDD (run baseline against subagents before writing the skill). Load when creating a new skill from scratch. |
+| `executing-plans` | Execute a written implementation plan with review checkpoints. Load when you have a plan document to work through. |
+| `using-superpowers` | Index of the superpowers skill library — triggering discipline, when to load skills, common rationalizations. |
 | `brainstorming` | Pre-implementation requirements exploration. Load before any creative work that touches features, components, behavior, or design. |
 | `test-driven-development` | TDD discipline: write the failing test first, watch it fail for the right reason, then implement. Load before writing implementation code for any feature or bug fix. |
 | `systematic-debugging` | Root-cause-first debugging. Load on any bug, test failure, or unexpected behavior before proposing a fix. |
@@ -72,6 +75,8 @@ Before certain tool calls, always `read_file` the corresponding skill body at th
 | Running a DTL `Transform` for testing | `test` |
 | Generating a sample HL7 message | `sample` |
 | Auditing, editing, or rewriting an existing skill | `improving-skills` |
+| Authoring a new skill from scratch | `writing-skills` |
+| Working through an implementation plan | `executing-plans` |
 | Starting creative work (feature, component, behavior, design) | `brainstorming` |
 | Writing implementation code for any feature or bug fix | `test-driven-development` |
 | Encountering any bug, test failure, or unexpected behavior | `systematic-debugging` |

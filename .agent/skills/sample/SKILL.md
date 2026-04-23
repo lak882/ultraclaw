@@ -20,9 +20,11 @@ Load these via `read_file` on their absolute paths:
 
 | Asset | When to load |
 |---|---|
-| `references/hl7.md` | HL7 v2 sample generation: schema-pulling one-liners, MSH template, segment patterns for PID/PV1/ORC/OBR/OBX, CR-delimited emission rules, minimum-viable ADT_A01 and ORU_R01 bodies, custom Z-structure handling. |
+| `hl7/references/hl7.md` | HL7 v2 sample generation: schema-pulling one-liners, MSH template, segment patterns for PID/PV1/ORC/OBR/OBX, CR-delimited emission rules, minimum-viable ADT_A01 and ORU_R01 bodies, custom Z-structure handling. |
 
-Base path: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/sample/references/`.
+Base path: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/sample/hl7/references/`.
+
+HL7 message examples live in `hl7/examples/`.
 
 ## See also
 

@@ -104,6 +104,14 @@ Only after all three steps pass should you describe the RecordMap as ready.
 
 Load via `read_file` at `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/record-map/references/authoring.md`.
 
+## Examples
+
+| Asset | Purpose |
+|---|---|
+| `examples/csv-patient.md` | Concrete 10-field delimited CSV patient RecordMap with production wiring. Load for a worked example. |
+
+Load via `read_file` at `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/record-map/examples/<name>.md`.
+
 ## HealthShare use case
 
 Common pattern: receive CSV/flat files from facilities, parse via RecordMap, transform to SDA3 or HL7, push to the Hub.

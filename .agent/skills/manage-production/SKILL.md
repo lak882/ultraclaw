@@ -58,7 +58,7 @@ Increase the timeout (second arg to `StopProduction`) for productions with slow 
 |---|---|
 | List tables | `run_sql`: `SELECT DISTINCT TableName FROM Ens_Util.LookupTable ORDER BY TableName` |
 | List keys in a table | `run_sql`: `SELECT KeyName, DataValue FROM Ens_Util.LookupTable WHERE TableName = 'MyTab' ORDER BY KeyName` |
-| Get one key | `run_sql`: `SELECT DataValue FROM Ens_Util.LookupTable WHERE TableName = 'MyTab' AND KeyName = 'k1'` |
+| Get one key | `exec:` `Set %result = ##class(Ens.Util.LookupTable).GetValueAt("MyTab", "k1")` (native one-liner; returns "" on miss) |
 | Set a key | `exec:` `Set lu=##class(Ens.Util.LookupTable).%New() Set lu.TableName="MyTab",lu.KeyName="k1",lu.DataValue="v1" Set sc=lu.%Save() Set %result=$System.Status.GetErrorText(sc)` |
 | Clear a table | `exec:` `Do ##class(Ens.Util.LookupTable).%ClearTable("MyTab") Set %result="cleared"` |
 | Import XML | `exec:` `Do ##class(Ens.Util.LookupTable).%Import("/path/to/file.xml") Set %result="imported"` |

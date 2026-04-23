@@ -71,6 +71,14 @@ The `record-map` skill covers authoring those prerequisite RecordMaps.
 
 Load via `read_file` at `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/complex-record-map/references/authoring.md`.
 
+## Examples
+
+| Asset | Purpose |
+|---|---|
+| `examples/patient-encounters.md` | Concrete minimum-viable ComplexMap: header + repeating Patient-group + trailer. Shows sub-RecordMap setup, `Generate` call, production wiring. Load for a worked example. |
+
+Load via `read_file` at `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/complex-record-map/examples/<name>.md`.
+
 ## See also
 
 - `record-map/SKILL.md` — authoring the individual RecordMap classes that a ComplexMap composes

@@ -32,19 +32,34 @@ Always pull the schema first. Never guess field paths. The existing `InterClaw.S
 
 ## References
 
+General DTL references (format-agnostic):
+
 | Asset | When to load |
 |---|---|
-| `references/data-transformations.md` | Full DTL authoring reference. Load when creating or editing any DTL. |
+| `references/data-transformations.md` | Full DTL language reference (assigns, foreach, conditionals, functions). Load when creating or editing any DTL. |
 | `references/datetime-formats.md` | DateTime conversion patterns. Load when mapping date/time fields. |
-| `references/poc-quality-criteria.md` | Quality checklist for POC DTLs. Load during review before pushing. |
 
-Load via `read_file` with absolute path: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/dtl/references/<name>.md`.
+HL7-specific references:
+
+| Asset | When to load |
+|---|---|
+| `hl7/references/poc-quality-criteria.md` | Quality checklist for HL7 POC DTLs — named field paths, Z-structure handling, nested-group gotchas. Load during review before pushing. |
+
+Base paths:
+- General: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/dtl/references/`
+- HL7: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/dtl/hl7/references/`
+
+Load each via `read_file`.
 
 ## Templates
 
 | Asset | Purpose |
 |---|---|
-| `templates/dtl.cls.template` | Starter DTL class shell. |
+| `hl7/templates/dtl.cls.template` | HL7 DTL class shell. |
+
+## Examples
+
+HL7 transform examples live in `hl7/examples/`. Load when you want a concrete worked pattern for a message-type pairing.
 
 ## Authoring checklist
 

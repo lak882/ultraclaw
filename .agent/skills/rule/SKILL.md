@@ -26,21 +26,27 @@ HL7 send requires the `InterClaw.Script.Test.SendHTTP` method (created in a foll
 
 ## References
 
+All current references are HL7-routing-specific:
+
 | Asset | When to load |
 |---|---|
-| `references/overview.md` | Class hierarchy, `Ens.Rule.Definition` structure, `RuleAssistClass` parameter. Load when starting a new rule from scratch. |
-| `references/elements.md` | `<rule>`, `<constraint>`, `<when>`, `<send>`, `<return>`, `<delegate>` reference. Load when writing the body of a rule. |
-| `references/conditions.md` | Condition expression syntax, HL7 field comparisons, logical operators, XML entity encoding. Load when writing `<when>` conditions. |
-| `references/patterns.md` | Best practices, constraint-first filtering, modality-based routing, fan-out, catch-all rules. Load when deciding structure. |
-| `references/pitfalls.md` | `RuleAssistClass` vs `RuleAssist`, `!=` vs `'=`, constraint vs condition for message type. Load during review. |
+| `hl7/references/overview.md` | Class hierarchy, `Ens.Rule.Definition` structure, `RuleAssistClass` parameter. Load when starting a new rule from scratch. |
+| `hl7/references/elements.md` | `<rule>`, `<constraint>`, `<when>`, `<send>`, `<return>`, `<delegate>` reference. Load when writing the body of a rule. |
+| `hl7/references/conditions.md` | Condition expression syntax, HL7 field comparisons, logical operators, XML entity encoding. Load when writing `<when>` conditions. |
+| `hl7/references/patterns.md` | Best practices, constraint-first filtering, modality-based routing, fan-out, catch-all rules. Load when deciding structure. |
+| `hl7/references/pitfalls.md` | `RuleAssistClass` vs `RuleAssist`, `!=` vs `'=`, constraint vs condition for message type. Load during review. |
 
-Load via `read_file` with absolute path: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/rule/references/<name>.md`.
+Base path: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/rule/hl7/references/`.
 
 ## Templates
 
 | Asset | Purpose |
 |---|---|
-| `templates/routing-rule.cls.template` | Starter routing rule class with XDATA shell. |
+| `hl7/templates/routing-rule.cls.template` | Starter HL7 routing rule class with XDATA shell. |
+
+## Examples
+
+HL7 routing examples live in `hl7/examples/`. Load for concrete worked patterns.
 
 ## Authoring checklist
 
