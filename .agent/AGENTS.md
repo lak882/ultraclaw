@@ -44,10 +44,8 @@ Skills live at `.agent/skills/<name>/SKILL.md` (or `<name>/<sub>/SKILL.md` for n
 | `production` | Creating production classes, business services, processes, operations, and message classes. XData production format, adapter selection, BPL defaults, package naming. |
 | `manage-production` | Running-production operations: start/stop/restart/update via `Ens.Director`, event-log error queries, message traces, lookup-table CRUD via `Ens.Util.LookupTable`. |
 | `iris-sql` | The `run_sql` tool contract and IRIS SQL dialect. Call arguments and return shape, TOP vs LIMIT, `%STARTSWITH`/`%INLIST`/`%EXTERNAL`, `$Horolog`+DATEADD, class-to-table mapping, canonical system-table queries. |
-| `test` | Index skill pointing at `test/dtl` and `test/production` for testing workflows. |
-| `test/dtl` | In-memory DTL testing via `Transform`. No production needed. Segment-level diff via `InterClaw.Script.Production.Test.DTL`. |
-| `sample` | Index skill pointing at `sample/hl7` and future sample-generation sub-skills. |
-| `sample/hl7` | Generating a realistic HL7 v2 sample message. MSH template, segment patterns, minimum-viable ADT/ORU bodies, custom Z-structure handling. |
+| `test` | Testing workflows for IRIS Interoperability components. In-memory DTL testing via `Transform`, segment-level diff via `InterClaw.Script.Production.Test.DTL`. Future: end-to-end production testing. |
+| `sample` | Generating realistic sample messages for testing and demos. Currently HL7 v2 (ADT, ORU, order-based). MSH template, segment patterns, minimum-viable ADT/ORU bodies, custom Z-structure handling. |
 | `improving-skills` | Meta-skill for fixing a skill that repeatedly fails to trigger, gives bad guidance, or drifts out of date. Load when you notice a skill underperforming. |
 
 ## Mandatory Skill Loading
@@ -62,8 +60,8 @@ Before certain tool calls, always `read_file` the corresponding skill body at th
 | `create_class` / `write_class` on a RecordMap | `record-map` |
 | Any `Ens.Director` call (start/stop/restart/update) | `manage-production` |
 | Building a production class, service, process, or operation | `production` |
-| Running a DTL `Transform` for testing | `test/dtl` |
-| Generating a sample HL7 message | `sample/hl7` |
+| Running a DTL `Transform` for testing | `test` |
+| Generating a sample HL7 message | `sample` |
 | Auditing, editing, or rewriting an existing skill | `improving-skills` |
 
 Skills are free to load — their bodies are small and the `<available_skills>` block gives you the absolute path. Do not guess field paths, column types, SQL dialect quirks, or workflow ordering without first loading the relevant skill.
