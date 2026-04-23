@@ -55,7 +55,7 @@ Load each via `read_file`.
 
 | Asset | Purpose |
 |---|---|
-| `hl7/templates/dtl.cls.template` | HL7 DTL class shell. |
+| `templates/dtl.cls.template` | Format-agnostic DTL class shell. Works for HL7, JSON, XML, or custom message types. |
 
 ## Examples
 
