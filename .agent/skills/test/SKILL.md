@@ -5,36 +5,23 @@ description: Testing workflows for IRIS Interoperability components. Covers in-m
 
 # test
 
-Testing workflows for IRIS Interoperability components. Currently covers DTL in-memory testing. Production testing will live in `references/production.md` once implemented.
+Testing workflows for IRIS Interoperability components.
 
-## DTL testing (in-memory)
+## When to use
 
-No production, no HTTP, no message queue. The transform runs synchronously and returns its output.
+- Verifying a DTL transforms HL7 correctly, before pushing it.
+- Debugging an unexpected transform output via segment-level diff.
+- (Future) End-to-end production smoke tests via HL7 send and trace verification.
 
-### Tool reference
+## References
 
-| Goal | How |
+Load these via `read_file` on their absolute paths:
+
+| Asset | When to load |
 |---|---|
-| Run a DTL Transform (HL7 in, HL7 out) | `exec:` `Set msg = ##class(EnsLib.HL7.Message).ImportFromString(hl7In) Set sc = ##class(MyDtl).Transform(msg, .out) Set %result = out.OutputToString()` |
-| Simple Transform for string-based DTLs | `exec:` `Set sc = ##class(MyDtl).Transform(input, .out) Set %result = out` |
-| Segment-level diff | `exec:` `Set %result = ##class(InterClaw.Script.Production.Test.DTL).Execute("{""dtl"":""MyDtl"",""input"":""MSH|...""}")` |
+| `references/dtl.md` | Testing a DTL transform in-memory with `Transform`. Input-format helpers for HL7 v2 raw text, `Ens.StringRequest`, custom request classes. Segment-level diff via `InterClaw.Script.Production.Test.DTL`. Gotchas around line endings, `Untyped="true"`, `%Status` unwrapping. |
 
-### Input-format helpers
-
-- HL7 v2 raw text (`MSH|^~\&|...`): use `EnsLib.HL7.Message.ImportFromString`.
-- `Ens.StringRequest`: construct with `##class(Ens.StringRequest).%New()` and set `StringValue`.
-- Custom request classes: instantiate and populate required properties before passing.
-
-### Gotchas
-
-- Ensure CRLF line endings are stripped or converted to CR before `ImportFromString`. IRIS HL7 parsing is strict: `$Replace(msg, $Char(13,10), $Char(13))` then `$Replace(msg, $Char(10), $Char(13))`.
-- `Transform` is a ClassMethod. It does NOT need a production running.
-- A DTL with `Untyped="true"` requires raw-string inputs; typed DTLs require the declared `%Class` from the DTL's `<transform>` element.
-- Errors returned as `%Status`; unwrap with `$System.Status.GetErrorText(sc)`.
-
-## Production testing
-
-Not yet implemented. When added, workflow will live here and cover: HTTP send via `%Net.HttpRequest` to an `EnsLib.HL7.Service.HTTPService`, trace-query verification via `Ens.MessageHeader`, and route-coverage assertions.
+Base path: `/usr/local/InterSystems/INTERCLAW-TEST/csp/interclaw/.agent/skills/test/references/`.
 
 ## See also
 
